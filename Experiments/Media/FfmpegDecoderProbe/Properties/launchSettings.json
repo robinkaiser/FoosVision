@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "FfmpegDecoderProbe": {
+      "commandName": "Project",
+      "commandLineArgs": "--codec h264 --width 1920 --height 1080",
+      "environmentVariables": {
+        "FOOSVISION_FFMPEG_ROOT": "D:\\Projects\\FoosVision.Integration\\ffmpeg\\bin"
+      }
+    }
+  }
+}

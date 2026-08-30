@@ -1,0 +1,8 @@
+﻿<Project>
+  <Import Project="..\Directory.Packages.props"/>
+
+  <!-- Third-party packages for tools only -->
+  <ItemGroup>
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+</Project>

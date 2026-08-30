@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Product\Adapters\FoosVision.Adapters.Viewer\FoosVision.Adapters.Viewer.csproj" />
+    <ProjectReference Include="..\..\..\Product\Adapters\FoosVision.Protocol\FoosVision.Protocol.csproj" />
+  </ItemGroup>
+</Project>

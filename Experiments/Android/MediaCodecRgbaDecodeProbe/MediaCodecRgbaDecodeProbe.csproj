@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
+    <ApplicationId>de.foosvision.experiments.mediacodecrgbadecodeprobe</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Product\Infrastructure\Media\FoosVision.Media.Android\FoosVision.Media.Android.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('..\..\..\..\FoosVision.Integration\FileCapture\H.264.mp4')">
+    <AndroidAsset Include="..\..\..\..\FoosVision.Integration\FileCapture\H.264.mp4" Link="Assets\H.264.mp4" />
+  </ItemGroup>
+</Project>

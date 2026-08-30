@@ -1,0 +1,26 @@
+﻿<Project>
+  <PropertyGroup>
+    <Title>FoosVision</Title>
+    <Product>FoosVision</Product>
+    <Authors>Robin Kaiser</Authors>
+    <Copyright>2026 Robin Kaiser</Copyright>
+    <!-- Major number is also the protocol version.
+         Breaking protocol changes require increasing it. -->
+    <FoosVisionVersionMajor>1</FoosVisionVersionMajor>
+    <FoosVisionVersionMinor>0</FoosVisionVersionMinor>
+    <FoosVisionVersionPatch>0</FoosVisionVersionPatch>
+    <FoosVisionVersion>$(FoosVisionVersionMajor).$(FoosVisionVersionMinor).$(FoosVisionVersionPatch)</FoosVisionVersion>
+    <!-- Store build code for MAUI ApplicationVersion.
+         Must increase for each published Android app upload. -->
+    <FoosVisionAppVersionCode>1</FoosVisionAppVersionCode>
+    <AssemblyVersion>$(FoosVisionVersion)</AssemblyVersion>
+    <InformationalVersion>$(FoosVisionVersion)</InformationalVersion>
+    <FileVersion>$(FoosVisionVersion)</FileVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>

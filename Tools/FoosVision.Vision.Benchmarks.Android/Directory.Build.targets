@@ -1,0 +1,20 @@
+<Project>
+  <Target Name="Benchmark" DependsOnTargets="Install">
+    <Message Text="Running benchmarks. This might take a while... See 'adb logcat' for realtime progress." Importance="High" />
+    <!-- Clear the log -->
+    <Exec Command="adb shell logcat -c" WorkingDirectory="$(AndroidSdkDirectory)/platform-tools" />
+    <!-- Run benchmarks -->
+    <Exec Command="adb shell am instrument -w $(_AndroidPackage)/com.dotnet.MainInstrumentation" WorkingDirectory="$(AndroidSdkDirectory)/platform-tools" />
+    <!--
+      Print the log filtered by mono-stdout and DOTNET tags
+      See: https://developer.android.com/studio/command-line/logcat#outputFormat
+    -->
+    <Exec
+        Command="adb shell logcat -d -v tag -s &quot;DOTNET,mono-stdout&quot;"
+        IgnoreStandardErrorWarningFormat="true"
+        StdErrEncoding="utf-8"
+        StdOutEncoding="utf-8"
+        WorkingDirectory="$(AndroidSdkDirectory)/platform-tools"
+    />
+  </Target>
+</Project>

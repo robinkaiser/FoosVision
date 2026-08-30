@@ -1,0 +1,31 @@
+{
+  "profiles": {
+    "FoosVision.VideoPlayer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "FOOSVISION_FFMPEG_ROOT": "D:\\Projects\\FoosVision.Integration\\ffmpeg\\bin"
+      }
+    },
+    "2024-03-02-Leonhart-Blue-3TickTack": {
+      "commandName": "Project",
+      "commandLineArgs": "--file \"D:\\Projects\\FoosVision.Validation\\Videos\\2024-03-02-Leonhart-Blue-3TickTack.mp4\" --codec h264 --width 1920 --height 1080",
+      "environmentVariables": {
+        "FOOSVISION_FFMPEG_ROOT": "D:\\Projects\\FoosVision.Integration\\ffmpeg\\bin"
+      }
+    },
+    "2024-03-02-Leonhart-Blue-3TickTack-Software": {
+      "commandName": "Project",
+      "commandLineArgs": "--file \"D:\\Projects\\FoosVision.Validation\\Videos\\2024-03-02-Leonhart-Blue-3TickTack.mp4\" --codec h264 --width 1920 --height 1080 --decode-mode software-only",
+      "environmentVariables": {
+        "FOOSVISION_FFMPEG_ROOT": "D:\\Projects\\FoosVision.Integration\\ffmpeg\\bin"
+      }
+    },
+    "Temp_Video": {
+      "commandName": "Project",
+      "commandLineArgs": "--file \"C:\\Temp\\video.mp4\" --codec h264 --width 1920 --height 1080",
+      "environmentVariables": {
+        "FOOSVISION_FFMPEG_ROOT": "D:\\Projects\\FoosVision.Integration\\ffmpeg\\bin"
+      }
+    }
+  }
+}

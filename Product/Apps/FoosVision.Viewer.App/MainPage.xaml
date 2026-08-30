@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:FoosVision.Viewer.App.Screen.Controls"
+             xmlns:screen="clr-namespace:FoosVision.Viewer.App.Screen.Page"
+             x:Class="FoosVision.Viewer.App.MainPage"
+             x:Name="Page"
+             x:DataType="screen:ViewerPageViewModel"
+             BackgroundColor="{StaticResource ViewerBackground}">
+
+    <Grid SafeAreaEdges="None">
+        <Border Margin="0"
+                BackgroundColor="{StaticResource ViewerVideoBackground}"
+                StrokeThickness="0">
+            <ContentView x:Name="StageHost"
+                         HorizontalOptions="Fill"
+                         VerticalOptions="Fill" />
+        </Border>
+
+        <controls:ViewerBottomLandscapeControlsView x:Name="BottomLandscapeControlsView"
+                                                    BindingContext="{Binding ControlsViewModel}"
+                                                    IsVisible="{Binding BindingContext.IsBottomLandscapeControlsVisible, Source={x:Reference Page}}"
+                                                    HorizontalOptions="Fill"
+                                                    VerticalOptions="End"
+                                                    Margin="16,5" />
+
+        <controls:ViewerBottomPortraitControlsView x:Name="BottomPortraitControlsView"
+                                                   BindingContext="{Binding ControlsViewModel}"
+                                                   IsVisible="{Binding BindingContext.IsBottomPortraitControlsVisible, Source={x:Reference Page}}"
+                                                   HorizontalOptions="Fill"
+                                                   VerticalOptions="End"
+                                                   Margin="16,5" />
+
+        <controls:ViewerSideLandscapeControlsView x:Name="SideLandscapeControlsView"
+                                                  BindingContext="{Binding ControlsViewModel}"
+                                                  IsVisible="{Binding BindingContext.IsSideLandscapeControlsVisible, Source={x:Reference Page}}"
+                                                  HorizontalOptions="End"
+                                                  VerticalOptions="Fill"
+                                                  Margin="5,16" />
+
+        <controls:ViewerSidePortraitControlsView x:Name="SidePortraitControlsView"
+                                                 BindingContext="{Binding ControlsViewModel}"
+                                                 IsVisible="{Binding BindingContext.IsSidePortraitControlsVisible, Source={x:Reference Page}}"
+                                                 HorizontalOptions="End"
+                                                 VerticalOptions="Fill"
+                                                 Margin="5,16" />
+
+        <Grid BindingContext="{Binding About}"
+              x:DataType="{x:Null}"
+              IsVisible="{Binding IsVisible}"
+              RowDefinitions="Auto,*"
+              RowSpacing="14"
+              BackgroundColor="{StaticResource ViewerPanelBackground}">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+                <Label Text="About"
+                       TextColor="{StaticResource White}"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="Close"
+                        Command="{Binding CloseCommand}"
+                        BackgroundColor="{StaticResource ViewerChromeBackground}"
+                        TextColor="{StaticResource White}"
+                        BorderColor="{StaticResource ViewerPanelStroke}"
+                        BorderWidth="1"
+                        CornerRadius="8"
+                        Padding="16,8" />
+            </Grid>
+
+            <ScrollView x:Name="AboutScrollView"
+                        Grid.Row="1"
+                        BackgroundColor="{StaticResource ViewerVideoBackground}"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill">
+                <Label Text="{Binding AboutText}"
+                       FontFamily="monospace"
+                       FontSize="10"
+                       TextColor="#E8EDF2"
+                       Padding="8" />
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

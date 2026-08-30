@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\FoosVision.Common\FoosVision.Common.csproj" />
+    <ProjectReference Include="..\..\Adapters\FoosVision.Protocol\FoosVision.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetMQ" />
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+</Project>

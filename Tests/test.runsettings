@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+
+  <RunConfiguration>
+    <!-- Process-level parallelism (test hosts). 0 = as many as cores -->
+    <MaxCpuCount>0</MaxCpuCount>
+  </RunConfiguration>
+
+  <!-- xUnit adapter settings -->
+  <xUnit>
+    <!-- Opt in to running test collections in parallel (default is true) -->
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+
+    <!-- Allow cross-assembly parallelism when the runner supports it -->
+    <ParallelizeAssembly>true</ParallelizeAssembly>
+
+    <!-- Threads per test assembly for xUnit’s internal parallelization -->
+    <MaxParallelThreads>8</MaxParallelThreads>
+  </xUnit>
+
+</RunSettings>

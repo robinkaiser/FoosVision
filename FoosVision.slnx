@@ -1,0 +1,129 @@
+<Solution>
+  <Folder Name="/Documentation/">
+    <File Path="Documentation/Configuration.md" />
+    <File Path="Documentation/Diagnostics.md" />
+    <File Path="Documentation/Release.md" />
+  </Folder>
+  <Folder Name="/Documentation/Development/">
+    <File Path="Documentation/Development/Discovery.md" />
+    <File Path="Documentation/Development/Performance.md" />
+    <File Path="Documentation/Development/Streaming.md" />
+  </Folder>
+  <Folder Name="/Documentation/Skills/">
+    <File Path="Documentation/Skills/VisionAlgorithmsSkill.md" />
+  </Folder>
+  <Folder Name="/Experiments/" />
+  <Folder Name="/Experiments/Android/">
+    <Project Path="Experiments/Android/MediaCodecRgbaDecodeProbe/MediaCodecRgbaDecodeProbe.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
+  <Folder Name="/Experiments/Logging/">
+    <Project Path="Experiments/Logging/LoggingCli/LoggingCli.csproj" Id="c1024b5a-0802-4374-86a7-48014338cb81" />
+  </Folder>
+  <Folder Name="/Experiments/Media/">
+    <Project Path="Experiments/Media/FfmpegDecoderProbe/FfmpegDecoderProbe.csproj" Id="b9db9cf4-b417-46df-93f0-c22506e42860" />
+  </Folder>
+  <Folder Name="/Experiments/Protocol/">
+    <Project Path="Experiments/Protocol/RecorderCli/RecorderCli.csproj" Id="e5572954-a9fb-486b-974c-60a6cd129aa8" />
+    <Project Path="Experiments/Protocol/ViewerCli/ViewerCli.csproj" Id="44f34ad0-9ccb-4745-aa1c-728b3e793c7a" />
+  </Folder>
+  <Folder Name="/Product/" />
+  <Folder Name="/Product/Adapters/">
+    <Project Path="Product/Adapters/FoosVision.Adapters.Common/FoosVision.Adapters.Common.csproj" Id="0303f49e-6142-4c41-b3a3-16c35be47367" />
+    <Project Path="Product/Adapters/FoosVision.Adapters.Recorder/FoosVision.Adapters.Recorder.csproj" Id="082be2cf-5310-4c26-9faa-d778d7568096" />
+    <Project Path="Product/Adapters/FoosVision.Adapters.Viewer/FoosVision.Adapters.Viewer.csproj" Id="542e0a11-52c8-4791-bcb7-5feb6962139e" />
+    <Project Path="Product/Adapters/FoosVision.Ports.Media/FoosVision.Ports.Media.csproj" Id="1fd6b3a8-bcef-4b5e-867a-f0e6940b47b0" />
+    <Project Path="Product/Adapters/FoosVision.Ports.Vision/FoosVision.Ports.Vision.csproj" Id="4d0c9b1f-0d56-40e3-9b92-0398fb3d2d9f" />
+    <Project Path="Product/Adapters/FoosVision.Protocol/FoosVision.Protocol.csproj" Id="4c622472-7092-4dfe-a443-4a901373a0e4" />
+  </Folder>
+  <Folder Name="/Product/Apps/">
+    <Project Path="Product/Apps/FoosVision.Recorder.App/FoosVision.Recorder.App.csproj" />
+    <Project Path="Product/Apps/FoosVision.Viewer.App/FoosVision.Viewer.App.csproj" />
+    <Project Path="Product/Apps/FoosVision/FoosVision.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
+  <Folder Name="/Product/Composition/">
+    <Project Path="Product/Composition/FoosVision.Recorder.Composition/FoosVision.Recorder.Composition.csproj" Id="89179726-3778-4cac-9974-30f34f40ca34" />
+    <Project Path="Product/Composition/FoosVision.Viewer.Composition/FoosVision.Viewer.Composition.csproj" Id="f8c4c628-6cdd-485f-bf3c-d7be5bfc70cb" />
+  </Folder>
+  <Folder Name="/Product/Core/">
+    <Project Path="Product/Core/FoosVision.Common/FoosVision.Common.csproj" />
+    <Project Path="Product/Core/FoosVision.Domain/FoosVision.Domain.csproj" />
+    <Project Path="Product/Core/FoosVision.UseCases.Dependencies/FoosVision.UseCases.Dependencies.csproj" Id="45369b82-3284-4f85-bfc0-8eb054a5f6fc" />
+    <Project Path="Product/Core/FoosVision.UseCases/FoosVision.UseCases.csproj" />
+  </Folder>
+  <Folder Name="/Product/Infrastructure/">
+    <Project Path="Product/Infrastructure/FoosVision.Logging/FoosVision.Logging.csproj" Id="99266362-0d25-4aa3-b24c-bed805abe8c9" />
+    <Project Path="Product/Infrastructure/FoosVision.NetDiscovery/FoosVision.NetDiscovery.csproj" Id="50f21715-75d6-4239-b4d0-43dd307574d3" />
+    <Project Path="Product/Infrastructure/FoosVision.NetMq/FoosVision.NetMq.csproj" Id="03b897e3-72e5-44b8-95c5-a6a7476770eb" />
+    <Project Path="Product/Infrastructure/FoosVision.Settings/FoosVision.Settings.csproj" />
+    <Project Path="Product/Infrastructure/FoosVision.Vision/FoosVision.Vision.csproj" Id="a9d50392-1313-48ab-8767-93a3a55a997d" />
+  </Folder>
+  <Folder Name="/Product/Infrastructure/Media/">
+    <Project Path="Product/Infrastructure/Media/FoosVision.Media.Android/FoosVision.Media.Android.csproj" Id="f06c572e-6ae8-4343-8f8f-41b4b3daa262" />
+    <Project Path="Product/Infrastructure/Media/FoosVision.Media.Core/FoosVision.Media.Core.csproj" Id="18eb87a8-fa0d-4e16-9ab9-522f452ed74a" />
+    <Project Path="Product/Infrastructure/Media/FoosVision.Media.Windows/FoosVision.Media.Windows.csproj" Id="ff547f6f-428d-4b43-bd2e-552ba155d164" />
+  </Folder>
+  <Folder Name="/Product/Infrastructure/NetDiscovery/">
+    <File Path="Product/Infrastructure/NetDiscovery/LICENSE" />
+    <File Path="Product/Infrastructure/NetDiscovery/ReadMe.txt" />
+    <Project Path="Product/Infrastructure/NetDiscovery/NetDiscovery.Udp/NetDiscovery.Udp.csproj" />
+    <Project Path="Product/Infrastructure/NetDiscovery/NetDiscovery/NetDiscovery.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="CODE-OF-CONDUCT.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="LICENSE.md" />
+    <File Path="PRIVACY.md" />
+    <File Path="README.md" />
+    <File Path="THIRD-PARTY-NOTICES.md" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <File Path="Tests/Directory.Build.props" />
+    <File Path="Tests/Directory.Packages.props" />
+    <File Path="Tests/test.runsettings" />
+  </Folder>
+  <Folder Name="/Tests/Adapters/">
+    <Project Path="Tests/Adapters/FoosVision.Adapters.Common.UnitTests/FoosVision.Adapters.Common.UnitTests.csproj" />
+    <Project Path="Tests/Adapters/FoosVision.Adapters.Recorder.UnitTests/FoosVision.Adapters.Recorder.UnitTests.csproj" />
+    <Project Path="Tests/Adapters/FoosVision.Adapters.Viewer.UnitTests/FoosVision.Adapters.Viewer.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Core/">
+    <Project Path="Tests/Core/FoosVision.Common.UnitTests/FoosVision.Common.UnitTests.csproj" />
+    <Project Path="Tests/Core/FoosVision.Domain.UnitTests/FoosVision.Domain.UnitTests.csproj" />
+    <Project Path="Tests/Core/FoosVision.UseCases.UnitTests/FoosVision.UseCases.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Infrastructure/">
+    <Project Path="Tests/Infrastructure/FoosVision.Logging.UnitTests/FoosVision.Logging.UnitTests.csproj" />
+    <Project Path="Tests/Infrastructure/FoosVision.Media.Core.UnitTests/FoosVision.Media.Core.UnitTests.csproj" Id="aa2524cc-8b05-479b-b27c-c09c77014e9c" />
+    <Project Path="Tests/Infrastructure/FoosVision.Media.Windows.IntegrationTests/FoosVision.Media.Windows.IntegrationTests.csproj" Id="1c5dbf11-c1e3-4f20-84ac-6985e77c8536" />
+    <Project Path="Tests/Infrastructure/FoosVision.Media.Windows.UnitTests/FoosVision.Media.Windows.UnitTests.csproj" Id="5a0e5d01-4109-4c8e-b4f3-5884fd7c3429" />
+    <Project Path="Tests/Infrastructure/FoosVision.Settings.UnitTests/FoosVision.Settings.UnitTests.csproj" />
+    <Project Path="Tests/Infrastructure/FoosVision.Vision.UnitTests/FoosVision.Vision.UnitTests.csproj" />
+    <Project Path="Tests/Infrastructure/FoosVision.Vision.ValidationTests/FoosVision.Vision.ValidationTests.csproj" Id="71e22c23-33f8-49c7-a9c3-8321282a905e" />
+  </Folder>
+  <Folder Name="/Tests/Tools/">
+    <Project Path="Tests/Tools/FoosVision.VideoPlayer.UnitTests/FoosVision.VideoPlayer.UnitTests.csproj" Id="3a9d941b-6cc9-47e1-8f6b-0d91d4fecac8" />
+  </Folder>
+  <Folder Name="/Tools/">
+    <File Path="Tools/Directory.Packages.props" />
+    <File Path="Tools/Start-AndroidPair.ps1" />
+    <Project Path="Tools/FoosVision.VideoPlayer/FoosVision.VideoPlayer.csproj" Id="60011dca-c1a5-46d8-a1ae-47ce42410bf2" />
+    <Project Path="Tools/FoosVision.Vision.Benchmarks.Android/FoosVision.Vision.Benchmarks.Android.csproj" Id="92ba97b4-c74c-41ff-a7fa-b24c8fa68bee">
+      <Deploy />
+    </Project>
+  </Folder>
+  <Folder Name="/Tools/ThirdPartyNotices/">
+    <File Path="Tools/ThirdPartyNotices/AppThirdPartyNoticeInputs.json" />
+    <File Path="Tools/ThirdPartyNotices/Generate-AppThirdPartyNotices.ps1" />
+  </Folder>
+</Solution>
+
+

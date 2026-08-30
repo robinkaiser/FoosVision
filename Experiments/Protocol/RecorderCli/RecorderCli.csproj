@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Product\Adapters\FoosVision.Adapters.Recorder\FoosVision.Adapters.Recorder.csproj" />
+    <ProjectReference Include="..\..\..\Product\Adapters\FoosVision.Protocol\FoosVision.Protocol.csproj" />
+    <ProjectReference Include="..\..\..\Product\Infrastructure\FoosVision.NetMq\FoosVision.NetMq.csproj" />
+    <ProjectReference Include="..\..\..\Product\Infrastructure\NetDiscovery\NetDiscovery.Udp\NetDiscovery.Udp.csproj" />
+  </ItemGroup>
+
+</Project>

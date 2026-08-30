@@ -1,0 +1,40 @@
+{
+  "packageOverrides": {
+    "AsyncIO": {
+      "license": "MPL-2.0",
+      "projectUrl": "https://github.com/somdoron/AsyncIO",
+      "notice": "The AsyncIO NuGet package does not carry license metadata. The upstream repository identifies the project license as MPL-2.0."
+    },
+    "NetMQ": {
+      "license": "LGPL-3.0 with special linking exception",
+      "projectUrl": "https://github.com/zeromq/netmq",
+      "notice": "NetMQ is licensed under LGPL-3.0 with a special linking exception. The exception permits linking this library with independent modules to produce and distribute an executable under terms of your choice, provided the terms of each independent module are also met."
+    }
+  },
+  "vendoredComponents": [
+    {
+      "name": "NetDiscovery and NetDiscovery.Udp",
+      "version": "0.0.3-alpha source import",
+      "license": "MIT",
+      "projectUrl": "https://github.com/Malcolmnixon/NetDiscovery/tree/master/NetDiscovery",
+      "sourcePath": "Product/Infrastructure/NetDiscovery",
+      "licenseFile": "Product/Infrastructure/NetDiscovery/LICENSE",
+      "notice": "Copyright (c) 2019 Malcolm Nixon."
+    }
+  ],
+  "appAssets": {
+    "FoosVision": [
+      {
+        "name": "Open Sans fonts",
+        "version": "2010-2011 digitized data",
+        "license": "Apache-2.0",
+        "projectUrl": "https://fonts.google.com/specimen/Open+Sans",
+        "notice": "Digitized data copyright (c) 2010-2011, Google Corporation.",
+        "sourcePaths": [
+          "Product/Apps/FoosVision/Resources/Fonts/OpenSans-Regular.ttf",
+          "Product/Apps/FoosVision/Resources/Fonts/OpenSans-Semibold.ttf"
+        ]
+      }
+    ]
+  }
+}

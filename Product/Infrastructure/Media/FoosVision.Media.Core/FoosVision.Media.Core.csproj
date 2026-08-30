@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Adapters\FoosVision.Ports.Media\FoosVision.Ports.Media.csproj" />
+    <ProjectReference Include="..\..\..\Core\FoosVision.UseCases.Dependencies\FoosVision.UseCases.Dependencies.csproj" />
+  </ItemGroup>
+</Project>

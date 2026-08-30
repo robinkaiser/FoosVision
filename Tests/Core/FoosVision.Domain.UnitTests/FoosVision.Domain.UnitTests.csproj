@@ -1,0 +1,6 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Product\Core\FoosVision.Domain\FoosVision.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Product\Core\FoosVision.UseCases\FoosVision.UseCases.csproj" />
+  </ItemGroup>
+</Project>

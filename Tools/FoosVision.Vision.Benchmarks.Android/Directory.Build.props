@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+</Project>

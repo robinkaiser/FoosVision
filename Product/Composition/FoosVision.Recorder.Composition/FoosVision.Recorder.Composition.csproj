@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\Adapters\FoosVision.Adapters.Recorder\FoosVision.Adapters.Recorder.csproj" />
+    <ProjectReference Include="..\..\Core\FoosVision.Common\FoosVision.Common.csproj" />
+    <ProjectReference Include="..\..\Core\FoosVision.Domain\FoosVision.Domain.csproj" />
+    <ProjectReference Include="..\..\Core\FoosVision.UseCases\FoosVision.UseCases.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\FoosVision.NetMq\FoosVision.NetMq.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\FoosVision.Vision\FoosVision.Vision.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Media\FoosVision.Media.Core\FoosVision.Media.Core.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\NetDiscovery\NetDiscovery.Udp\NetDiscovery.Udp.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\NetDiscovery\NetDiscovery\NetDiscovery.csproj" />
+  </ItemGroup>
+</Project>

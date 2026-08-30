@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework></TargetFramework>
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>FoosVision</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Keep the Android interpreter disabled for performance. Enable it only when C# Hot Reload is needed. -->
+    <UseInterpreter>false</UseInterpreter>
+
+    <!-- Use MAUI XAML source generation for app resources and linked role styles. -->
+    <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+    <ApplicationTitle>FoosVision</ApplicationTitle>
+    <ApplicationId>org.foosvision.app</ApplicationId>
+    <ApplicationDisplayVersion>$(InformationalVersion)</ApplicationDisplayVersion>
+    <ApplicationVersion>$(FoosVisionAppVersionCode)</ApplicationVersion>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">33.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0D6F3C" ForegroundScale="0.85" />
+    <MauiImage Include="Resources\AppIcon\appicon_recorder.svg" ForegroundFile="Resources\AppIcon\appicon_recorderfg.svg" Color="#0D6F3C" ForegroundScale="0.85" IsAppIcon="true" />
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0D6F3C" BaseSize="128,128" />
+    <MauiImage Include="Resources\Splash\splash_recorder.svg" BaseSize="128,128" />
+    <MauiImage Include="Resources\Images\*" />
+    <MauiFont Include="Resources\Fonts\*" />
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    <MauiXaml Include="..\FoosVision.Recorder.App\Resources\Styles\Colors.xaml" Link="Resources\Styles\Recorder\Colors.xaml" />
+    <MauiXaml Include="..\FoosVision.Recorder.App\Resources\Styles\Styles.xaml" Link="Resources\Styles\Recorder\Styles.xaml" />
+    <MauiXaml Include="..\FoosVision.Viewer.App\Resources\Styles\Colors.xaml" Link="Resources\Styles\Viewer\Colors.xaml" />
+    <MauiXaml Include="..\FoosVision.Viewer.App\Resources\Styles\Styles.xaml" Link="Resources\Styles\Viewer\Styles.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoosVision.Recorder.App\FoosVision.Recorder.App.csproj" />
+    <ProjectReference Include="..\FoosVision.Viewer.App\FoosVision.Viewer.App.csproj" />
+  </ItemGroup>
+
+</Project>

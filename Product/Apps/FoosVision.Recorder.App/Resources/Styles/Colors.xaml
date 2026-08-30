@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    <Color x:Key="RecorderBackground">#000000</Color>
+    <Color x:Key="RecorderPanelBackground">#10151C</Color>
+    <Color x:Key="RecorderEditorBackground">#05070A</Color>
+    <Color x:Key="RecorderEditorText">#E8EDF2</Color>
+    <Color x:Key="RecorderConnectionStatusText">#C6CFDA</Color>
+    <Color x:Key="RecorderStatusText">#8F9AA6</Color>
+    <Color x:Key="RecorderModeText">#E8EDF2</Color>
+    <Color x:Key="RecorderActionBackground">#D7E3F1</Color>
+    <Color x:Key="RecorderActionText">#10151C</Color>
+    <Color x:Key="RecorderSecondaryActionBackground">#27313D</Color>
+    <Color x:Key="RecorderSecondaryActionText">#E8EDF2</Color>
+</ResourceDictionary>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.0.3-alpha</Version>
+    <Authors>Malcolm Nixon</Authors>
+    <Company>Malcolm Nixon</Company>
+    <Description>Local Network Discovery Library for .NET projects</Description>
+    <Copyright>2019</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Malcolmnixon/NetDiscovery</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Malcolmnixon/NetDiscovery</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>network discovery</PackageTags>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>

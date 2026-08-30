@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Robin Kaiser
+
+using FoosVision.Common.Types;
+using FoosVision.Domain.Capture.ValueObjects;
+using FoosVision.Domain.Table.ValueObjects;
+
+namespace FoosVision.UseCases.Dependencies.Settings;
+
+public interface ISettingsStore
+{
+    Option<TableConfiguration> LoadTableConfig();
+
+    CameraProfile LoadCameraProfile();
+}

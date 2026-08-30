@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FFmpeg.AutoGen" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\FoosVision.Common\FoosVision.Common.csproj" />
+    <ProjectReference Include="..\..\..\Adapters\FoosVision.Ports.Media\FoosVision.Ports.Media.csproj" />
+    <ProjectReference Include="..\FoosVision.Media.Core\FoosVision.Media.Core.csproj" />
+  </ItemGroup>
+</Project>

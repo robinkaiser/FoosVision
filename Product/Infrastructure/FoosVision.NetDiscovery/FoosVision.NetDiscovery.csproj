@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Adapters\FoosVision.Adapters.Viewer\FoosVision.Adapters.Viewer.csproj" />
+    <ProjectReference Include="..\..\Adapters\FoosVision.Protocol\FoosVision.Protocol.csproj" />
+
+    <ProjectReference Include="..\NetDiscovery\NetDiscovery.Udp\NetDiscovery.Udp.csproj" />
+  </ItemGroup>
+
+</Project>

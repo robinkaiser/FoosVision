@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\FoosVision.Common\FoosVision.Common.csproj" />
+    <ProjectReference Include="..\FoosVision.Ports.Media\FoosVision.Ports.Media.csproj" />
+    <ProjectReference Include="..\FoosVision.Ports.Vision\FoosVision.Ports.Vision.csproj" />
+    <ProjectReference Include="..\FoosVision.Protocol\FoosVision.Protocol.csproj" />
+  </ItemGroup>
+</Project>

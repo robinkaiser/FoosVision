@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Robin Kaiser
+
+using FoosVision.Media.Core.EncodedVideo;
+using FoosVision.Ports.Media;
+
+namespace FoosVision.Media.Windows.Decoding.Ffmpeg;
+
+internal record FfmpegDecoderOptions(
+    CodecType Codec,
+    int Width,
+    int Height,
+    FrameByteFormat OutputFormat,
+    WindowsVideoDecoderHardwareMode HardwareMode);

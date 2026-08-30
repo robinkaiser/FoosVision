@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:FoosVision.Viewer.App.Screen.Controls"
+             x:Class="FoosVision.Viewer.App.Screen.Controls.ViewerBottomPortraitControlsView"
+             x:DataType="controls:ViewerControlsViewModel">
+    <Grid ColumnDefinitions="Auto,*,Auto"
+          ColumnSpacing="16"
+          VerticalOptions="End">
+        <HorizontalStackLayout Grid.Column="0"
+                               Spacing="2"
+                               HorizontalOptions="Start"
+                               VerticalOptions="End">
+            <Grid IsVisible="{Binding IsStreamFpsVisible}"
+                  WidthRequest="20"
+                  HeightRequest="40"
+                  VerticalOptions="End">
+                <Label Text="{Binding FpsLabelText}"
+                       TextColor="#D7DEE8"
+                       FontSize="11"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Start"
+                       LineBreakMode="NoWrap"
+                       WidthRequest="40"
+                       HeightRequest="20"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+            <Grid IsVisible="{Binding IsStreamFpsVisible}"
+                  WidthRequest="20"
+                  HeightRequest="80"
+                  VerticalOptions="End">
+                <Label Text="{Binding StreamFpsText}"
+                       TextColor="#D7DEE8"
+                       FontSize="11"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Start"
+                       LineBreakMode="NoWrap"
+                       WidthRequest="80"
+                       HeightRequest="20"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+            <Grid IsVisible="{Binding IsTrackingFpsVisible}"
+                  WidthRequest="20"
+                  HeightRequest="80"
+                  VerticalOptions="End">
+                <Label Text="{Binding TrackingFpsText}"
+                       TextColor="#D7DEE8"
+                       FontSize="11"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Start"
+                       LineBreakMode="NoWrap"
+                       WidthRequest="80"
+                       HeightRequest="20"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout Grid.Column="2"
+                               Spacing="12"
+                               HorizontalOptions="End"
+                               VerticalOptions="Center">
+            <Grid WidthRequest="40"
+                  HeightRequest="112">
+                <Button Text="{Binding InstallButton.Text}"
+                        Command="{Binding ToggleInstallModeCommand}"
+                        IsEnabled="{Binding InstallButton.IsEnabled}"
+                        BackgroundColor="{Binding InstallButton.BackgroundColor}"
+                        TextColor="{Binding InstallButton.TextColor}"
+                        BorderColor="{Binding InstallButton.BorderColor}"
+                        BorderWidth="1"
+                        CornerRadius="10"
+                        Padding="10,0"
+                        WidthRequest="104"
+                        HeightRequest="40"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        FontSize="11"
+                        Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+            <Grid WidthRequest="40"
+                  HeightRequest="112">
+                <Button Text="{Binding GameButton.Text}"
+                        Command="{Binding ToggleGameModeCommand}"
+                        IsEnabled="{Binding GameButton.IsEnabled}"
+                        BackgroundColor="{Binding GameButton.BackgroundColor}"
+                        TextColor="{Binding GameButton.TextColor}"
+                        BorderColor="{Binding GameButton.BorderColor}"
+                        BorderWidth="1"
+                        CornerRadius="10"
+                        Padding="10,0"
+                        WidthRequest="104"
+                        HeightRequest="40"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        FontSize="11"
+                        Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+            <Grid WidthRequest="40"
+                  HeightRequest="112">
+                <Button Text="About"
+                        Command="{Binding OpenAboutCommand}"
+                        BackgroundColor="#761C222C"
+                        TextColor="#D7DEE8"
+                        BorderColor="#94637080"
+                        BorderWidth="1"
+                        CornerRadius="10"
+                        Padding="10,0"
+                        WidthRequest="104"
+                        HeightRequest="40"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        FontSize="11"
+                        Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+        </HorizontalStackLayout>
+    </Grid>
+</ContentView>

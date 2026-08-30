@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>33</SupportedOSPlatformVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Adapters\FoosVision.Adapters.Viewer\FoosVision.Adapters.Viewer.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\FoosVision.NetDiscovery\FoosVision.NetDiscovery.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\FoosVision.NetMq\FoosVision.NetMq.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Media\FoosVision.Media.Android\FoosVision.Media.Android.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\FoosVision.Vision\FoosVision.Vision.csproj" />
+  </ItemGroup>
+</Project>

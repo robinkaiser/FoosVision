@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:recorder="clr-namespace:FoosVision.Recorder.App"
+             x:Class="FoosVision.Recorder.App.MainPage"
+             x:DataType="recorder:MainViewModel"
+             BackgroundColor="{StaticResource RecorderBackground}">
+
+    <Grid SafeAreaEdges="None"
+          Padding="32"
+          RowDefinitions="Auto,*,Auto"
+          BackgroundColor="{StaticResource RecorderBackground}">
+        <VerticalStackLayout Grid.Row="0"
+                             Spacing="10"
+                             HorizontalOptions="Start"
+                             VerticalOptions="Start">
+            <Label Text="{Binding TitleText}"
+                   Style="{StaticResource RecorderTitleLabel}"
+                   VerticalOptions="Center" />
+
+            <HorizontalStackLayout Spacing="10">
+                <BoxView WidthRequest="12"
+                         HeightRequest="12"
+                         CornerRadius="6"
+                         Color="{Binding ConnectionStatusColor}"
+                         VerticalOptions="Center" />
+                <Label Text="{Binding ConnectionStatusText}"
+                       Style="{StaticResource RecorderStatusLabel}"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+            <Label Text="{Binding ModeText}"
+                   IsVisible="{Binding IsModeVisible}"
+                   Style="{StaticResource RecorderModeLabel}" />
+        </VerticalStackLayout>
+
+        <HorizontalStackLayout Grid.Row="2"
+                               Spacing="10"
+                               HorizontalOptions="End"
+                               VerticalOptions="End">
+            <Button Text="About"
+                    Style="{StaticResource RecorderSecondaryActionButton}"
+                    Command="{Binding About.OpenCommand}" />
+            <Button Text="Config"
+                    Style="{StaticResource RecorderSecondaryActionButton}"
+                    Command="{Binding ConfigEditor.OpenCommand}" />
+        </HorizontalStackLayout>
+
+        <Grid Grid.RowSpan="3"
+              BindingContext="{Binding ConfigEditor}"
+              x:DataType="{x:Null}"
+              IsVisible="{Binding IsVisible}"
+              RowDefinitions="Auto,*,Auto"
+              RowSpacing="14"
+              BackgroundColor="{StaticResource RecorderPanelBackground}">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+                <Label Text="Config.json"
+                       TextColor="{StaticResource RecorderModeText}"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="Close"
+                        Style="{StaticResource RecorderSecondaryActionButton}"
+                        Command="{Binding CloseCommand}" />
+            </Grid>
+
+            <Editor x:Name="ConfigEditor"
+                    Grid.Row="1"
+                    Text="{Binding ConfigText}"
+                    CursorPosition="{Binding CursorPosition}"
+                    AutoSize="Disabled"
+                    FontFamily="monospace"
+                    FontSize="13"
+                    TextColor="{StaticResource RecorderEditorText}"
+                    BackgroundColor="{StaticResource RecorderEditorBackground}"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill" />
+
+            <Grid Grid.Row="2"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+                <VerticalStackLayout Spacing="4"
+                                     VerticalOptions="Center">
+                    <Label Text="{Binding StatusText}"
+                           IsVisible="{Binding IsStatusVisible}"
+                           TextColor="{StaticResource RecorderModeText}"
+                           FontSize="16"
+                           FontAttributes="Bold" />
+                    <Label Text="{Binding StatusDetail}"
+                           IsVisible="{Binding IsStatusDetailVisible}"
+                           TextColor="{StaticResource RecorderStatusText}"
+                           FontSize="13"
+                           LineBreakMode="TailTruncation"
+                           MaxLines="4" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="1"
+                        Text="Save"
+                        Style="{StaticResource RecorderActionButton}"
+                        Command="{Binding SaveCommand}"
+                        VerticalOptions="Center" />
+            </Grid>
+        </Grid>
+
+        <Grid Grid.RowSpan="3"
+              BindingContext="{Binding About}"
+              x:DataType="{x:Null}"
+              IsVisible="{Binding IsVisible}"
+              RowDefinitions="Auto,*"
+              RowSpacing="14"
+              BackgroundColor="{StaticResource RecorderPanelBackground}">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+                <Label Text="About"
+                       TextColor="{StaticResource RecorderModeText}"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="Close"
+                        Style="{StaticResource RecorderSecondaryActionButton}"
+                        Command="{Binding CloseCommand}" />
+            </Grid>
+
+            <ScrollView x:Name="AboutScrollView"
+                        Grid.Row="1"
+                        BackgroundColor="{StaticResource RecorderEditorBackground}"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill">
+                <Label Text="{Binding AboutText}"
+                       FontFamily="monospace"
+                       FontSize="10"
+                       TextColor="{StaticResource RecorderEditorText}"
+                       Padding="8" />
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Adapters\FoosVision.Ports.Vision\FoosVision.Ports.Vision.csproj" />
+  </ItemGroup>
+</Project>

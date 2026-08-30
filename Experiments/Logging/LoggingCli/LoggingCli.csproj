@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.Seq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Product\Core\FoosVision.Common\FoosVision.Common.csproj" />
+    <ProjectReference Include="..\..\..\Product\Infrastructure\FoosVision.Logging\FoosVision.Logging.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Product\Composition\FoosVision.Recorder.Composition\FoosVision.Recorder.Composition.csproj" />
+    <ProjectReference Include="..\..\Product\Infrastructure\FoosVision.Settings\FoosVision.Settings.csproj" />
+    <ProjectReference Include="..\..\Product\Infrastructure\Media\FoosVision.Media.Windows\FoosVision.Media.Windows.csproj" />
+    <ProjectReference Include="..\..\Product\Infrastructure\FoosVision.Logging\FoosVision.Logging.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Product\Infrastructure\FoosVision.Vision\FoosVision.Vision.csproj" />
+  </ItemGroup>
+</Project>

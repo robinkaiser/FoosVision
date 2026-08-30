@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <style name="FoosVision.RecorderSplashTheme" parent="Maui.SplashTheme">
+    <item name="android:windowBackground">@drawable/foosvision_recorder_splash</item>
+    <item name="android:windowSplashScreenBackground">@color/foosvision_icon_green</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@drawable/foosvision_recorder_splash_image</item>
+  </style>
+</resources>
