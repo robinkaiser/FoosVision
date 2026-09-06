@@ -4,7 +4,7 @@ FoosVision is an Android-based foosball vision system. It uses a `Recorder` phon
 
 The current product focus is low-latency live viewing, 30 fps live ball tracking, shot detection, and 120 fps replay analysis with shot metrics.
 
-https://github.com/user-attachments/assets/820bcf40-8658-488e-ab66-e8de46f2ec4f
+https://github.com/user-attachments/assets/459e4668-d8d3-4830-ac09-bf484e90947c
 
 ## Apps
 
