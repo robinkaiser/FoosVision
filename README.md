@@ -2,11 +2,15 @@
 
 FoosVision is an Android-based foosball vision system. It uses a `Recorder` phone mounted above the table to capture and analyze the game, and a `Viewer` device to show the live stream, tracked-ball visualization, and slow-motion replay for shots.
 
-The current product focus is low-latency live viewing, 30 fps live ball tracking, shot detection, and 120 fps replay analysis with shot metrics. For setup examples and demos, see the [FoosVision YouTube channel](https://www.youtube.com/@FoosVision).
+The current product focus is low-latency live viewing, 30 fps live ball tracking, shot detection, and 120 fps replay analysis with shot metrics.
+
+https://github.com/user-attachments/assets/820bcf40-8658-488e-ab66-e8de46f2ec4f
 
 ## Apps
 
-FoosVision is distributed through Google Play and provides two launcher icons:
+FoosVision is currently distributed through a closed Google Play test and provides two launcher icons. It is not available as a public Play Store production release yet, because the app is still in an early testing phase and will not work reliably for every table, device, or setup.
+
+To request access to the closed test, send an email to `robin@foos.vision` with the Google account email address that should be added to the tester list.
 
 - `Recorder`: use this on the Android smartphone mounted above the table.
 - `Viewer`: use this on an Android smartphone or tablet connected to the recorder.
