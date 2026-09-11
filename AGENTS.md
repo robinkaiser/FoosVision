@@ -386,6 +386,12 @@ Before changing code:
 5. keep the diff focused on the requested behavior
 6. avoid introducing new build, analyzer, formatting, or newline churn
 
+Record user-facing product changes in `Documentation/FoosVision Changes.md` under the current
+release section. Keep that file written for end users; do not include internal-only engineering,
+tooling, test, or agent-rule changes unless they affect visible app behavior or supported usage.
+Only add changelog sections that are needed for the current release; do not add empty sections just
+to mirror another release. Use the `1.0.0` entry as the reference for available section names.
+
 Prefer:
 
 - one clean vertical slice at a time
@@ -417,6 +423,7 @@ A task is done when, where applicable:
 - the change is in the correct layer and ownership boundary
 - related tests are added or updated, or the reason for not adding tests is clear
 - relevant documentation is updated when behavior, configuration, diagnostics, protocol, or developer workflows change
+- user-facing product changes are recorded in the needed sections of `Documentation/FoosVision Changes.md`
 - protocol-impacting changes are called out explicitly
 - verification was run, or the reason it was not run is stated
 - incomplete work is marked clearly with an explicit TODO or called out to the user

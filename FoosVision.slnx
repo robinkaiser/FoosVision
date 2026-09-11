@@ -2,6 +2,7 @@
   <Folder Name="/Documentation/">
     <File Path="Documentation/Configuration.md" />
     <File Path="Documentation/Diagnostics.md" />
+    <File Path="Documentation/FoosVision Changes.md" />
     <File Path="Documentation/Release.md" />
   </Folder>
   <Folder Name="/Documentation/Development/">

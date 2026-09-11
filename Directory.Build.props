@@ -7,12 +7,12 @@
     <!-- Major number is also the protocol version.
          Breaking protocol changes require increasing it. -->
     <FoosVisionVersionMajor>1</FoosVisionVersionMajor>
-    <FoosVisionVersionMinor>0</FoosVisionVersionMinor>
+    <FoosVisionVersionMinor>1</FoosVisionVersionMinor>
     <FoosVisionVersionPatch>0</FoosVisionVersionPatch>
     <FoosVisionVersion>$(FoosVisionVersionMajor).$(FoosVisionVersionMinor).$(FoosVisionVersionPatch)</FoosVisionVersion>
     <!-- Store build code for MAUI ApplicationVersion.
          Must increase for each published Android app upload. -->
-    <FoosVisionAppVersionCode>1</FoosVisionAppVersionCode>
+    <FoosVisionAppVersionCode>2</FoosVisionAppVersionCode>
     <AssemblyVersion>$(FoosVisionVersion)</AssemblyVersion>
     <InformationalVersion>$(FoosVisionVersion)</InformationalVersion>
     <FileVersion>$(FoosVisionVersion)</FileVersion>
