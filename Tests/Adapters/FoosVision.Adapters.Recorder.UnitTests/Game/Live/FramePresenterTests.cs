@@ -152,6 +152,11 @@ public class FramePresenterTests
         {
             return Task.CompletedTask;
         }
+
+        public Task PublishProcessFrameRate(ProcessFrameRateMessage frameRate, CancellationToken ct = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class RecordingLiveAnalysisPublisher : IRecorderLiveAnalysisPublisher

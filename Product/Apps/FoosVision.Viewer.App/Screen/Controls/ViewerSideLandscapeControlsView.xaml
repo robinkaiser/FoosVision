@@ -29,8 +29,8 @@
                    LineBreakMode="NoWrap"
                    HeightRequest="24"
                    Rotation="{Binding ControlsRotationDegrees}" />
-            <Label Text="{Binding TrackingFpsText}"
-                   IsVisible="{Binding IsTrackingFpsVisible}"
+            <Label Text="{Binding ProcessFpsText}"
+                   IsVisible="{Binding IsProcessFpsVisible}"
                    TextColor="#D7DEE8"
                    FontSize="11"
                    HorizontalTextAlignment="End"

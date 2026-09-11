@@ -35,6 +35,7 @@ internal class GameModule : IDisposable
     private readonly ReplayCoordinator _ReplayCoordinator;
     private readonly VisionContextUpdatePublisher _VisionContextUpdatePublisher;
     private readonly IVideoDumpOrchestrator _VideoDumpOrchestrator;
+    private readonly FrameProcessingRatePublisher _FrameProcessingRatePublisher;
 
     public GameModule(
         IFrameSource frameSource,
@@ -111,6 +112,7 @@ internal class GameModule : IDisposable
             frameFeed,
             frameProcessor,
             runtimeMetricsOptions);
+        _FrameProcessingRatePublisher = new FrameProcessingRatePublisher(FrameLoop, liveDataPublisher);
 
         CommandHandler = new GameCommandHandler(
             StartGame,
@@ -124,6 +126,7 @@ internal class GameModule : IDisposable
         GC.SuppressFinalize(this);
         _ReplayCoordinator.Dispose();
         _VisionContextUpdatePublisher.Dispose();
+        _FrameProcessingRatePublisher.Dispose();
     }
 
     public IGameSessionStore SessionStore { get; }

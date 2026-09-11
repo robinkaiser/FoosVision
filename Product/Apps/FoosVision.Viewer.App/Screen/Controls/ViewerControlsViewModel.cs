@@ -16,9 +16,9 @@ public class ViewerControlsViewModel :
     private readonly ViewerSessionController _SessionController;
     private readonly ViewerPageViewModel _ViewModel;
     private float _ControlsRotationDegrees;
-    private string _TrackingFpsText = "Tracking ---";
+    private string _ProcessFpsText = "Process ---";
     private string _StreamFpsText = "Stream ---";
-    private bool _IsTrackingFpsVisible;
+    private bool _IsProcessFpsVisible;
     private bool _IsStreamFpsVisible;
     private bool _IsReplayActive;
 
@@ -46,13 +46,13 @@ public class ViewerControlsViewModel :
 
     public ViewerControlButtonState GameButton { get; private set; }
 
-    public string TrackingFpsText => _TrackingFpsText;
+    public string ProcessFpsText => _ProcessFpsText;
 
     public string StreamFpsText => _StreamFpsText;
 
     public string FpsLabelText => "FPS";
 
-    public bool IsTrackingFpsVisible => _IsTrackingFpsVisible;
+    public bool IsProcessFpsVisible => _IsProcessFpsVisible;
 
     public bool IsStreamFpsVisible => _IsStreamFpsVisible;
 
@@ -72,17 +72,17 @@ public class ViewerControlsViewModel :
         GameButton = CreateButtonState(SessionMode.Game);
 
         _IsReplayActive = uiState.IsReplayActive;
-        _IsTrackingFpsVisible = uiState.IsRunning && uiState.Mode == SessionMode.Game;
+        _IsProcessFpsVisible = uiState.IsRunning;
         _IsStreamFpsVisible = uiState.IsRunning;
 
-        _TrackingFpsText = FormatTrackingFpsText(uiState);
+        _ProcessFpsText = FormatProcessFpsText(uiState);
         UpdateStreamFpsText(_ViewModel.StreamFps);
 
         OnPropertyChanged(nameof(SetupButton));
         OnPropertyChanged(nameof(GameButton));
-        OnPropertyChanged(nameof(TrackingFpsText));
+        OnPropertyChanged(nameof(ProcessFpsText));
         OnPropertyChanged(nameof(StreamFpsText));
-        OnPropertyChanged(nameof(IsTrackingFpsVisible));
+        OnPropertyChanged(nameof(IsProcessFpsVisible));
         OnPropertyChanged(nameof(IsStreamFpsVisible));
     }
 
@@ -99,11 +99,11 @@ public class ViewerControlsViewModel :
             : "Stream ---";
     }
 
-    private static string FormatTrackingFpsText(SessionUiState uiState)
+    private static string FormatProcessFpsText(SessionUiState uiState)
     {
-        return uiState.TrackingFps.HasValue ?
-            $"Tracking {uiState.TrackingFps.Value:0.0}" :
-            "Tracking ---";
+        return uiState.ProcessFps.HasValue ?
+            $"Process {uiState.ProcessFps.Value:0.0}" :
+            "Process ---";
     }
 
     private void OnControlsRotationChanged(float rotationDegrees)

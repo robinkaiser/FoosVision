@@ -16,8 +16,6 @@ internal enum ActiveSessionPendingIntent
 
 internal static class SessionUiStateCalculator
 {
-    public const double ReplayTrackingFps = 120.0;
-
     public static bool CanToggle(
         RecorderRuntimeMode runtimeMode,
         ActiveSessionPendingIntent pendingIntent,
@@ -82,34 +80,25 @@ internal static class SessionUiStateCalculator
             IsConnected: true,
             IsPendingCommand: pendingIntent != ActiveSessionPendingIntent.None,
             IsFaulted: runtimeMode == RecorderRuntimeMode.Faulted,
-            TrackingFps: isReplayActive ? ReplayTrackingFps : currentState.TrackingFps,
+            ProcessFps: runtimeMode is RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.GameRunning
+                ? currentState.ProcessFps
+                : null,
             IsReplayActive: isReplayActive,
             IsGameAvailable: isTableAvailable);
     }
 
-    public static SessionUiState UpdateTrackingFps(
+    public static SessionUiState UpdateProcessFps(
         SessionUiState currentState,
-        double? trackingFps,
+        double? processFps,
         bool isReplayActive)
     {
-        double? roundedTrackingFps;
-
-        if (isReplayActive)
-        {
-            roundedTrackingFps = ReplayTrackingFps;
-        }
-        else if (trackingFps.HasValue)
-        {
-            roundedTrackingFps = Math.Round(trackingFps.Value, 1, MidpointRounding.AwayFromZero);
-        }
-        else
-        {
-            roundedTrackingFps = null;
-        }
+        double? roundedProcessFps = processFps.HasValue
+            ? Math.Round(processFps.Value, 1, MidpointRounding.AwayFromZero)
+            : null;
 
         return currentState with
         {
-            TrackingFps = roundedTrackingFps,
+            ProcessFps = roundedProcessFps,
             IsReplayActive = isReplayActive,
         };
     }

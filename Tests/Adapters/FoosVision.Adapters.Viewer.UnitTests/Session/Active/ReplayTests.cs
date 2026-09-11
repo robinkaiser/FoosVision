@@ -7,6 +7,7 @@ using FoosVision.Adapters.Viewer.UnitTests.Session.Active.Fakes;
 using FoosVision.Common.Types;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Protocol.Messages.Events;
+using FoosVision.Protocol.Messages.Live;
 using FoosVision.Protocol.Messages.LiveAnalysis;
 using static FoosVision.Adapters.Viewer.UnitTests.Session.Active.Fakes.TestMessages;
 
@@ -59,18 +60,19 @@ public class ReplayTests
     }
 
     [Fact]
-    public async Task Replay_started_publishes_replay_fps_state()
+    public async Task Replay_started_preserves_process_fps_state()
     {
         SessionContext context = new();
         using ActiveSession sut = context.CreateSut();
 
         sut.OnRecorderRuntimeStateChanged(CreateRuntimeState(RecorderRuntimeMode.GameRunning));
+        context.PublishProcessFrameRate(new ProcessFrameRateMessage { FramesPerSecond = 28.94 });
         context.PublishReplayStarted(CreateReplayStartedMessage());
 
         await context.WaitUntil(() => context.UiSink.States[^1].IsReplayActive);
 
         Assert.True(context.UiSink.States[^1].IsRunning);
-        Assert.Equal(120.0, context.UiSink.States[^1].TrackingFps);
+        Assert.Equal(28.9, context.UiSink.States[^1].ProcessFps);
     }
 
     [Fact]

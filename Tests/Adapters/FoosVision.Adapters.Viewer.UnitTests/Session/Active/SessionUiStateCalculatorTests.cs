@@ -50,27 +50,41 @@ public class SessionUiStateCalculatorTests
     }
 
     [Fact]
-    public void Calculate_publishes_replay_tracking_fps_when_replay_is_active()
+    public void Calculate_preserves_process_fps_when_replay_is_active()
     {
         SessionUiState state = SessionUiStateCalculator.Calculate(
-            new SessionUiState(SessionMode.Game, true, true, false, false, TrackingFps: 42.3),
+            new SessionUiState(SessionMode.Game, true, true, false, false, ProcessFps: 42.3),
             RecorderRuntimeMode.GameRunning,
             ActiveSessionPendingIntent.None,
             isTableAvailable: true,
             isReplayActive: true);
 
         Assert.True(state.IsReplayActive);
-        Assert.Equal(120.0, state.TrackingFps);
+        Assert.Equal(42.3, state.ProcessFps);
     }
 
     [Fact]
-    public void UpdateTrackingFps_rounds_live_fps()
+    public void Calculate_clears_process_fps_when_recorder_is_not_running()
     {
-        SessionUiState state = SessionUiStateCalculator.UpdateTrackingFps(
+        SessionUiState state = SessionUiStateCalculator.Calculate(
+            new SessionUiState(SessionMode.Game, true, true, false, false, ProcessFps: 42.3),
+            RecorderRuntimeMode.Idle,
+            ActiveSessionPendingIntent.None,
+            isTableAvailable: true,
+            isReplayActive: false);
+
+        Assert.False(state.IsRunning);
+        Assert.Null(state.ProcessFps);
+    }
+
+    [Fact]
+    public void UpdateProcessFps_rounds_live_fps()
+    {
+        SessionUiState state = SessionUiStateCalculator.UpdateProcessFps(
             new SessionUiState(SessionMode.Setup, false, true, false, false),
             29.95,
             isReplayActive: false);
 
-        Assert.Equal(30.0, state.TrackingFps);
+        Assert.Equal(30.0, state.ProcessFps);
     }
 }

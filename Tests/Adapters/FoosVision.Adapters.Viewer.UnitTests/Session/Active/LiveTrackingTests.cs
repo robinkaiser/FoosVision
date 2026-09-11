@@ -196,7 +196,6 @@ public class LiveTrackingTests
         return new LiveTrackingPresenter(
             overlaySink,
             new TrackingOverlayProjector(),
-            () => DateTimeOffset.UtcNow,
             isReplayPending ?? (() => false),
             hasActiveReplay ?? (() => false),
             observeLiveTracking ?? (_ => Task.CompletedTask));

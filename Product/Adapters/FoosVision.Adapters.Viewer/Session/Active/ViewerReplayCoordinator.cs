@@ -50,7 +50,7 @@ internal class ViewerReplayCoordinator :
     private readonly Func<bool> _HasVisionContext;
     private readonly Action _ResetTrackingOverlay;
     private readonly Func<Task> _StartLivePlayback;
-    private readonly Action<double?> _UpdateTrackingFps;
+    private readonly Action _RefreshUiState;
     private readonly StartReplayAnalysisInteractor _StartReplayAnalysis;
     private readonly ProcessReplayFrameInteractor _ProcessReplayFrame;
     private readonly CompleteReplayAnalysisInteractor _CompleteReplayAnalysis;
@@ -73,7 +73,7 @@ internal class ViewerReplayCoordinator :
         Func<bool> hasVisionContext,
         Action resetTrackingOverlay,
         Func<Task> startLivePlayback,
-        Action<double?> updateTrackingFps)
+        Action refreshUiState)
     {
         _OverlaySink = overlaySink;
         _PlaybackCoordinator = playbackCoordinator;
@@ -84,7 +84,7 @@ internal class ViewerReplayCoordinator :
         _HasVisionContext = hasVisionContext;
         _ResetTrackingOverlay = resetTrackingOverlay;
         _StartLivePlayback = startLivePlayback;
-        _UpdateTrackingFps = updateTrackingFps;
+        _RefreshUiState = refreshUiState;
         _StartReplayAnalysis = new StartReplayAnalysisInteractor(_ReplaySessionStore);
         _ProcessReplayFrame = new ProcessReplayFrameInteractor(_ReplaySessionStore);
         _CompleteReplayAnalysis = new CompleteReplayAnalysisInteractor(_ReplaySessionStore);
@@ -186,8 +186,8 @@ internal class ViewerReplayCoordinator :
 
     public Task ReportStopped(ReplayStoppedResponse response)
     {
-        _UpdateTrackingFps(null);
         _Log.Information("Replay stopped. TriggerFrameId={0} TriggerTimestampNs={1}", response.ReplayId.TriggerFrameId, response.ReplayId.TriggerTimestampNs);
+        _RefreshUiState();
         return Task.CompletedTask;
     }
 
@@ -478,13 +478,13 @@ internal class ViewerReplayCoordinator :
     private void MarkReplayPending()
     {
         Interlocked.Exchange(ref _ReplayPending, 1);
-        _UpdateTrackingFps(null);
+        _RefreshUiState();
     }
 
     private void ClearReplayPending()
     {
         Interlocked.Exchange(ref _ReplayPending, 0);
-        _UpdateTrackingFps(null);
+        _RefreshUiState();
     }
 
     private void ClearReplayPendingIfCurrent(long replayGeneration)

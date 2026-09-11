@@ -29,6 +29,7 @@ internal class SetupModule : IDisposable
     private readonly IRecorderEventPublisher _EventPublisher;
     private readonly RecorderRuntimeStateController _RuntimeState;
     private readonly IVideoDumpOrchestrator _VideoDumpOrchestrator;
+    private readonly FrameProcessingRatePublisher _FrameProcessingRatePublisher;
 
     public SetupModule(
         IFrameSource frameSource,
@@ -65,6 +66,7 @@ internal class SetupModule : IDisposable
         var frameProcessor = new FrameProcessor(ProcessFrame, framePresenter, SessionStore);
 
         FrameLoop = new FrameProcessingLoop(frameFeed, frameProcessor, runtimeMetricsOptions);
+        _FrameProcessingRatePublisher = new FrameProcessingRatePublisher(FrameLoop, liveDataPublisher);
 
         CommandHandler = new SetupCommandHandler(
             StartSetup,
@@ -76,6 +78,7 @@ internal class SetupModule : IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+        _FrameProcessingRatePublisher.Dispose();
     }
 
     public ISetupSessionStore SessionStore { get; }

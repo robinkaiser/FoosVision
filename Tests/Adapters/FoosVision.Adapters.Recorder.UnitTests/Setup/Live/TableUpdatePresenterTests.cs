@@ -51,5 +51,10 @@ public class TableUpdatePresenterTests
             TableUpdate = update;
             return Task.CompletedTask;
         }
+
+        public Task PublishProcessFrameRate(ProcessFrameRateMessage frameRate, CancellationToken ct = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

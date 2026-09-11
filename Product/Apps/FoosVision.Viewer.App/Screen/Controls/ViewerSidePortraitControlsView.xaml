@@ -40,10 +40,10 @@
                        VerticalOptions="Center"
                        Rotation="{Binding ControlsRotationDegrees}" />
             </Grid>
-            <Grid IsVisible="{Binding IsTrackingFpsVisible}"
+            <Grid IsVisible="{Binding IsProcessFpsVisible}"
                   WidthRequest="20"
                   HeightRequest="80">
-                <Label Text="{Binding TrackingFpsText}"
+                <Label Text="{Binding ProcessFpsText}"
                        TextColor="#D7DEE8"
                        FontSize="11"
                        HorizontalTextAlignment="Start"

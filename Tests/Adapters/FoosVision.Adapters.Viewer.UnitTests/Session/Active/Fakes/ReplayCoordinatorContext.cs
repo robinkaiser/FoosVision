@@ -33,7 +33,7 @@ internal sealed class ReplayCoordinatorContext : IDisposable
             () => _HasVisionContext,
             ResetTrackingOverlay,
             StartLivePlaybackAsync,
-            TrackingFpsUpdates.Add);
+            () => { });
     }
 
     public RecorderConnection Connection { get; } = new(
@@ -56,8 +56,6 @@ internal sealed class ReplayCoordinatorContext : IDisposable
     public RecordingReplayFrameDecoder ReplayFrameDecoder { get; } = new();
 
     public List<string> Events { get; } = [];
-
-    public List<double?> TrackingFpsUpdates { get; } = [];
 
     public void Dispose()
     {

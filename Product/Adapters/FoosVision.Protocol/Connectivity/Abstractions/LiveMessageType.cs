@@ -11,4 +11,5 @@ public enum LiveMessageType : byte
 {
     TrackingFrame = 1,
     TableUpdate = 2,
+    ProcessFrameRate = 3,
 }

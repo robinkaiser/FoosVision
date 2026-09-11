@@ -23,12 +23,10 @@ public class ActiveSession :
     IDisposable
 {
     private static readonly Source _Log = new("Viewer.Session.ActiveSession");
-    private static readonly TimeSpan _TrackingFpsPublishInterval = TimeSpan.FromMilliseconds(500);
 
     private readonly IConnectedViewerSession _Session;
     private readonly IUiStateSink _UiStateSink;
     private readonly IOverlaySink _OverlaySink;
-    private readonly Timer _TrackingFpsTimer;
     private readonly ViewerPlaybackCoordinator _PlaybackCoordinator;
     private readonly IReplaySessionStore _ReplaySessionStore;
     private readonly IEncodedVisionContextConsumer _VisionContextConsumer;
@@ -39,6 +37,7 @@ public class ActiveSession :
     private readonly IntervalMetric? _TrackingFrameHandleInterval;
     private readonly IDisposable _TableUpdateSubscription;
     private readonly IDisposable _TrackingFrameSubscription;
+    private readonly IDisposable _ProcessFrameRateSubscription;
     private readonly IDisposable _VisionContextSubscription;
     private readonly IDisposable _BallDetectionMaskSubscription;
     private readonly IDisposable _ReplayStartedSubscription;
@@ -67,7 +66,6 @@ public class ActiveSession :
         IBallFinder ballFinder,
         IEncodedBallDetectionMaskDecoder ballDetectionMaskDecoder,
         IEncodedReplayFrameDecoder replayFrameDecoder,
-        Func<DateTimeOffset>? utcNow = null,
         RuntimeMetricsOptions? runtimeMetricsOptions = null)
     {
         _Session = session;
@@ -86,13 +84,11 @@ public class ActiveSession :
             () => _HasVisionContext,
             ResetTrackingOverlay,
             StartLivePlaybackAsync,
-            UpdateTrackingFps);
-        Func<DateTimeOffset> utcNowProvider = utcNow ?? (() => DateTimeOffset.UtcNow);
+            RefreshUiState);
         TrackingOverlayProjector trackingProjector = new();
         _LiveTrackingPresenter = new(
             _OverlaySink,
             trackingProjector,
-            utcNowProvider,
             () => _ReplayCoordinator.IsReplayPending,
             () => _ReplaySessionStore.HasActive,
             _ReplayCoordinator.ObserveLiveTrackingAsync);
@@ -105,8 +101,6 @@ public class ActiveSession :
             _OverlaySink,
             ballDetectionMaskDecoder,
             IsReplayActiveForUi);
-        _TrackingFpsTimer = new Timer(_ => RefreshTrackingFps(), null, _TrackingFpsPublishInterval, _TrackingFpsPublishInterval);
-
         RuntimeMetricsOptions options = runtimeMetricsOptions ?? RuntimeMetricsOptions.CreateDefault();
 
         if (options.Enabled)
@@ -120,6 +114,7 @@ public class ActiveSession :
         _Session.AttachRuntimeStateSink(this);
         _TableUpdateSubscription = _Session.LiveDataSubscriber.Subscribe<TableUpdateMessage>(_TableUpdatePresenter.Handle);
         _TrackingFrameSubscription = _Session.LiveDataSubscriber.Subscribe<TrackingFrameMessage>(OnTrackingFrameReceived);
+        _ProcessFrameRateSubscription = _Session.LiveDataSubscriber.Subscribe<ProcessFrameRateMessage>(OnProcessFrameRateReceived);
         _VisionContextSubscription = _Session.LiveAnalysisSubscriber.Subscribe<VisionContextMessage>(OnVisionContextReceived);
         _BallDetectionMaskSubscription = _Session.LiveAnalysisSubscriber.Subscribe<BallDetectionMaskMessage>(_BallDetectionMaskOverlayPresenter.Handle);
         _ReplayStartedSubscription = _Session.LiveAnalysisSubscriber.Subscribe<ReplayStartedMessage>(_ReplayCoordinator.HandleReplayStarted);
@@ -257,13 +252,12 @@ public class ActiveSession :
         }
 
         _TrackingFrameSubscription.Dispose();
+        _ProcessFrameRateSubscription.Dispose();
         _TableUpdateSubscription.Dispose();
         _VisionContextSubscription.Dispose();
         _BallDetectionMaskSubscription.Dispose();
         _ReplayStartedSubscription.Dispose();
         _ReplaySubscription.Dispose();
-        _TrackingFpsTimer.Dispose();
-
         _ReplayCoordinator.Dispose();
         _PlaybackCoordinator.TryStopIgnoringErrors();
         _PlaybackCoordinator.Dispose();
@@ -293,6 +287,11 @@ public class ActiveSession :
     {
         _TrackingFrameHandleInterval?.Record();
         _LiveTrackingPresenter.Handle(message);
+    }
+
+    private void OnProcessFrameRateReceived(ProcessFrameRateMessage message)
+    {
+        UpdateProcessFps(message.FramesPerSecond);
     }
 
     private bool HandleCommandResponse(CommandResponse response, ActiveSessionPendingIntent intent)
@@ -333,30 +332,19 @@ public class ActiveSession :
         _LiveTrackingPresenter.Reset();
         _ReplayCoordinator.ResetAnalysis();
 
-        UpdateTrackingFps(IsReplayActiveForUi() ? SessionUiStateCalculator.ReplayTrackingFps : null);
         _OverlaySink.ClearTrackingState();
         _OverlaySink.ClearBallDetectionMaskState();
     }
 
-    private void RefreshTrackingFps()
-    {
-        if (Interlocked.CompareExchange(ref _Disposed, 0, 0) != 0)
-        {
-            return;
-        }
-
-        UpdateTrackingFps(_LiveTrackingPresenter.GetFramesPerSecond());
-    }
-
-    private void UpdateTrackingFps(double? trackingFps)
+    private void UpdateProcessFps(double? processFps)
     {
         bool isReplayActive = IsReplayActiveForUi();
-        SessionUiState nextState = SessionUiStateCalculator.UpdateTrackingFps(
+        SessionUiState nextState = SessionUiStateCalculator.UpdateProcessFps(
             _UiState,
-            trackingFps,
+            processFps,
             isReplayActive);
 
-        if (_UiState.TrackingFps == nextState.TrackingFps &&
+        if (_UiState.ProcessFps == nextState.ProcessFps &&
             _UiState.IsReplayActive == nextState.IsReplayActive)
         {
             return;

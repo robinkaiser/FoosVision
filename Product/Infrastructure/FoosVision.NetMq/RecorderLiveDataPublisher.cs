@@ -47,6 +47,9 @@ public class RecorderLiveDataPublisher : IRecorderLiveDataPublisher, IDisposable
     public Task PublishTableUpdate(TableUpdateMessage update, CancellationToken ct = default)
         => Publish(update, ct);
 
+    public Task PublishProcessFrameRate(ProcessFrameRateMessage frameRate, CancellationToken ct = default)
+        => Publish(frameRate, ct);
+
     public void Dispose()
     {
         GC.SuppressFinalize(this);

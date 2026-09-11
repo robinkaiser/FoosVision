@@ -15,4 +15,6 @@ public interface IRecorderLiveDataPublisher
     Task PublishTrackingFrame(TrackingFrameMessage frame, CancellationToken ct = default);
 
     Task PublishTableUpdate(TableUpdateMessage update, CancellationToken ct = default);
+
+    Task PublishProcessFrameRate(ProcessFrameRateMessage frameRate, CancellationToken ct = default);
 }

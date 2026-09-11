@@ -46,6 +46,7 @@ public static class ProtocolTypeRegistry
 
         if (t == typeof(TrackingFrameMessage)) return LiveMessageType.TrackingFrame;
         if (t == typeof(TableUpdateMessage)) return LiveMessageType.TableUpdate;
+        if (t == typeof(ProcessFrameRateMessage)) return LiveMessageType.ProcessFrameRate;
 
         throw new NotSupportedException($"Unsupported live message type: {t.FullName}");
     }
@@ -54,6 +55,7 @@ public static class ProtocolTypeRegistry
     {
         LiveMessageType.TrackingFrame => typeof(TrackingFrameMessage),
         LiveMessageType.TableUpdate => typeof(TableUpdateMessage),
+        LiveMessageType.ProcessFrameRate => typeof(ProcessFrameRateMessage),
 
         _ => throw new NotSupportedException($"Unsupported live message type: {type}"),
     };

@@ -104,6 +104,10 @@ public class SessionManagerTests
                 .Subscribe<TrackingFrameMessage>(Arg.Any<Action<TrackingFrameMessage>>())
                 .Returns(Substitute.For<IDisposable>());
 
+            _LiveDataSubscriber
+                .Subscribe<ProcessFrameRateMessage>(Arg.Any<Action<ProcessFrameRateMessage>>())
+                .Returns(Substitute.For<IDisposable>());
+
             _LiveAnalysisSubscriber
                 .Subscribe<VisionContextMessage>(Arg.Any<Action<VisionContextMessage>>())
                 .Returns(Substitute.For<IDisposable>());

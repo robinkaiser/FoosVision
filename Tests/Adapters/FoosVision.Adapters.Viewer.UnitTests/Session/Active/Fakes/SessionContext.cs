@@ -20,6 +20,7 @@ internal sealed class SessionContext
     private readonly IRecorderLiveAnalysisSubscriber _LiveAnalysisSubscriber = Substitute.For<IRecorderLiveAnalysisSubscriber>();
     private Action<TableUpdateMessage>? _TableUpdateHandler;
     private Action<TrackingFrameMessage>? _TrackingFrameHandler;
+    private Action<ProcessFrameRateMessage>? _ProcessFrameRateHandler;
     private Action<VisionContextMessage>? _VisionContextHandler;
     private Action<BallDetectionMaskMessage>? _BallDetectionMaskHandler;
     private Action<ReplayStartedMessage>? _ReplayStartedHandler;
@@ -54,6 +55,14 @@ internal sealed class SessionContext
             .Returns(callInfo =>
             {
                 _TrackingFrameHandler = callInfo.Arg<Action<TrackingFrameMessage>>();
+                return Substitute.For<IDisposable>();
+            });
+
+        _LiveDataSubscriber
+            .Subscribe<ProcessFrameRateMessage>(Arg.Any<Action<ProcessFrameRateMessage>>())
+            .Returns(callInfo =>
+            {
+                _ProcessFrameRateHandler = callInfo.Arg<Action<ProcessFrameRateMessage>>();
                 return Substitute.For<IDisposable>();
             });
 
@@ -146,6 +155,12 @@ internal sealed class SessionContext
     {
         Assert.NotNull(_TableUpdateHandler);
         _TableUpdateHandler(message);
+    }
+
+    public void PublishProcessFrameRate(ProcessFrameRateMessage message)
+    {
+        Assert.NotNull(_ProcessFrameRateHandler);
+        _ProcessFrameRateHandler(message);
     }
 
     public void PublishReplay(ReplayMessage message)

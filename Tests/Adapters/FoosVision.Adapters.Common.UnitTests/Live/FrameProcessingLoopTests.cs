@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using System.Diagnostics;
 using FoosVision.Adapters.Common.Live;
 using FoosVision.Common.Types;
 using FoosVision.Ports.Media;
@@ -156,5 +157,72 @@ public class FrameProcessingLoopTests
         _FrameHandle.Received(1).Release();
         frameHandle2.Received(1).Release();
         frameHandle3.Received(1).Release();
+    }
+
+    [Fact]
+    public void Publishes_process_fps_from_processed_frames_and_clears_on_stop()
+    {
+        IFrameFeed frameFeed = Substitute.For<IFrameFeed>();
+        IFrameProcessor frameProcessor = Substitute.For<IFrameProcessor>();
+        frameProcessor.ShouldProcess.Returns(true);
+
+        long now = Stopwatch.GetTimestamp();
+        long startedAt = now;
+        long frameIntervalTicks = Stopwatch.Frequency / 50;
+        long publishTimestampTicks = startedAt + Stopwatch.Frequency * 120 / 1000;
+        var allProcessed = new ManualResetEventSlim();
+        int processedCount = 0;
+
+        frameProcessor
+            .Process(Arg.Any<IFrameHandle>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                now = startedAt + frameIntervalTicks * Interlocked.Increment(ref processedCount);
+
+                if (processedCount == 5)
+                {
+                    now = publishTimestampTicks;
+                    allProcessed.Set();
+                }
+
+                return Task.CompletedTask;
+            });
+
+        FrameProcessingLoop testee = new(
+            frameFeed,
+            frameProcessor,
+            getTimestamp: () => now,
+            processFpsWindow: TimeSpan.FromMilliseconds(100),
+            processFpsPublishInterval: TimeSpan.FromMilliseconds(10));
+
+        var fpsPublished = new ManualResetEventSlim();
+        List<double?> published = [];
+        testee.ProcessFramesPerSecondChanged += value =>
+        {
+            published.Add(value);
+
+            if (value.HasValue)
+            {
+                fpsPublished.Set();
+            }
+        };
+
+        testee.Start();
+
+        for (ulong i = 0; i < 5; i++)
+        {
+            IFrameHandle frameHandle = Substitute.For<IFrameHandle>();
+            frameHandle.Meta.Returns(new Frame(i + 1, (long)i + 1));
+            frameFeed.FrameReady += Raise.Event<Action<IFrameHandle>>(frameHandle);
+        }
+
+        Assert.True(allProcessed.Wait(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken));
+        Assert.True(fpsPublished.Wait(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken));
+
+        Assert.Equal(50.0, published.Last(value => value.HasValue));
+
+        testee.Stop();
+
+        Assert.Null(published[^1]);
     }
 }

@@ -15,6 +15,6 @@ public record struct SessionUiState(
     bool IsConnected,
     bool IsPendingCommand,
     bool IsFaulted,
-    double? TrackingFps = null,
+    double? ProcessFps = null,
     bool IsReplayActive = false,
     bool IsGameAvailable = false);
