@@ -6,6 +6,7 @@
 ## Changed
 - Renamed the Android launcher icons to `Foos Rec` and `Foos View`.
 - Renamed the pre-game flow to setup.
+- Documented local network and port requirements for recorder-viewer communication.
 
 ---
 

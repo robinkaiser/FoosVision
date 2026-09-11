@@ -22,6 +22,11 @@ Install FoosVision on both devices. Start `Foos Rec` on the recorder phone and `
 - Recorder and viewer devices must run Android 13 or newer.
 - Recorder device must support FullHD video at `120 fps`.
 - Use a stable `5 GHz` Wi-Fi network for reliable `120 fps` playback. Treat `2.4 GHz` Wi-Fi as best-effort only.
+- Recorder and viewer must be on the same local IPv4 network and must be allowed to communicate directly with each other.
+- Corporate, guest, school, or hotel Wi-Fi networks may block device-to-device traffic, UDP broadcast, or custom ports. Use a private router or hotspot, or ask the network administrator to allow FoosVision traffic.
+- Required default ports between recorder and viewer:
+  - TCP `5555-5559`: handshake and connection, commands, events, live data, live analysis
+  - UDP `5560-5561`: recorder discovery, RTP/H.264 live video
 - Disable battery optimization and power-saving restrictions for FoosVision when possible. Non-stock Android devices (e.g. Samsung, Xiaomi) may apply aggressive power management that can affect streaming or tracking stability.
 - Mount the recorder centered or slightly offset above the table, so the full playing field is visible and fills most of the camera image.
 - Keep the recorder fixed and vibration-free; a boom stand is a suitable mounting option. Attaching the recorder directly to the table is not recommended because table jarring can make it shake.
