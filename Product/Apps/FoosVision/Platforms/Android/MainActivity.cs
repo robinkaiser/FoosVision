@@ -99,7 +99,7 @@ public abstract class RoleLauncherActivity : Activity
 
 [Activity(
     Name = "org.foosvision.app.ViewerLauncherActivity",
-    Label = "Viewer",
+    Label = "Foos View",
     Icon = "@mipmap/appicon",
     RoundIcon = "@mipmap/appicon_round",
     Theme = "@style/Maui.SplashTheme",
@@ -115,7 +115,7 @@ public class ViewerLauncherActivity : RoleLauncherActivity
 
 [Activity(
     Name = "org.foosvision.app.RecorderLauncherActivity",
-    Label = "Recorder",
+    Label = "Foos Rec",
     Icon = "@mipmap/appicon_recorder",
     RoundIcon = "@mipmap/appicon_recorder_round",
     Theme = "@style/FoosVision.RecorderSplashTheme",

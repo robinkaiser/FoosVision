@@ -1,6 +1,6 @@
 # FoosVision
 
-FoosVision is an Android-based foosball vision system. It uses a `Recorder` phone mounted above the table to capture and analyze the game, and a `Viewer` device to show the live stream, tracked-ball visualization, and slow-motion replay for shots.
+FoosVision is an Android-based foosball vision system. It uses a recorder phone mounted above the table to capture and analyze the game, and a viewer device to show the live stream, tracked-ball visualization, and slow-motion replay for shots.
 
 The current product focus is low-latency live viewing, 30 fps live ball tracking, shot detection, and 120 fps replay analysis with shot metrics.
 
@@ -12,10 +12,10 @@ FoosVision is currently distributed through a closed Google Play test and provid
 
 To request access to the closed test, send an email to `robin@foos.vision` with the Google account email address that should be added to the tester list.
 
-- `Recorder`: use this on the Android smartphone mounted above the table.
-- `Viewer`: use this on an Android smartphone or tablet connected to the recorder.
+- `Foos Rec`: use this on the Android smartphone mounted above the table.
+- `Foos View`: use this on an Android smartphone or tablet connected to the recorder.
 
-Install FoosVision on both devices. Start `Recorder` on the recorder phone and `Viewer` on the viewing device.
+Install FoosVision on both devices. Start `Foos Rec` on the recorder phone and `Foos View` on the viewing device.
 
 ## Requirements
 
@@ -30,8 +30,8 @@ Install FoosVision on both devices. Start `Recorder` on the recorder phone and `
 
 ## Basic Usage
 
-1. Start `Recorder` on the phone mounted above the table.
-2. Start `Viewer` on the viewing device; it searches for recorders on the local network.
+1. Start `Foos Rec` on the phone mounted above the table.
+2. Start `Foos View` on the viewing device; it searches for recorders on the local network.
 3. Start setup and mount the recorder above the table. Setup can only be started after the viewer has connected to the recorder.
 4. Wait until the table is detected. The playing field and optionally a horizontally mounted light should be outlined, and the rods should be marked in the player colors.
 5. Stop setup and start a game session. A game can only be started after a successful setup.

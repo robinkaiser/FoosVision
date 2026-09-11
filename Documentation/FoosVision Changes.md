@@ -4,6 +4,7 @@
 - Android 13+
 
 ## Changed
+- Renamed the Android launcher icons to `Foos Rec` and `Foos View`.
 - Renamed the pre-game flow to setup.
 
 ---
