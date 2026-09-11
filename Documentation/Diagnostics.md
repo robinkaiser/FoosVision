@@ -22,7 +22,7 @@ Diagnostics/
 Notes:
 
 - `Recorder` writes file logs to `Logs/` and can write diagnostic video artifacts to `Videos/`.
-- Diagnostic video artifacts are controlled by `diagnostics.video`. When enabled, the recorder writes them for both stopped install sessions and stopped game sessions.
+- Diagnostic video artifacts are controlled by `diagnostics.video`. When enabled, the recorder writes them for both stopped setup sessions and stopped game sessions.
 - `Viewer` writes file logs to `Logs/`.
 - `Viewer` starts file logging immediately at app startup, so discovery and handshake problems are captured locally.
 - `Viewer` enables Seq only after a successful recorder handshake, using the recorder-provided diagnostics settings.

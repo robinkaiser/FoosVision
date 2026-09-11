@@ -23,7 +23,7 @@ public class OverlayView : AndroidView
     private const long _ModeBlinkIntervalMs = 500;
     private const int _ModeBlinkToggles = 3;
     private const int _PossessionAreaAlpha = 40;
-    private static readonly SessionUiState _InitialSessionUiState = new(SessionMode.Install, false, false, true, false);
+    private static readonly SessionUiState _InitialSessionUiState = new(SessionMode.Setup, false, false, true, false);
     private readonly AndroidGraphics.Paint _BallPaint;
     private readonly AndroidGraphics.Paint _BallDetectionMaskPaint;
     private readonly AndroidGraphics.Paint _BarCenterPaint;

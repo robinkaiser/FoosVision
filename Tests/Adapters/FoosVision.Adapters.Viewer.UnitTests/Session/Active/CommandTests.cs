@@ -12,16 +12,16 @@ namespace FoosVision.Adapters.Viewer.UnitTests.Session.Active;
 public class CommandTests
 {
     [Fact]
-    public async Task ToggleModeSessionAsync_start_install_refreshes_playback_before_sending_command()
+    public async Task ToggleModeSessionAsync_start_setup_refreshes_playback_before_sending_command()
     {
         SessionContext context = new();
         using ActiveSession sut = context.CreateSut();
 
-        await sut.ToggleModeSessionAsync(SessionMode.Install);
+        await sut.ToggleModeSessionAsync(SessionMode.Setup);
 
         Assert.Equal(["clear-tracking", "stop-playback", "start-playback"], context.Events);
         Assert.True(context.UiSink.States[^1].IsPendingCommand);
-        await context.Session.Received(1).StartInstallAsync(Arg.Any<Guid>(), CancellationToken.None);
+        await context.Session.Received(1).StartSetupAsync(Arg.Any<Guid>(), CancellationToken.None);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class CommandTests
 
         await sut.ToggleModeSessionAsync(SessionMode.Game);
 
-        Assert.Equal(SessionMode.Install, context.UiSink.States[^1].Mode);
+        Assert.Equal(SessionMode.Setup, context.UiSink.States[^1].Mode);
         Assert.False(context.UiSink.States[^1].IsPendingCommand);
         await context.Session.DidNotReceive().StartGameAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }

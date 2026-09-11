@@ -51,7 +51,7 @@ public class ActiveSession :
         Reason = RecorderStateChangeReason.None,
         Detail = string.Empty,
     };
-    private SessionUiState _UiState = new(SessionMode.Install, false, true, false, false);
+    private SessionUiState _UiState = new(SessionMode.Setup, false, true, false, false);
     private ActiveSessionPendingIntent _PendingIntent;
     private bool _HasVisionContext;
     private int _Disposed;
@@ -139,7 +139,7 @@ public class ActiveSession :
             return;
         }
 
-        if (mode == SessionMode.Install)
+        if (mode == SessionMode.Setup)
         {
             var commandId = Guid.NewGuid();
             _PendingIntent = SessionUiStateCalculator.GetPendingIntent(_LastKnownRuntimeState.Mode, mode);
@@ -148,16 +148,16 @@ public class ActiveSession :
             try
             {
                 CommandResponse response;
-                if (_PendingIntent == ActiveSessionPendingIntent.StopInstall)
+                if (_PendingIntent == ActiveSessionPendingIntent.StopSetup)
                 {
-                    _Log.Information("Sending StopInstall command {0}.", commandId);
-                    response = await _Session.StopInstallAsync(commandId, CancellationToken.None);
+                    _Log.Information("Sending StopSetup command {0}.", commandId);
+                    response = await _Session.StopSetupAsync(commandId, CancellationToken.None);
                 }
                 else
                 {
                     await StartLivePlaybackAsync();
-                    _Log.Information("Sending StartInstall command {0}.", commandId);
-                    response = await _Session.StartInstallAsync(commandId, CancellationToken.None);
+                    _Log.Information("Sending StartSetup command {0}.", commandId);
+                    response = await _Session.StartSetupAsync(commandId, CancellationToken.None);
                 }
 
                 if (!HandleCommandResponse(response, _PendingIntent))
@@ -168,7 +168,7 @@ public class ActiveSession :
             catch (Exception ex)
             {
                 _PendingIntent = ActiveSessionPendingIntent.None;
-                _Log.Error("Install command send failed.", ex);
+                _Log.Error("Setup command send failed.", ex);
                 RefreshUiState();
             }
 
@@ -228,8 +228,8 @@ public class ActiveSession :
             ResetTrackingOverlay();
         }
 
-        if (previousMode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.InstallRunning &&
-            state.Mode is not RecorderRuntimeMode.GameRunning and not RecorderRuntimeMode.InstallRunning)
+        if (previousMode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.SetupRunning &&
+            state.Mode is not RecorderRuntimeMode.GameRunning and not RecorderRuntimeMode.SetupRunning)
         {
             _ReplayCoordinator.CancelReplayReplacement();
             _ = _ReplayCoordinator.StopReplayAsync();
@@ -237,7 +237,7 @@ public class ActiveSession :
         }
 
         if (previousMode != state.Mode &&
-            state.Mode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.InstallRunning)
+            state.Mode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.SetupRunning)
         {
             ResetTrackingOverlay();
         }

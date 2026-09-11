@@ -26,7 +26,7 @@ FoosVision ships as one Android app package with two role-specific launcher icon
 FoosVision is built around a two-device recorder-viewer workflow:
 
 - connect a viewer to a recorder on the local network
-- guide installation and table detection before starting a game session
+- guide setup and table detection before starting a game session
 - show a low-latency 120 fps live stream with 30 fps tracked-ball visualization
 - detect replay-worthy shot moments during live tracking
 - play back 120 fps slow-motion replay and analyze shots for metrics
@@ -153,14 +153,14 @@ At a high level, the recorder role:
 - initializes recorder logging/settings in the app runtime layer
 - creates the Android camera feed, video dump writer, and recorder runtime factory in the role app module
 - requests camera permission before starting the recorder host
-- creates runtime stores, `CameraController`, `VisionSession`, network, installation, and game modules in the composition root
+- creates runtime stores, `CameraController`, `VisionSession`, network, setup, and game modules in the composition root
 - configures the UDP video stream when a viewer completes the handshake
-- routes install and game commands through `RecorderCommandRouter`
+- routes setup and game commands through `RecorderCommandRouter`
 - publishes recorder runtime state through `RecorderRuntimeStateController`
 - exposes startup, viewer connection notifications, runtime state changes, and active-session shutdown through `RecorderHost`
 
 Recorder startup starts the network surface and makes the recorder discoverable.
-Stopping active sessions stops installation/game work and releases the viewer connection.
+Stopping active sessions stops setup/game work and releases the viewer connection.
 
 ### Viewer Role
 
@@ -170,7 +170,7 @@ At a high level, the viewer role:
 
 - initializes viewer logging/settings in the app runtime layer
 - creates recorder discovery, connection, network, vision, and replay-decoder services before connecting
-- creates recorder-bound installation, game, runtime-state, live-data, and live-analysis modules only after a successful recorder connection
+- creates recorder-bound setup, game, runtime-state, live-data, and live-analysis modules only after a successful recorder connection
 - exposes connection lifecycle, replay session storage, vision context, ball finding, mask decoding, and replay decoding through `ViewerHost`
 - attaches UI state, overlay, playback, live data, live analysis, command handling, and replay coordination through `SessionManager` and `ActiveSession`
 

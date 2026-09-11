@@ -8,7 +8,7 @@ namespace FoosVision.Protocol.Messages.Events;
 public enum RecorderRuntimeMode
 {
     Idle = 0,
-    InstallRunning = 1,
+    SetupRunning = 1,
     GameRunning = 2,
     Faulted = 3,
 }

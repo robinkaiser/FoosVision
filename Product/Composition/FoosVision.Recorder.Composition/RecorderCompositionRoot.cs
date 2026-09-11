@@ -20,7 +20,7 @@ internal class RecorderCompositionRoot : IDisposable
     private readonly SettingsStore _Settings;
     private readonly CameraController _CameraControl;
     private readonly VisionSession _Vision;
-    private readonly InstallationModule _Installation;
+    private readonly SetupModule _Setup;
     private readonly GameModule _Game;
 
     public NetworkModule Network { get; }
@@ -33,13 +33,13 @@ internal class RecorderCompositionRoot : IDisposable
         CameraController cameraControl,
         VisionSession vision,
         NetworkModule network,
-        InstallationModule installation,
+        SetupModule setup,
         GameModule game)
     {
         _Settings = settings;
         _CameraControl = cameraControl;
         _Vision = vision;
-        _Installation = installation;
+        _Setup = setup;
         _Game = game;
         Network = network;
     }
@@ -88,7 +88,7 @@ internal class RecorderCompositionRoot : IDisposable
         var runtimeState = new RecorderRuntimeStateController(network.EventPublisher);
         runtimeState.StateChanged += state => root?.RuntimeStateChanged?.Invoke(state);
 
-        var installation = new InstallationModule(
+        var setup = new SetupModule(
             frameSource: cameraControl,
             frameFeed: cameraControl,
             tableConfigFinder: vision,
@@ -121,16 +121,16 @@ internal class RecorderCompositionRoot : IDisposable
             publishBallDetectionMask: publishBallDetectionMask,
             runtimeMetricsOptions: runtimeMetricsOptions);
 
-        var router = new RecorderCommandRouter(installation.CommandHandler, game.CommandHandler);
+        var router = new RecorderCommandRouter(setup.CommandHandler, game.CommandHandler);
         network.SetCommandRouter(router);
 
-        root = new RecorderCompositionRoot(settings, cameraControl, vision, network, installation, game);
+        root = new RecorderCompositionRoot(settings, cameraControl, vision, network, setup, game);
         return root;
     }
 
     public async Task StopActiveSessions(CancellationToken ct)
     {
-        await _Installation.StopIfActive(ct);
+        await _Setup.StopIfActive(ct);
         await _Game.StopIfActive(ct);
         Network.ReleaseViewerConnection();
     }
@@ -142,6 +142,6 @@ internal class RecorderCompositionRoot : IDisposable
         // Stop network first (prevents late incoming commands triggering use-cases during teardown)
         Network.Dispose();
         _Game.Dispose();
-        _Installation.Dispose();
+        _Setup.Dispose();
     }
 }

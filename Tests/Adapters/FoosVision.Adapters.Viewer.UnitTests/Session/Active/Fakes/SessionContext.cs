@@ -32,9 +32,9 @@ internal sealed class SessionContext
         Session.Connection.Returns(Connection);
         Session.LiveDataSubscriber.Returns(_LiveDataSubscriber);
         Session.LiveAnalysisSubscriber.Returns(_LiveAnalysisSubscriber);
-        Session.StartInstallAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        Session.StartSetupAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(CreateAcceptedResponse);
-        Session.StopInstallAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        Session.StopSetupAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(CreateAcceptedResponse);
         Session.StartGameAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(CreateAcceptedResponse);

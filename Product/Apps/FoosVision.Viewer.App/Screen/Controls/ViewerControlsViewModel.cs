@@ -30,19 +30,19 @@ public class ViewerControlsViewModel :
         _SessionController.UiStateChanged += OnUiStateChanged;
         viewModel.ControlsRotationChanged += OnControlsRotationChanged;
         viewModel.StreamFpsChanged += OnStreamFpsChanged;
-        InstallButton = CreateButtonState(SessionMode.Install);
+        SetupButton = CreateButtonState(SessionMode.Setup);
         GameButton = CreateButtonState(SessionMode.Game);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public ICommand ToggleInstallModeCommand => _SessionController.ToggleInstallModeCommand;
+    public ICommand ToggleSetupModeCommand => _SessionController.ToggleSetupModeCommand;
 
     public ICommand ToggleGameModeCommand => _SessionController.ToggleGameModeCommand;
 
     public ICommand OpenAboutCommand => _ViewModel.About.OpenCommand;
 
-    public ViewerControlButtonState InstallButton { get; private set; }
+    public ViewerControlButtonState SetupButton { get; private set; }
 
     public ViewerControlButtonState GameButton { get; private set; }
 
@@ -68,7 +68,7 @@ public class ViewerControlsViewModel :
 
     private void OnUiStateChanged(SessionUiState uiState)
     {
-        InstallButton = CreateButtonState(SessionMode.Install);
+        SetupButton = CreateButtonState(SessionMode.Setup);
         GameButton = CreateButtonState(SessionMode.Game);
 
         _IsReplayActive = uiState.IsReplayActive;
@@ -78,7 +78,7 @@ public class ViewerControlsViewModel :
         _TrackingFpsText = FormatTrackingFpsText(uiState);
         UpdateStreamFpsText(_ViewModel.StreamFps);
 
-        OnPropertyChanged(nameof(InstallButton));
+        OnPropertyChanged(nameof(SetupButton));
         OnPropertyChanged(nameof(GameButton));
         OnPropertyChanged(nameof(TrackingFpsText));
         OnPropertyChanged(nameof(StreamFpsText));
@@ -158,7 +158,7 @@ public class ViewerControlsViewModel :
     {
         return mode switch
         {
-            SessionMode.Install => true,
+            SessionMode.Setup => true,
             SessionMode.Game => uiState.IsGameAvailable,
             _ => false,
         };
@@ -208,7 +208,7 @@ public class ViewerControlsViewModel :
 
     private static string GetModeLabel(SessionMode mode)
     {
-        return mode == SessionMode.Install ? "Install" : "Game";
+        return mode == SessionMode.Setup ? "Setup" : "Game";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

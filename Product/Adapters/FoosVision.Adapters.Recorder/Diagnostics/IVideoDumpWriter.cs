@@ -7,7 +7,7 @@ namespace FoosVision.Adapters.Recorder.Diagnostics;
 
 public enum VideoDumpSessionKind
 {
-    Installation,
+    Setup,
     Game,
 }
 

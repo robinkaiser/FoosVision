@@ -15,8 +15,8 @@ public static class ProtocolTypeRegistry
     {
         var t = typeof(TCommand);
 
-        if (t == typeof(StartInstallCommand)) return CommandMessageType.StartInstall;
-        if (t == typeof(StopInstallCommand)) return CommandMessageType.StopInstall;
+        if (t == typeof(StartSetupCommand)) return CommandMessageType.StartSetup;
+        if (t == typeof(StopSetupCommand)) return CommandMessageType.StopSetup;
 
         if (t == typeof(StartGameCommand)) return CommandMessageType.StartGame;
         if (t == typeof(StopGameCommand)) return CommandMessageType.StopGame;

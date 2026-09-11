@@ -3,6 +3,9 @@
 ## Supported Platforms
 - Android 13+
 
+## Changed
+- Renamed the pre-game flow to setup.
+
 ---
 
 # FoosVision 1.0.0                   2026-08-30

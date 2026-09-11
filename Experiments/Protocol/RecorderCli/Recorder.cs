@@ -87,7 +87,7 @@ try
             [1] = () => Publish(new RecorderRuntimeStateChanged
             {
                 Sequence = 2,
-                Mode = RecorderRuntimeMode.InstallRunning,
+                Mode = RecorderRuntimeMode.SetupRunning,
                 ActiveSessionId = sessionId,
                 Reason = RecorderStateChangeReason.CommandCompleted,
                 Detail = string.Empty,
@@ -148,7 +148,7 @@ static void PrintEventMenu()
 {
     Console.WriteLine("Publish events (enter number):");
     Console.WriteLine("  0  RuntimeState Idle");
-    Console.WriteLine("  1  RuntimeState InstallRunning");
+    Console.WriteLine("  1  RuntimeState SetupRunning");
     Console.WriteLine("  2  RuntimeState GameRunning");
     Console.WriteLine("  3  RuntimeState Idle (EndOfInput)");
     Console.WriteLine("  4  RuntimeState Faulted");

@@ -27,7 +27,7 @@ public class SessionManager : IDisposable
     private readonly IEncodedReplayFrameDecoder _ReplayFrameDecoder;
     private readonly Action<RecorderConnection> _OnConnected;
     private ActiveSession? _ActiveSession;
-    private SessionUiState _UiState = new(SessionMode.Install, false, false, true, false);
+    private SessionUiState _UiState = new(SessionMode.Setup, false, false, true, false);
     private int _Disposed;
 
     public SessionManager(

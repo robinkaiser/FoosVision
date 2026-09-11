@@ -26,8 +26,8 @@ public class SessionUiStateCalculatorTests
     {
         bool canToggle = SessionUiStateCalculator.CanToggle(
             RecorderRuntimeMode.Idle,
-            ActiveSessionPendingIntent.StartInstall,
-            SessionMode.Install,
+            ActiveSessionPendingIntent.StartSetup,
+            SessionMode.Setup,
             isTableAvailable: true);
 
         Assert.False(canToggle);
@@ -37,7 +37,7 @@ public class SessionUiStateCalculatorTests
     public void Calculate_uses_pending_intent_mode_when_recorder_is_idle()
     {
         SessionUiState state = SessionUiStateCalculator.Calculate(
-            new SessionUiState(SessionMode.Install, false, true, false, false),
+            new SessionUiState(SessionMode.Setup, false, true, false, false),
             RecorderRuntimeMode.Idle,
             ActiveSessionPendingIntent.StartGame,
             isTableAvailable: true,
@@ -67,7 +67,7 @@ public class SessionUiStateCalculatorTests
     public void UpdateTrackingFps_rounds_live_fps()
     {
         SessionUiState state = SessionUiStateCalculator.UpdateTrackingFps(
-            new SessionUiState(SessionMode.Install, false, true, false, false),
+            new SessionUiState(SessionMode.Setup, false, true, false, false),
             29.95,
             isReplayActive: false);
 

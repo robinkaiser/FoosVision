@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Recorder.Game.Control;
-using FoosVision.Adapters.Recorder.Installation.Control;
+using FoosVision.Adapters.Recorder.Setup.Control;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.Commands;
 using FoosVision.Protocol.Messages.Common;
@@ -11,14 +11,14 @@ namespace FoosVision.Adapters.Recorder.Connectivity;
 
 public class RecorderCommandRouter : IRecorderCommandRouter
 {
-    private readonly InstallCommandHandler _Install;
+    private readonly SetupCommandHandler _Setup;
     private readonly GameCommandHandler _Game;
 
     public RecorderCommandRouter(
-        InstallCommandHandler install,
+        SetupCommandHandler setup,
         GameCommandHandler game)
     {
-        _Install = install;
+        _Setup = setup;
         _Game = game;
     }
 
@@ -26,8 +26,8 @@ public class RecorderCommandRouter : IRecorderCommandRouter
     {
         return type switch
         {
-            CommandMessageType.StartInstall => Dispatch<StartInstallCommand>(command, _Install.Handle, ct),
-            CommandMessageType.StopInstall => Dispatch<StopInstallCommand>(command, _Install.Handle, ct),
+            CommandMessageType.StartSetup => Dispatch<StartSetupCommand>(command, _Setup.Handle, ct),
+            CommandMessageType.StopSetup => Dispatch<StopSetupCommand>(command, _Setup.Handle, ct),
 
             CommandMessageType.StartGame => Dispatch<StartGameCommand>(command, _Game.Handle, ct),
             CommandMessageType.StopGame => Dispatch<StopGameCommand>(command, _Game.Handle, ct),

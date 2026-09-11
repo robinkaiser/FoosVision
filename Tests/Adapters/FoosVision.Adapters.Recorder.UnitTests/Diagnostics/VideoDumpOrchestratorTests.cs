@@ -59,7 +59,7 @@ public class VideoDumpOrchestratorTests
         FakeBackgroundQueue queue = new();
         VideoDumpOrchestrator testee = new(snapshotSource, writer, queue);
 
-        bool scheduled = testee.TryScheduleDump(VideoDumpSessionKind.Installation);
+        bool scheduled = testee.TryScheduleDump(VideoDumpSessionKind.Setup);
 
         Assert.False(scheduled);
         Assert.Empty(queue.Work);
@@ -79,7 +79,7 @@ public class VideoDumpOrchestratorTests
         FakeBackgroundQueue queue = new();
         VideoDumpOrchestrator testee = new(snapshotSource, writer, queue);
 
-        testee.TryScheduleDump(VideoDumpSessionKind.Installation);
+        testee.TryScheduleDump(VideoDumpSessionKind.Setup);
         await queue.RunNext(CancellationToken.None);
 
         Assert.Single(writer.Requests);

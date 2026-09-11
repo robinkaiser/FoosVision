@@ -17,9 +17,9 @@ public interface IConnectedViewerSession : IDisposable
 
     void AttachRuntimeStateSink(IRecorderRuntimeStateSink sink);
 
-    Task<CommandResponse> StartInstallAsync(Guid commandId, CancellationToken ct);
+    Task<CommandResponse> StartSetupAsync(Guid commandId, CancellationToken ct);
 
-    Task<CommandResponse> StopInstallAsync(Guid commandId, CancellationToken ct);
+    Task<CommandResponse> StopSetupAsync(Guid commandId, CancellationToken ct);
 
     Task<CommandResponse> StartGameAsync(Guid commandId, CancellationToken ct);
 

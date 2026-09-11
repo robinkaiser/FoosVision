@@ -32,9 +32,9 @@ Install FoosVision on both devices. Start `Recorder` on the recorder phone and `
 
 1. Start `Recorder` on the phone mounted above the table.
 2. Start `Viewer` on the viewing device; it searches for recorders on the local network.
-3. Start installation and mount the recorder above the table. Installation can only be started after the viewer has connected to the recorder.
+3. Start setup and mount the recorder above the table. Setup can only be started after the viewer has connected to the recorder.
 4. Wait until the table is detected. The playing field and optionally a horizontally mounted light should be outlined, and the rods should be marked in the player colors.
-5. Stop installation and start a game session. A game can only be started after a successful installation.
+5. Stop setup and start a game session. A game can only be started after a successful setup.
 
 ## Performance Notes
 

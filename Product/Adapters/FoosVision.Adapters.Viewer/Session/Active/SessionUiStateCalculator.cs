@@ -8,8 +8,8 @@ namespace FoosVision.Adapters.Viewer.Session.Active;
 internal enum ActiveSessionPendingIntent
 {
     None = 0,
-    StartInstall = 1,
-    StopInstall = 2,
+    StartSetup = 1,
+    StopSetup = 2,
     StartGame = 3,
     StopGame = 4,
 }
@@ -32,7 +32,7 @@ internal static class SessionUiStateCalculator
         return runtimeMode switch
         {
             RecorderRuntimeMode.Idle => CanStartMode(requestedMode, isTableAvailable),
-            RecorderRuntimeMode.InstallRunning => requestedMode == SessionMode.Install,
+            RecorderRuntimeMode.SetupRunning => requestedMode == SessionMode.Setup,
             RecorderRuntimeMode.GameRunning => requestedMode == SessionMode.Game,
             RecorderRuntimeMode.Faulted => false,
             _ => false,
@@ -43,11 +43,11 @@ internal static class SessionUiStateCalculator
         RecorderRuntimeMode runtimeMode,
         SessionMode requestedMode)
     {
-        if (requestedMode == SessionMode.Install)
+        if (requestedMode == SessionMode.Setup)
         {
-            return runtimeMode == RecorderRuntimeMode.InstallRunning
-                ? ActiveSessionPendingIntent.StopInstall
-                : ActiveSessionPendingIntent.StartInstall;
+            return runtimeMode == RecorderRuntimeMode.SetupRunning
+                ? ActiveSessionPendingIntent.StopSetup
+                : ActiveSessionPendingIntent.StartSetup;
         }
 
         return runtimeMode == RecorderRuntimeMode.GameRunning
@@ -64,12 +64,12 @@ internal static class SessionUiStateCalculator
     {
         SessionMode mode = runtimeMode switch
         {
-            RecorderRuntimeMode.InstallRunning => SessionMode.Install,
+            RecorderRuntimeMode.SetupRunning => SessionMode.Setup,
             RecorderRuntimeMode.GameRunning => SessionMode.Game,
             _ => pendingIntent switch
             {
-                ActiveSessionPendingIntent.StartInstall => SessionMode.Install,
-                ActiveSessionPendingIntent.StopInstall => SessionMode.Install,
+                ActiveSessionPendingIntent.StartSetup => SessionMode.Setup,
+                ActiveSessionPendingIntent.StopSetup => SessionMode.Setup,
                 ActiveSessionPendingIntent.StartGame => SessionMode.Game,
                 ActiveSessionPendingIntent.StopGame => SessionMode.Game,
                 _ => currentState.Mode,
@@ -78,7 +78,7 @@ internal static class SessionUiStateCalculator
 
         return new SessionUiState(
             Mode: mode,
-            IsRunning: runtimeMode is RecorderRuntimeMode.InstallRunning or RecorderRuntimeMode.GameRunning,
+            IsRunning: runtimeMode is RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.GameRunning,
             IsConnected: true,
             IsPendingCommand: pendingIntent != ActiveSessionPendingIntent.None,
             IsFaulted: runtimeMode == RecorderRuntimeMode.Faulted,
@@ -118,7 +118,7 @@ internal static class SessionUiStateCalculator
     {
         return mode switch
         {
-            SessionMode.Install => true,
+            SessionMode.Setup => true,
             SessionMode.Game => isTableAvailable,
             _ => false,
         };

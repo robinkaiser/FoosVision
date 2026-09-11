@@ -5,7 +5,7 @@ namespace FoosVision.Adapters.Viewer.Session;
 
 public enum SessionMode
 {
-    Install,
+    Setup,
     Game,
 }
 

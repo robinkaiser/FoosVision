@@ -100,8 +100,8 @@ try
 
         var actions = new Dictionary<int, Func<Guid, CancellationToken, Task>>
         {
-            [1] = (id, ct) => Send(new StartInstallCommand { CommandId = id }, ct),
-            [2] = (id, ct) => Send(new StopInstallCommand { CommandId = id }, ct),
+            [1] = (id, ct) => Send(new StartSetupCommand { CommandId = id }, ct),
+            [2] = (id, ct) => Send(new StopSetupCommand { CommandId = id }, ct),
             [10] = (id, ct) => Send(new StartGameCommand { CommandId = id }, ct),
             [11] = (id, ct) => Send(new StopGameCommand { CommandId = id }, ct),
         };
@@ -129,8 +129,8 @@ Console.WriteLine("Viewer stopped.");
 static void PrintCommandMenu()
 {
     Console.WriteLine("Send commands (enter number):");
-    Console.WriteLine("  1  StartInstall");
-    Console.WriteLine("  2  StopInstall");
+    Console.WriteLine("  1  StartSetup");
+    Console.WriteLine("  2  StopSetup");
     Console.WriteLine(" 10  StartGame");
     Console.WriteLine(" 11  StopGame");
     Console.WriteLine("Type 'help' to show this menu again.");

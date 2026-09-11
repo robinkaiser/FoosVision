@@ -86,7 +86,7 @@ public class VideoDumpOrchestrator : IVideoDumpOrchestrator
     {
         string sessionPart = sessionKind switch
         {
-            VideoDumpSessionKind.Installation => "installation",
+            VideoDumpSessionKind.Setup => "setup",
             VideoDumpSessionKind.Game => "game",
             _ => "unknown",
         };

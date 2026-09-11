@@ -68,14 +68,14 @@ internal class ViewerCompositionRoot : IDisposable
             return result;
         }
 
-        var installation = new InstallationModule(_Network.CommandClient);
+        var setup = new SetupModule(_Network.CommandClient);
         var game = new GameModule(_Network.CommandClient);
         var runtimeState = new RuntimeStateModule(_Network.EventSubscriber);
 
         _ConnectedSession = Option<ConnectedViewerSession>.Some(
             new ConnectedViewerSession(
                 _Network.Connection,
-                installation,
+                setup,
                 game,
                 runtimeState,
                 _Network.LiveDataSubscriber,

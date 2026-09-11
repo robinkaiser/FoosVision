@@ -5,8 +5,8 @@ namespace FoosVision.Protocol.Connectivity.Abstractions;
 
 public enum CommandMessageType : byte
 {
-    StartInstall = 1,
-    StopInstall = 2,
+    StartSetup = 1,
+    StopSetup = 2,
     StartGame = 10,
     StopGame = 11,
 }

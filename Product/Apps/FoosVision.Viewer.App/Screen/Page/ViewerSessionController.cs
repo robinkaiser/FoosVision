@@ -24,15 +24,15 @@ public class ViewerSessionController :
     {
         _ViewerHost = new ViewerHost(
             fallbackCandidateSource: new AndroidRecorderFallbackCandidateSource(Platform.AppContext));
-        ToggleInstallModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Install));
+        ToggleSetupModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Setup));
         ToggleGameModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Game));
     }
 
     public event Action<SessionUiState>? UiStateChanged;
 
-    public SessionUiState CurrentUiState { get; private set; } = new(SessionMode.Install, false, false, true, false);
+    public SessionUiState CurrentUiState { get; private set; } = new(SessionMode.Setup, false, false, true, false);
 
-    public ICommand ToggleInstallModeCommand { get; }
+    public ICommand ToggleSetupModeCommand { get; }
 
     public ICommand ToggleGameModeCommand { get; }
 

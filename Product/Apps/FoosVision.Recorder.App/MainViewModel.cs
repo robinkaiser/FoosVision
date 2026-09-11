@@ -90,7 +90,7 @@ public class MainViewModel : INotifyPropertyChanged
         string text = mode switch
         {
             RecorderRuntimeMode.Idle => "Ready",
-            RecorderRuntimeMode.InstallRunning => "Installation",
+            RecorderRuntimeMode.SetupRunning => "Setup",
             RecorderRuntimeMode.GameRunning => "Tracking",
             RecorderRuntimeMode.Faulted => "Recorder fault",
             _ => "Unknown mode",

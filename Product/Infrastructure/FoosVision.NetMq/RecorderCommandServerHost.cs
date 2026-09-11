@@ -86,8 +86,8 @@ public class RecorderCommandServerHost : IDisposable
     {
         return type switch
         {
-            CommandMessageType.StartInstall => MessagePackSerializer.Deserialize<StartInstallCommand>(payload, cancellationToken: ct),
-            CommandMessageType.StopInstall => MessagePackSerializer.Deserialize<StopInstallCommand>(payload, cancellationToken: ct),
+            CommandMessageType.StartSetup => MessagePackSerializer.Deserialize<StartSetupCommand>(payload, cancellationToken: ct),
+            CommandMessageType.StopSetup => MessagePackSerializer.Deserialize<StopSetupCommand>(payload, cancellationToken: ct),
 
             CommandMessageType.StartGame => MessagePackSerializer.Deserialize<StartGameCommand>(payload, cancellationToken: ct),
             CommandMessageType.StopGame => MessagePackSerializer.Deserialize<StopGameCommand>(payload, cancellationToken: ct),

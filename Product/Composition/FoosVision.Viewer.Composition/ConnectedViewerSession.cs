@@ -18,7 +18,7 @@ public class ConnectedViewerSession :
 
     internal ConnectedViewerSession(
         RecorderConnection connection,
-        InstallationModule installation,
+        SetupModule setup,
         GameModule game,
         RuntimeStateModule runtimeState,
         IRecorderLiveDataSubscriber liveDataSubscriber,
@@ -26,7 +26,7 @@ public class ConnectedViewerSession :
         Action dispose)
     {
         Connection = connection;
-        Installation = installation;
+        Setup = setup;
         Game = game;
         RuntimeState = runtimeState;
         LiveDataSubscriber = liveDataSubscriber;
@@ -36,7 +36,7 @@ public class ConnectedViewerSession :
 
     public RecorderConnection Connection { get; }
 
-    public InstallationModule Installation { get; }
+    public SetupModule Setup { get; }
 
     public GameModule Game { get; }
 
@@ -51,14 +51,14 @@ public class ConnectedViewerSession :
         RuntimeState.Attach(sink);
     }
 
-    public Task<CommandResponse> StartInstallAsync(Guid commandId, CancellationToken ct)
+    public Task<CommandResponse> StartSetupAsync(Guid commandId, CancellationToken ct)
     {
-        return Installation.CommandSender.Start(commandId, ct);
+        return Setup.CommandSender.Start(commandId, ct);
     }
 
-    public Task<CommandResponse> StopInstallAsync(Guid commandId, CancellationToken ct)
+    public Task<CommandResponse> StopSetupAsync(Guid commandId, CancellationToken ct)
     {
-        return Installation.CommandSender.Stop(commandId, ct);
+        return Setup.CommandSender.Stop(commandId, ct);
     }
 
     public Task<CommandResponse> StartGameAsync(Guid commandId, CancellationToken ct)

@@ -6,28 +6,28 @@ using FoosVision.Adapters.Common.Live;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Adapters.Recorder.Game.Control;
-using FoosVision.Adapters.Recorder.Installation.Control;
+using FoosVision.Adapters.Recorder.Setup.Control;
 using FoosVision.Ports.Media;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.UseCases.Game.StopGame;
-using FoosVision.UseCases.Installation.StopInstall;
+using FoosVision.UseCases.Setup.StopSetup;
 
 namespace FoosVision.Adapters.Recorder.UnitTests.Diagnostics;
 
 public class VideoDumpPresenterTests
 {
     [Fact]
-    public async Task InstallEventPresenter_schedules_installation_dump_after_successful_stop()
+    public async Task SetupEventPresenter_schedules_setup_dump_after_successful_stop()
     {
         RecordingVideoDumpOrchestrator videoDumpOrchestrator = new();
-        InstallEventPresenter testee = new(
+        SetupEventPresenter testee = new(
             CreateFrameLoop(),
             new RecorderRuntimeStateController(new RecordingEventPublisher()),
             videoDumpOrchestrator);
 
-        await testee.ReportStopped(new StopInstallResponse(Guid.NewGuid()));
+        await testee.ReportStopped(new StopSetupResponse(Guid.NewGuid()));
 
-        Assert.Equal(new[] { VideoDumpSessionKind.Installation }, videoDumpOrchestrator.SessionKinds);
+        Assert.Equal(new[] { VideoDumpSessionKind.Setup }, videoDumpOrchestrator.SessionKinds);
     }
 
     [Fact]
