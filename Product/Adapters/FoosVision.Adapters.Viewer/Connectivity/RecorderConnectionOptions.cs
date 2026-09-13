@@ -5,13 +5,11 @@ namespace FoosVision.Adapters.Viewer.Connectivity;
 
 public record RecorderConnectionOptions(
     TimeSpan GracePeriod,
-    TimeSpan MaxDiscoverAndPairTime,
     TimeSpan PollInterval,
     TimeSpan PerCandidateHandshakeTimeout)
 {
     public static RecorderConnectionOptions Default { get; } = new(
-        GracePeriod: TimeSpan.FromMilliseconds(500),
-        MaxDiscoverAndPairTime: TimeSpan.FromSeconds(5),
+        GracePeriod: TimeSpan.FromSeconds(4),
         PollInterval: TimeSpan.FromMilliseconds(200),
         PerCandidateHandshakeTimeout: TimeSpan.FromSeconds(3));
 }

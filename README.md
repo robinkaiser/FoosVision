@@ -45,10 +45,11 @@ Install FoosVision on both devices. Start `Foos Rec` on the recorder phone and `
 
 The recorder performs continuous high-speed camera capture, video encoding, streaming, and vision processing. This can put significant load on the phone, and the device may become warm during longer sessions.
 
-The viewer shows two frame rates. During live game operation, `Stream` should stay close to `120 fps`, and `Tracking` should stay close to `30 fps`. During replay, `Tracking` should show `120 fps`. If these values drop, the recorder device, network, or playback device may be overloaded.
+The viewer shows two frame rates during setup and game sessions. `Stream` should stay close to `120 fps`, and `Process` should stay close to `30 fps`. If these values drop, the recorder device, network, or playback device may be overloaded.
 
 ## Documentation
 
+- [FoosVision Changes](Documentation/FoosVision%20Changes.md): User-facing release notes.
 - [Configuration](Documentation/Configuration.md): App configuration handling and example config.
 - [Diagnostics](Documentation/Diagnostics.md): Diagnostics settings and Seq setup for debugging.
 

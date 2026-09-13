@@ -19,9 +19,105 @@ Both paths converge on the same recorder handshake. A device is treated as a usa
 
 Other recorder channels are not part of discovery. The recorder binds them at startup, and the viewer connects to them only after a successful handshake.
 
-## Recorder Announcements
+## Discovery Sequence
 
-At recorder startup, the recorder starts a UDP announcement server and publishes this identity:
+```mermaid
+sequenceDiagram
+autonumber off
+
+participant ViewerPage as VIEWER<br/>ViewerSessionController<br/>AttachRuntimeAsync()
+participant AndroidLifecycle as VIEWER<br/>MainActivity<br/>OnResume()/OnPause()
+participant ViewerRoot as VIEWER<br/>ViewerCompositionRoot<br/>ConnectAsync()
+participant ViewNet as VIEWER<br/>NetworkModule<br/>ConnectAsync()
+participant Conn as VIEWER<br/>RecorderConnectionService<br/>ConnectAsync()
+participant UdpDisc as VIEWER<br/>UdpRecorderDiscoverySession
+participant Fallback as VIEWER<br/>AndroidRecorderFallbackCandidateSource
+participant HClient as VIEWER<br/>HandshakeClient<br/>HelloAsync()
+
+participant RecorderApp as RECORDER<br/>RecorderHost<br/>Start()
+participant RecNet as RECORDER<br/>NetworkModule
+participant UdpServer as RECORDER<br/>UdpServer
+participant HServer as RECORDER<br/>HandshakeServerHost
+participant HHandler as RECORDER<br/>HandshakeHandler<br/>Handle()
+participant Camera as RECORDER<br/>CameraController<br/>ConfigureUdpVideoStream()
+
+Note over ViewerPage,HClient: Viewer side
+Note over RecorderApp,Camera: Recorder side
+Note over ViewerPage,Camera: Number ranges: 100 = UDP discovery, 200 = TCP connect probe fallback, 300 = FoosVision handshake
+
+RecorderApp->>RecNet: Start()
+RecNet->>RecNet: StartDiscovery()
+RecNet->>UdpServer: Start()
+RecNet->>HServer: Start("tcp://*:5555")
+
+ViewerPage->>ViewerRoot: ConnectAsync(ct)
+AndroidLifecycle->>Fallback: Enable TCP fallback probing<br/>while viewer is foreground
+ViewerRoot->>ViewNet: ConnectAsync(ct)
+ViewNet->>Conn: ConnectAsync(ct)
+
+autonumber 100 1
+Conn->>UdpDisc: Start UDP discovery session
+Conn->>Conn: Start TCP fallback grace timer<br/>(4 seconds)
+UdpServer->>UdpServer: Send IPv4 broadcast announcement<br/>(every 1 second for the first minute,<br/>then every 3 seconds)
+UdpServer-->>UdpDisc: UDP announcement on 5560<br/>FoosVisionRecorder|proto=1|app=...
+UdpDisc->>UdpDisc: Filter identity and protocol version
+
+loop while disconnected
+    Conn->>UdpDisc: GetCandidatesRankedSnapshot()
+
+    alt UDP candidate found
+        UdpDisc-->>Conn: RecorderDiscoveryCandidate(ip, appVersion, proto)
+    else no new UDP candidate, viewer foreground, and fallback grace elapsed
+        autonumber 200 1
+        Note over Conn,Fallback: Fallback runs only while the viewer is foreground, no UDP candidate is available, and the 4-second grace timer has elapsed.
+        Conn->>Fallback: GetCandidatesAsync(ct)
+        Conn->>Conn: Restart TCP fallback grace timer
+        Fallback->>Fallback: Build local WiFi /24 probe list
+        Fallback->>HServer: TCP connect probe to ip:5555<br/>no HelloRequest
+        HServer-->>Fallback: TCP port accepted
+        Fallback-->>Conn: direct-probe candidates
+    else viewer background
+        AndroidLifecycle->>Fallback: Disable TCP fallback probing
+        Fallback-->>Conn: no fallback probing while background
+    else no new UDP candidate and fallback grace still running
+        Conn->>Conn: Wait PollInterval (200 ms),<br/>then check for candidates again
+    end
+
+    opt candidate available from UDP discovery or TCP probing
+        autonumber 300 1
+        Note over Conn,HClient: Handshake starts as soon as a candidate is available, regardless of whether it came from UDP discovery or TCP probing.
+        Conn->>Conn: Pick next candidate
+        Conn->>Conn: LocalIpPicker.PickLocalIPv4ForRemote(recorderIp)
+        Conn->>HClient: HelloAsync("tcp://ip:5555", HelloRequest)
+
+        HClient->>HServer: NetMQ HelloRequest
+        HServer->>HHandler: Handle(request)
+        HHandler->>RecNet: TryAcceptViewer(request)
+
+        alt handshake timeout or failed candidate
+            HClient-->>Conn: timeout / failed handshake
+            Conn->>UdpDisc: RemoveCandidate(ip)
+        else recorder already has viewer
+            RecNet-->>HHandler: false
+            HHandler-->>HClient: HelloResponse Accepted=false, RecorderBusy
+            HClient-->>Conn: busy
+            Conn->>UdpDisc: RemoveCandidate(ip)
+        else accepted
+            RecNet-->>HHandler: true
+            HHandler-->>HClient: HelloResponse Accepted=true
+            HHandler->>Camera: via onHello: ConfigureUdpVideoStream(viewerIp, 5561)
+            HClient-->>Conn: protocol/app/settings/diagnostics
+            Conn-->>ViewNet: RecorderConnectionResult.Connected
+            ViewNet->>ViewNet: create command/event/live subscribers
+            ViewNet-->>ViewerRoot: connected
+        end
+    end
+end
+```
+
+## Details
+
+Recorder UDP announcements use this identity format:
 
 ```text
 FoosVisionRecorder|proto=1|app=1.0.0
@@ -29,95 +125,13 @@ FoosVisionRecorder|proto=1|app=1.0.0
 
 The protocol version is authoritative for compatibility. The app version is diagnostic metadata and is not used by the viewer to reject otherwise compatible recorders.
 
-The recorder sends announcements periodically to IPv4 broadcast addresses for each active non-loopback local interface:
+Discovery is IPv4-only. The recorder broadcasts on each active non-loopback local interface to `255.255.255.255`, to the interface broadcast address when available, and to a pragmatic `/24` broadcast address such as `192.168.1.255`. The announcement interval is one second for the first minute after discovery starts, then three seconds.
 
-- `255.255.255.255`
-- the interface broadcast address, when the platform exposes a mask
-- a pragmatic `/24` broadcast address, for example `192.168.1.255` for `192.168.1.x`
+The Android viewer keeps one UDP discovery session open while disconnected. It checks for candidates every 200 ms when no candidate is currently available. TCP fallback probing runs only while the viewer is in the foreground, is delayed by a four-second grace period, and can run again only after another four seconds. There is no separate pairing-cycle timeout; a started TCP fallback probe run is not interrupted by an outer discovery budget. Real handshake attempts are bounded per candidate by a three-second timeout.
 
-Loopback interfaces and loopback addresses are ignored. IPv6 announcements are skipped; the current recorder-viewer discovery path is IPv4-only.
+TCP fallback probing is only a candidate source. It scans the viewer's active WiFi `/24`, uses short TCP connect attempts against port `5555`, and does not send a `HelloRequest`. A candidate becomes a usable recorder only after the normal FoosVision handshake succeeds.
 
-The recorder keeps discovery active after a viewer connects. Additional viewer handshakes are rejected while one viewer is connected, but the recorder remains discoverable.
-
-Expected recorder logs:
-
-```text
-Recorder discovery started. Port=5560 Identity=FoosVisionRecorder|proto=1|app=1.0.0
-Recorder handshake endpoint started. BindAddress=tcp://*:5555
-Recorder discovery announcement sent. LocalAddress=192.168.1.3 TargetAddress=255.255.255.255 Port=5560 Identity=FoosVisionRecorder|proto=1|app=1.0.0
-```
-
-## Viewer UDP Listener
-
-The viewer starts recorder discovery when the viewer session initializes and keeps the UDP listener open until connection succeeds or the viewer session is disposed.
-
-Expected viewer logs:
-
-```text
-Connecting viewer to recorder.
-Starting recorder discovery. ExpectedIdentity=FoosVisionRecorder|proto=1|app=*
-```
-
-On Android, the viewer also acquires a WiFi multicast lock while the viewer page runtime is attached:
-
-```text
-Acquired WiFi multicast lock for viewer discovery.
-```
-
-When a compatible UDP announcement arrives, the viewer turns it into a recorder candidate and attempts the handshake:
-
-```text
-Trying discovered recorder. RecorderIp=192.168.0.179 DiscoveryAppVersion=1.0.0 ProtocolVersion=1
-```
-
-`DiscoveryAppVersion=1.0.0` indicates that the candidate came from the recorder UDP announcement identity.
-
-## Android TCP Fallback
-
-If the viewer does not receive a usable UDP announcement, it uses an Android-specific fallback candidate source.
-
-The Android fallback reads the active WiFi IPv4 address through Android platform APIs. For example, if the viewer address is `192.168.1.4`, it probes these candidate addresses:
-
-```text
-192.168.1.1:5555
-192.168.1.2:5555
-...
-192.168.1.254:5555
-```
-
-The fallback uses short TCP connect probes with bounded parallelism. A successful TCP connect only means that something is listening on the handshake port. The viewer still performs the normal FoosVision handshake before accepting the recorder.
-
-Expected viewer logs:
-
-```text
-Android recorder fallback local WiFi addresses. Addresses=192.168.1.4
-Android recorder fallback probing local subnet for recorder handshake endpoint. AddressCount=253 Port=5555
-Android recorder fallback found handshake endpoints. Count=1 Addresses=192.168.1.2
-Trying discovered recorder. RecorderIp=192.168.1.2 DiscoveryAppVersion=android-direct-probe ProtocolVersion=1
-```
-
-`DiscoveryAppVersion=android-direct-probe` indicates that the candidate came from the TCP fallback, not from UDP discovery.
-
-## Retry Model
-
-The viewer has one long-lived discovery session. It no longer closes and recreates discovery every few seconds.
-
-Instead, it repeats bounded pairing cycles while the discovery session stays open:
-
-1. Read UDP discovery candidates.
-2. If no new UDP candidate exists, run the fallback candidate source.
-3. Try each untried candidate within the current pairing budget.
-4. If no connection succeeds, start another pairing cycle.
-
-Typical failed-cycle log:
-
-```text
-Recorder discovery cycle ended without connection. Failure=NoCandidateFound
-```
-
-This log does not mean the viewer stopped looking. It means only that the current pairing cycle ended without a usable candidate.
-
-## Handshake
+## Handshake And Video
 
 Both discovery paths use the same handshake endpoint:
 
@@ -125,38 +139,27 @@ Both discovery paths use the same handshake endpoint:
 tcp://<recorder-ip>:5555
 ```
 
-The viewer sends its selected local IPv4 address in the handshake request. The recorder returns protocol version, recorder app version, diagnostics settings, and viewer runtime settings.
+The viewer sends its selected local IPv4 address in the `HelloRequest`. The recorder returns protocol version, recorder app version, diagnostics settings, and viewer runtime settings. The handshake client uses a fresh NetMQ request socket per attempt so timeouts or failed candidates do not poison later attempts.
 
-Expected successful logs:
+After a successful handshake, the recorder streams RTP/H.264 over UDP to the viewer on port `5561`. On Android, the recorder binds the app process to WiFi while active and binds the RTP socket to the local IPv4 address that matches the viewer route. This avoids sending video through the wrong interface when WiFi and mobile data are both active.
 
-```text
-Recorder received handshake request. ViewerAddress=192.168.1.4 ProtocolVersion=1
-Recorder sending handshake response. ViewerAddress=192.168.1.4 ProtocolVersion=1 RecorderAppVersion=1.0.0 Accepted=true
-Viewer connected to recorder. RecorderIp=192.168.1.2 ProtocolVersion=1 RecorderAppVersion=1.0.0
-Viewer handshake diagnostics applied. RecorderIp=192.168.1.2 ...
-```
-
-The handshake client uses a fresh NetMQ request socket per attempt so timeouts or failed candidates do not poison later attempts.
-
-## Live Video Binding
-
-Live video is not part of discovery, but it depends on the connection result.
-
-After a successful handshake, the recorder streams RTP/H.264 over UDP to the viewer. On Android, the recorder binds the app process to the available WiFi network while the recorder runtime is active. The recorder also binds the RTP socket to the local IPv4 address that matches the viewer's IP route. This avoids sending RTP through the wrong local interface when the recorder device has multiple active network paths, for example WiFi plus mobile data.
-
-This addresses the observed failure mode where commands arrived over TCP but no live image appeared until mobile data was disabled.
+The recorder keeps discovery active after a viewer connects. Additional viewer handshakes are rejected while one viewer is connected, but the recorder remains discoverable.
 
 ## Operational Interpretation
 
-Useful indicators:
+Useful log indicators:
 
 - `DiscoveryAppVersion=1.0.0`: UDP announcement path worked.
-- `DiscoveryAppVersion=android-direct-probe`: UDP discovery did not provide the candidate; TCP fallback found the recorder.
-- `Recorder discovery cycle ended without connection`: viewer is still running but did not find a candidate in that cycle.
-- `Android recorder fallback local WiFi addresses. Addresses=<none>`: viewer could not determine an active WiFi IPv4 address.
+- `DiscoveryAppVersion=android-direct-probe`: UDP discovery did not provide a candidate after the fallback grace period; TCP probing found the recorder.
+- `Android recorder fallback probing enabled because the viewer is in the foreground.`: TCP fallback probing is allowed again after a foreground transition.
+- `Android recorder fallback probing disabled because the viewer is not in the foreground.`: TCP fallback probing is blocked after a background transition.
+- `Android recorder fallback probing run started`: one TCP fallback probing run started. This is logged once per run, not once per probed IP address.
+- `Android recorder fallback probing run completed`: one TCP fallback probing run finished, including the number of found candidates.
+- `Android recorder fallback local WiFi addresses. Addresses=<none>`: the viewer could not determine an active WiFi IPv4 address.
+- `Acquired WiFi multicast lock for viewer discovery.`: Android acquired the multicast lock used while the viewer page runtime is attached.
 
 Known practical behavior:
 
 - Some Android/router combinations do not reliably deliver UDP broadcast announcements to the viewer.
-- The TCP fallback is more active than pure beacon discovery, but it is limited to the viewer's local `/24`, uses short timeouts, and runs only while disconnected.
+- The TCP fallback is more active than pure beacon discovery, but it is limited to the viewer's local `/24`, uses short timeouts, and runs only while disconnected and foregrounded.
 - A future cleaner replacement would be an explicit UDP query-response discovery path or mDNS/Bonjour-style discovery. The current TCP fallback is a pragmatic reliability measure for local two-device setups.

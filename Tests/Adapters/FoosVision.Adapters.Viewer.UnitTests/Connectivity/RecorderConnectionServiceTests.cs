@@ -105,6 +105,70 @@ public class RecorderConnectionServiceTests
     }
 
     [Fact]
+    public async Task ConnectAsync_tries_udp_candidate_before_fallback_grace_period_expires()
+    {
+        _DiscoverySession.GetCandidatesRankedSnapshot().Returns(
+        [
+            new RecorderDiscoveryCandidate("192.168.178.10", "1.2.3-test", ProtocolVersions.Current),
+        ]);
+
+        _HandshakeClient.HelloAsync(Arg.Any<string>(), Arg.Any<HelloRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HelloResponse
+            {
+                ProtocolVersion = ProtocolVersions.Current,
+                RecorderAppVersion = "working",
+            }));
+
+        IRecorderFallbackCandidateSource fallbackCandidateSource = Substitute.For<IRecorderFallbackCandidateSource>();
+        var sut = new RecorderConnectionService(
+            _Discovery,
+            _HandshakeClient,
+            new RecorderConnectionOptions(
+                GracePeriod: TimeSpan.FromSeconds(1),
+                PollInterval: TimeSpan.FromMilliseconds(1),
+                PerCandidateHandshakeTimeout: TimeSpan.FromSeconds(1)),
+            fallbackCandidateSource);
+
+        var result = await sut.ConnectAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+        _ = fallbackCandidateSource.DidNotReceive().GetCandidatesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConnectAsync_does_not_use_fallback_before_fallback_grace_period_expires()
+    {
+        using CancellationTokenSource cts = new();
+        var snapshotCount = 0;
+        _DiscoverySession.GetCandidatesRankedSnapshot().Returns(_ =>
+        {
+            snapshotCount++;
+            if (snapshotCount >= 3)
+            {
+                cts.Cancel();
+            }
+
+            return [];
+        });
+
+        IRecorderFallbackCandidateSource fallbackCandidateSource = Substitute.For<IRecorderFallbackCandidateSource>();
+        var sut = new RecorderConnectionService(
+            _Discovery,
+            _HandshakeClient,
+            new RecorderConnectionOptions(
+                GracePeriod: TimeSpan.FromSeconds(1),
+                PollInterval: TimeSpan.FromMilliseconds(1),
+                PerCandidateHandshakeTimeout: TimeSpan.FromSeconds(1)),
+            fallbackCandidateSource);
+
+        var result = await sut.ConnectAsync(cts.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal(RecorderConnectionFailure.Cancelled, result.Failure.Value);
+        _ = fallbackCandidateSource.DidNotReceive().GetCandidatesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ConnectAsync_tries_next_candidate_after_protocol_mismatch()
     {
         _DiscoverySession.GetCandidatesRankedSnapshot().Returns(
@@ -319,48 +383,53 @@ public class RecorderConnectionServiceTests
     }
 
     [Fact]
-    public async Task ConnectAsync_retries_after_global_pairing_budget_expires_during_handshake()
+    public async Task ConnectAsync_tries_next_candidate_after_per_candidate_handshake_timeout()
     {
         _DiscoverySession.GetCandidatesRankedSnapshot().Returns(
         [
             new RecorderDiscoveryCandidate("192.168.178.10", "late", ProtocolVersions.Current),
+            new RecorderDiscoveryCandidate("192.168.178.11", "working", ProtocolVersions.Current),
         ]);
 
         int handshakeAttempts = 0;
-        _HandshakeClient.HelloAsync(Arg.Any<string>(), Arg.Any<HelloRequest>(), Arg.Any<CancellationToken>())
+        _HandshakeClient.HelloAsync(
+                "tcp://192.168.178.10:5555",
+                Arg.Any<HelloRequest>(),
+                Arg.Any<CancellationToken>())
             .Returns(async callInfo =>
             {
                 handshakeAttempts++;
-                if (handshakeAttempts > 1)
-                {
-                    return new HelloResponse
-                    {
-                        ProtocolVersion = ProtocolVersions.Current,
-                        RecorderAppVersion = "working",
-                    };
-                }
-
                 var token = callInfo.ArgAt<CancellationToken>(2);
                 await Task.Delay(TimeSpan.FromSeconds(5), token);
                 return new HelloResponse();
             });
+
+        _HandshakeClient.HelloAsync(
+                "tcp://192.168.178.11:5555",
+                Arg.Any<HelloRequest>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HelloResponse
+            {
+                ProtocolVersion = ProtocolVersions.Current,
+                RecorderAppVersion = "working",
+            }));
 
         var sut = new RecorderConnectionService(
             _Discovery,
             _HandshakeClient,
             new RecorderConnectionOptions(
                 GracePeriod: TimeSpan.Zero,
-                MaxDiscoverAndPairTime: TimeSpan.FromMilliseconds(20),
                 PollInterval: TimeSpan.FromMilliseconds(1),
-                PerCandidateHandshakeTimeout: TimeSpan.FromSeconds(5)),
+                PerCandidateHandshakeTimeout: TimeSpan.FromMilliseconds(20)),
             new EmptyFallbackCandidateSource());
 
         var result = await sut.ConnectAsync(CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.True(result.Connection.IsSome);
-        Assert.Equal("192.168.178.10", result.Connection.Value.RecorderIpAddress);
-        Assert.Equal(2, handshakeAttempts);
+        Assert.Equal("192.168.178.11", result.Connection.Value.RecorderIpAddress);
+        Assert.Equal(1, handshakeAttempts);
+        _DiscoverySession.Received(1).RemoveCandidate("192.168.178.10");
     }
 
     private RecorderConnectionService CreateSut()
@@ -373,7 +442,6 @@ public class RecorderConnectionServiceTests
             _HandshakeClient,
             new RecorderConnectionOptions(
                 GracePeriod: TimeSpan.Zero,
-                MaxDiscoverAndPairTime: TimeSpan.FromMilliseconds(200),
                 PollInterval: TimeSpan.FromMilliseconds(1),
                 PerCandidateHandshakeTimeout: TimeSpan.FromSeconds(1)),
             fallbackCandidateSource);

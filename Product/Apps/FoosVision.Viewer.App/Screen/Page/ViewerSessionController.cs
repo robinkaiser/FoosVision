@@ -15,6 +15,7 @@ public class ViewerSessionController :
     IDisposable
 {
     private readonly CancellationTokenSource _ConnectCts = new();
+    private readonly AndroidRecorderFallbackCandidateSource _FallbackCandidateSource;
     private readonly IViewerSessionHost _ViewerHost;
     private bool _Disposed;
     private bool _RuntimeAttached;
@@ -22,8 +23,11 @@ public class ViewerSessionController :
 
     public ViewerSessionController()
     {
+        _FallbackCandidateSource = new AndroidRecorderFallbackCandidateSource(Platform.AppContext);
+        _FallbackCandidateSource.SetProbingEnabled(ViewerForegroundState.IsForeground);
+        ViewerForegroundState.Changed += OnViewerForegroundChanged;
         _ViewerHost = new ViewerHost(
-            fallbackCandidateSource: new AndroidRecorderFallbackCandidateSource(Platform.AppContext));
+            fallbackCandidateSource: _FallbackCandidateSource);
         ToggleSetupModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Setup));
         ToggleGameModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Game));
     }
@@ -65,6 +69,8 @@ public class ViewerSessionController :
         _Disposed = true;
         _ConnectCts.Cancel();
         _ConnectCts.Dispose();
+        ViewerForegroundState.Changed -= OnViewerForegroundChanged;
+        _FallbackCandidateSource.SetProbingEnabled(false);
         _SessionManager?.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -72,6 +78,11 @@ public class ViewerSessionController :
     public Task ToggleModeSessionAsync(SessionMode mode)
     {
         return _SessionManager?.ToggleModeSessionAsync(mode) ?? Task.CompletedTask;
+    }
+
+    private void OnViewerForegroundChanged(bool isForeground)
+    {
+        _FallbackCandidateSource.SetProbingEnabled(isForeground);
     }
 
     void IUiStateSink.Update(SessionUiState uiState)

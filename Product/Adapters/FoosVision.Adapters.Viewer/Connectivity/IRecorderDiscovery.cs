@@ -11,4 +11,6 @@ public interface IRecorderDiscovery
 public interface IRecorderDiscoverySession : IDisposable
 {
     IReadOnlyList<RecorderDiscoveryCandidate> GetCandidatesRankedSnapshot();
+
+    void RemoveCandidate(string recorderIpAddress);
 }

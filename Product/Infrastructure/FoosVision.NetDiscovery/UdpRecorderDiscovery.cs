@@ -47,6 +47,16 @@ public class UdpRecorderDiscovery : IRecorderDiscovery
                 .Select(x => x.Value)];
         }
 
+        public void RemoveCandidate(string recorderIpAddress)
+        {
+            if (!IPAddress.TryParse(recorderIpAddress, out IPAddress? address))
+            {
+                return;
+            }
+
+            _Candidates.TryRemove(address, out _);
+        }
+
         public void Dispose()
         {
             try

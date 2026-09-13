@@ -10,6 +10,10 @@ namespace NetDiscovery.Udp;
 /// </summary>
 internal sealed class UdpServer : IServer
 {
+    private static readonly TimeSpan _StartupAnnouncementDuration = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan _StartupAnnouncementInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan _SteadyAnnouncementInterval = TimeSpan.FromSeconds(3);
+
     /// <summary>
     /// Lock object
     /// </summary>
@@ -116,12 +120,18 @@ internal sealed class UdpServer : IServer
     {
         // Dictionary of sockets by address
         var sockets = new Dictionary<IPAddress, Socket>();
+        var startedAt = DateTime.UtcNow;
 
         // Loop until asked to cancel
         while (true)
         {
-            // Wait for 3 seconds or a cancel request
-            if (_Cancel.Token.WaitHandle.WaitOne(3000))
+            var elapsed = DateTime.UtcNow - startedAt;
+            var announcementInterval = elapsed < _StartupAnnouncementDuration
+                ? _StartupAnnouncementInterval
+                : _SteadyAnnouncementInterval;
+
+            // Wait for the next announcement interval or a cancel request
+            if (_Cancel.Token.WaitHandle.WaitOne(announcementInterval))
                 break;
 
             // Get the addresses of all interfaces

@@ -21,14 +21,48 @@ internal class AndroidRecorderFallbackCandidateSource : IRecorderFallbackCandida
     private static readonly Source _Log = new("Viewer.Android.Connectivity.AndroidRecorderFallbackCandidateSource");
 
     private readonly Context _Context;
+    private int _ProbingEnabled;
+    private int _BackgroundSkipLogged;
+    private int _ProbeRun;
 
     public AndroidRecorderFallbackCandidateSource(Context context)
     {
         _Context = context.ApplicationContext ?? context;
     }
 
+    public void SetProbingEnabled(bool enabled)
+    {
+        int next = enabled ? 1 : 0;
+        int previous = Interlocked.Exchange(ref _ProbingEnabled, next);
+        Interlocked.Exchange(ref _BackgroundSkipLogged, 0);
+
+        if (previous == next)
+        {
+            return;
+        }
+
+        if (enabled)
+        {
+            _Log.Information("Android recorder fallback probing enabled because the viewer is in the foreground.");
+        }
+        else
+        {
+            _Log.Information("Android recorder fallback probing disabled because the viewer is not in the foreground.");
+        }
+    }
+
     public async Task<IReadOnlyList<RecorderDiscoveryCandidate>> GetCandidatesAsync(CancellationToken ct)
     {
+        if (!IsProbingEnabled)
+        {
+            if (Interlocked.Exchange(ref _BackgroundSkipLogged, 1) == 0)
+            {
+                _Log.Information("Android recorder fallback probing skipped because the viewer is not in the foreground.");
+            }
+
+            return [];
+        }
+
         List<IPAddress> localAddresses = GetLocalWifiIPv4Addresses();
         _Log.Information(
             "Android recorder fallback local WiFi addresses. Addresses={0}",
@@ -41,8 +75,10 @@ internal class AndroidRecorderFallbackCandidateSource : IRecorderFallbackCandida
             return [];
         }
 
+        var probeRun = Interlocked.Increment(ref _ProbeRun);
         _Log.Information(
-            "Android recorder fallback probing local subnet for recorder handshake endpoint. AddressCount={0} Port={1}",
+            "Android recorder fallback probing run started. Run={0} AddressCount={1} Port={2}",
+            probeRun,
             probeAddresses.Count,
             DefaultPorts.HandshakeReqRepTcp);
 
@@ -57,6 +93,11 @@ internal class AndroidRecorderFallbackCandidateSource : IRecorderFallbackCandida
             },
             async (address, token) =>
             {
+                if (!IsProbingEnabled)
+                {
+                    return;
+                }
+
                 if (!await CanConnectAsync(address, token))
                 {
                     return;
@@ -71,16 +112,16 @@ internal class AndroidRecorderFallbackCandidateSource : IRecorderFallbackCandida
         IReadOnlyList<RecorderDiscoveryCandidate> result = [.. candidates
             .OrderBy(x => IPAddress.Parse(x.RecorderIpAddress), Comparer<IPAddress>.Create(CompareAddresses))];
 
-        if (result.Count > 0)
-        {
-            _Log.Information(
-                "Android recorder fallback found handshake endpoints. Count={0} Addresses={1}",
-                result.Count,
-                string.Join(",", result.Select(x => x.RecorderIpAddress)));
-        }
+        _Log.Information(
+            "Android recorder fallback probing run completed. Run={0} CandidateCount={1} Addresses={2}",
+            probeRun,
+            result.Count,
+            result.Count == 0 ? "<none>" : string.Join(",", result.Select(x => x.RecorderIpAddress)));
 
         return result;
     }
+
+    private bool IsProbingEnabled => Volatile.Read(ref _ProbingEnabled) != 0;
 
     private List<IPAddress> GetLocalWifiIPv4Addresses()
     {
