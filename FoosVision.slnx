@@ -83,6 +83,7 @@
     <File Path="CODE-OF-CONDUCT.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
     <File Path="LICENSE.md" />
     <File Path="PRIVACY.md" />
     <File Path="README.md" />
@@ -91,7 +92,7 @@
   <Folder Name="/Tests/">
     <File Path="Tests/Directory.Build.props" />
     <File Path="Tests/Directory.Packages.props" />
-    <File Path="Tests/test.runsettings" />
+    <File Path="Tests/testconfig.json" />
   </Folder>
   <Folder Name="/Tests/Adapters/">
     <Project Path="Tests/Adapters/FoosVision.Adapters.Common.UnitTests/FoosVision.Adapters.Common.UnitTests.csproj" />

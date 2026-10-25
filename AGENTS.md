@@ -224,6 +224,10 @@ Follow `.editorconfig` and existing repository conventions.
 This repository uses LF line endings and a final newline.
 Do not introduce mixed line endings or switch LF files to CRLF to satisfy whitespace tooling.
 
+For Markdown tables, pad cells with spaces so that column separators line up in the
+source, including the header and separator row. Preserve any explicit column alignment.
+Apply this to tables you add or edit; avoid reformatting unrelated tables.
+
 Important existing code style conventions include:
 
 - use 4-space indentation for C# files
@@ -307,11 +311,11 @@ Test naming conventions:
 
 Use from repository root to run all tests:
 
-dotnet test --settings Tests/test.runsettings
+dotnet test
 
 Use from repository root to run one test project:
 
-dotnet test Tests/Core/FoosVision.Domain.UnitTests/FoosVision.Domain.UnitTests.csproj --settings Tests/test.runsettings
+dotnet test --project Tests/Core/FoosVision.Domain.UnitTests/FoosVision.Domain.UnitTests.csproj
 
 ### Coverage expectations
 

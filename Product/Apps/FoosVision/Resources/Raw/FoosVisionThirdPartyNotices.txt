@@ -1,4 +1,4 @@
-FoosVision 1.0.0
+FoosVision 1.1.0
 License: GPL-3.0-or-later
 Source license file: LICENSE.md
 
@@ -7,8 +7,8 @@ Third-party notices
 Runtime NuGet packages
 - AsyncIO 0.1.69 - MPL-2.0 - https://github.com/somdoron/AsyncIO
 - GoogleGson 2.13.1.1 - MIT AND Apache-2.0 - https://aka.ms/android-libraries
-- MessagePack 3.1.7 - MIT - https://github.com/MessagePack-CSharp/MessagePack-CSharp
-- MessagePack.Annotations 3.1.7 - MIT - https://github.com/MessagePack-CSharp/MessagePack-CSharp
+- MessagePack 3.1.12 - MIT - https://github.com/MessagePack-CSharp/MessagePack-CSharp
+- MessagePack.Annotations 3.1.12 - MIT - https://github.com/MessagePack-CSharp/MessagePack-CSharp
 - Microsoft.Extensions.Configuration 10.0.0 - MIT - https://dot.net/
 - Microsoft.Extensions.Configuration.Abstractions 10.0.0 - MIT - https://dot.net/
 - Microsoft.Extensions.DependencyInjection 10.0.0 - MIT - https://dot.net/
@@ -21,21 +21,21 @@ Runtime NuGet packages
 - Microsoft.Extensions.ObjectPool 10.0.0 - MIT - https://asp.net/
 - Microsoft.Extensions.Options 10.0.0 - MIT - https://dot.net/
 - Microsoft.Extensions.Primitives 10.0.0 - MIT - https://dot.net/
-- Microsoft.Maui.Controls 10.0.71 - MIT - https://github.com/dotnet/maui
-- Microsoft.Maui.Controls.Core 10.0.71 - MIT - https://github.com/dotnet/maui
-- Microsoft.Maui.Controls.Xaml 10.0.71 - MIT - https://github.com/dotnet/maui
-- Microsoft.Maui.Core 10.0.71 - MIT - https://github.com/dotnet/maui
-- Microsoft.Maui.Essentials 10.0.71 - MIT - https://github.com/dotnet/maui
-- Microsoft.Maui.Graphics 10.0.71 - MIT - https://github.com/dotnet/maui
+- Microsoft.Maui.Controls 10.0.120 - MIT - https://github.com/dotnet/maui
+- Microsoft.Maui.Controls.Core 10.0.120 - MIT - https://github.com/dotnet/maui
+- Microsoft.Maui.Controls.Xaml 10.0.120 - MIT - https://github.com/dotnet/maui
+- Microsoft.Maui.Core 10.0.120 - MIT - https://github.com/dotnet/maui
+- Microsoft.Maui.Essentials 10.0.120 - MIT - https://github.com/dotnet/maui
+- Microsoft.Maui.Graphics 10.0.120 - MIT - https://github.com/dotnet/maui
 - Microsoft.NET.StringTools 17.11.4 - MIT - http://go.microsoft.com/fwlink/?LinkId=624683
 - NaCl.Net 0.1.13 - MPL-2.0 - https://github.com/somdoron/nacl.net
-- NetMQ 4.0.4.3 - LGPL-3.0 with special linking exception - https://github.com/zeromq/netmq
-- Serilog 4.3.1 - Apache-2.0 - https://serilog.net/
+- NetMQ 4.0.4.5 - LGPL-3.0 with special linking exception - https://github.com/zeromq/netmq
+- Serilog 4.4.0 - Apache-2.0 - https://serilog.net/
 - Serilog.Formatting.Compact 3.0.0 - Apache-2.0 - https://github.com/serilog/serilog-formatting-compact
 - Serilog.Sinks.File 7.0.0 - Apache-2.0 - https://github.com/serilog/serilog-sinks-file
 - Serilog.Sinks.Seq 9.1.0 - Apache-2.0 - https://github.com/serilog/serilog-sinks-seq
-- System.Security.Cryptography.Pkcs 10.0.10 - MIT - https://dot.net/
-- System.Security.Cryptography.Xml 10.0.10 - MIT - https://dot.net/
+- System.Security.Cryptography.Pkcs 10.0.13 - MIT - https://dot.net/
+- System.Security.Cryptography.Xml 10.0.13 - MIT - https://dot.net/
 - System.ServiceModel.Primitives 10.0.652802 - MIT - https://github.com/dotnet/wcf
 - Xamarin.Android.Glide 4.16.0.14 - MIT AND BSD-2-Clause AND Apache-2.0 - https://aka.ms/android-libraries
 - Xamarin.Android.Glide.Annotations 4.16.0.14 - MIT AND BSD-2-Clause AND Apache-2.0 - https://aka.ms/android-libraries
@@ -179,7 +179,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ----- Package license file -----
-Used by: Microsoft.Maui.Controls 10.0.71, Microsoft.Maui.Controls.Core 10.0.71, Microsoft.Maui.Controls.Xaml 10.0.71, Microsoft.Maui.Core 10.0.71, Microsoft.Maui.Essentials 10.0.71, Microsoft.Maui.Graphics 10.0.71, System.ServiceModel.Primitives 10.0.652802
+Used by: Microsoft.Maui.Controls 10.0.120, Microsoft.Maui.Controls.Core 10.0.120, Microsoft.Maui.Controls.Xaml 10.0.120, Microsoft.Maui.Core 10.0.120, Microsoft.Maui.Essentials 10.0.120, Microsoft.Maui.Graphics 10.0.120, System.ServiceModel.Primitives 10.0.652802
 
 The MIT License (MIT)
 
@@ -206,7 +206,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ----- Package notice -----
-Used by: NetMQ 4.0.4.3
+Used by: NetMQ 4.0.4.5
 
 NetMQ is licensed under LGPL-3.0 with a special linking exception. The exception permits linking this library with independent modules to produce and distribute an executable under terms of your choice, provided the terms of each independent module are also met.
 
@@ -1387,7 +1387,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ----- Package notice file -----
-Used by: Microsoft.Maui.Controls 10.0.71, Microsoft.Maui.Controls.Core 10.0.71, Microsoft.Maui.Controls.Xaml 10.0.71, Microsoft.Maui.Core 10.0.71, Microsoft.Maui.Essentials 10.0.71, Microsoft.Maui.Graphics 10.0.71
+Used by: Microsoft.Maui.Controls 10.0.120, Microsoft.Maui.Controls.Core 10.0.120, Microsoft.Maui.Controls.Xaml 10.0.120, Microsoft.Maui.Core 10.0.120, Microsoft.Maui.Essentials 10.0.120, Microsoft.Maui.Graphics 10.0.120
 
 .NET MAUI uses third-party libraries or other resources that may be
 distributed under licenses different than the .NET MAUI software.
@@ -1974,7 +1974,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 =========================================
 
 ----- Package notice file -----
-Used by: Microsoft.Extensions.Configuration 10.0.0, Microsoft.Extensions.Configuration.Abstractions 10.0.0, Microsoft.Extensions.DependencyInjection 10.0.0, Microsoft.Extensions.DependencyInjection.Abstractions 10.0.0, Microsoft.Extensions.Diagnostics.Abstractions 10.0.0, Microsoft.Extensions.FileProviders.Abstractions 10.0.0, Microsoft.Extensions.Hosting.Abstractions 10.0.0, Microsoft.Extensions.Logging 10.0.0, Microsoft.Extensions.Logging.Abstractions 10.0.0, Microsoft.Extensions.Options 10.0.0, Microsoft.Extensions.Primitives 10.0.0, System.Security.Cryptography.Pkcs 10.0.10, System.Security.Cryptography.Xml 10.0.10
+Used by: Microsoft.Extensions.Configuration 10.0.0, Microsoft.Extensions.Configuration.Abstractions 10.0.0, Microsoft.Extensions.DependencyInjection 10.0.0, Microsoft.Extensions.DependencyInjection.Abstractions 10.0.0, Microsoft.Extensions.Diagnostics.Abstractions 10.0.0, Microsoft.Extensions.FileProviders.Abstractions 10.0.0, Microsoft.Extensions.Hosting.Abstractions 10.0.0, Microsoft.Extensions.Logging 10.0.0, Microsoft.Extensions.Logging.Abstractions 10.0.0, Microsoft.Extensions.Options 10.0.0, Microsoft.Extensions.Primitives 10.0.0, System.Security.Cryptography.Pkcs 10.0.13, System.Security.Cryptography.Xml 10.0.13
 
 .NET Runtime uses third-party libraries or other resources that may be
 distributed under licenses different than the .NET Runtime software.

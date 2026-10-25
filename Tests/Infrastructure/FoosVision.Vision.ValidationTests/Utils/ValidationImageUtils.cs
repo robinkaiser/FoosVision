@@ -71,7 +71,7 @@ public static class ValidationImageUtils
     {
         var image = Image.LoadPixelData<Rgba32>(imageData.Buffer, imageData.Width, imageData.Height);
 
-        image.Mutate(ctx =>
+        image.Mutate(ctx => ctx.Paint(canvas =>
         {
             foreach (var line in lines)
             {
@@ -81,9 +81,9 @@ public static class ValidationImageUtils
 
                 PointF p0 = new(Convert.ToSingle(line.X0), Convert.ToSingle(line.Y0));
                 PointF p1 = new(Convert.ToSingle(line.X1), Convert.ToSingle(line.Y1));
-                ctx.DrawLine(pen, p0, p1);
+                canvas.DrawLine(pen, p0, p1);
             }
-        });
+        }));
 
         image.SaveAsPng(outputFilePath);
     }

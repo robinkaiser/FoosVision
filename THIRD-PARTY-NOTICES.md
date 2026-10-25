@@ -13,7 +13,7 @@ FoosVision product apps are built with .NET and .NET MAUI, targeting
 
 The product directly references .NET and .NET MAUI packages including:
 
-- `Microsoft.Maui.Controls` 10.0.71
+- `Microsoft.Maui.Controls` 10.0.120
 
 License: `MIT`
 
@@ -31,14 +31,14 @@ The following packages are centrally versioned in the repository root
 
 | Package                       | Version  | License                                    | Project                                                                              |
 | ----------------------------- | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `Microsoft.Maui.Controls`     | 10.0.71  | `MIT`                                      | [dotnet/maui](https://github.com/dotnet/maui)                                        |
-| `Serilog`                     | 4.3.1    | `Apache-2.0`                               | [serilog.net](https://serilog.net/)                                                  |
+| `Microsoft.Maui.Controls`     | 10.0.120 | `MIT`                                      | [dotnet/maui](https://github.com/dotnet/maui)                                        |
+| `Serilog`                     | 4.4.0    | `Apache-2.0`                               | [serilog.net](https://serilog.net/)                                                  |
 | `Serilog.Formatting.Compact`  | 3.0.0    | `Apache-2.0`                               | [serilog-formatting-compact](https://github.com/serilog/serilog-formatting-compact)  |
 | `Serilog.Sinks.File`          | 7.0.0    | `Apache-2.0`                               | [serilog-sinks-file](https://github.com/serilog/serilog-sinks-file)                  |
 | `Serilog.Sinks.Seq`           | 9.1.0    | `Apache-2.0`                               | [serilog-sinks-seq](https://github.com/serilog/serilog-sinks-seq)                    |
-| `NetMQ`                       | 4.0.4.3  | `LGPL-3.0 with special linking exception`  | [zeromq/netmq](https://github.com/zeromq/netmq)                                      |
-| `MessagePack`                 | 3.1.7    | `MIT`                                      | [MessagePack-CSharp](https://github.com/MessagePack-CSharp/MessagePack-CSharp)       |
-| `MessagePack.Annotations`     | 3.1.7    | `MIT`                                      | [MessagePack-CSharp](https://github.com/MessagePack-CSharp/MessagePack-CSharp)       |
+| `NetMQ`                       | 4.0.4.5  | `LGPL-3.0 with special linking exception`  | [zeromq/netmq](https://github.com/zeromq/netmq)                                      |
+| `MessagePack`                 | 3.1.12   | `MIT`                                      | [MessagePack-CSharp](https://github.com/MessagePack-CSharp/MessagePack-CSharp)       |
+| `MessagePack.Annotations`     | 3.1.12   | `MIT`                                      | [MessagePack-CSharp](https://github.com/MessagePack-CSharp/MessagePack-CSharp)       |
 | `FFmpeg.AutoGen`              | 8.1.0    | `MIT`                                      | [FFmpeg.AutoGen](https://github.com/Ruslan-B/FFmpeg.AutoGen)                         |
 
 ## Third-Party Source Incorporated in Product

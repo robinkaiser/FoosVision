@@ -69,7 +69,7 @@ dotnet build FoosVision.slnx
 ```
 
 ```powershell
-dotnet test --settings Tests/test.runsettings
+dotnet test
 ```
 
 Run the full test suite, not only tests directly associated with the package. Build after
