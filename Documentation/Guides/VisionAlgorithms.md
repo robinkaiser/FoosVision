@@ -1,4 +1,4 @@
-# Vision Algorithms Skill
+# Vision Algorithms Guide
 
 ## Core Pattern
 

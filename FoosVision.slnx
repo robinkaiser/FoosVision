@@ -10,8 +10,10 @@
     <File Path="Documentation/Development/Performance.md" />
     <File Path="Documentation/Development/Streaming.md" />
   </Folder>
-  <Folder Name="/Documentation/Skills/">
-    <File Path="Documentation/Skills/VisionAlgorithmsSkill.md" />
+  <Folder Name="/Documentation/Guides/">
+    <File Path="Documentation/Guides/PackageUpgrades.md" />
+    <File Path="Documentation/Guides/ProtocolAndConnectivity.md" />
+    <File Path="Documentation/Guides/VisionAlgorithms.md" />
   </Folder>
   <Folder Name="/Experiments/" />
   <Folder Name="/Experiments/Android/">

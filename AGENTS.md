@@ -177,41 +177,6 @@ At a high level, the viewer role:
 A connected viewer session exists only after a successful connection to a recorder.
 Recorder-bound state, subscriptions, command routing, live data, live analysis, and media playback must be attached to that connected recorder session rather than treated as application startup state.
 
-## Protocol and Connectivity
-
-The repo already contains protocol and connectivity abstractions for recorder-viewer communication.
-Keep protocol contracts separate from concrete transport implementations.
-
-Relevant projects and folders:
-
-- `Product/Adapters/FoosVision.Protocol`
-  - protocol message definitions, protocol versioning, default ports, and connectivity abstractions
-- `Product/Infrastructure/FoosVision.NetMq`
-  - concrete NetMQ transport for handshake, commands, events, live data, and live analysis
-- `Product/Infrastructure/FoosVision.NetDiscovery`
-  - FoosVision recorder discovery adapter
-- `Product/Infrastructure/NetDiscovery`
-  - lower-level UDP discovery implementation
-- `Experiments/Protocol/RecorderCli`
-- `Experiments/Protocol/ViewerCli`
-
-Existing protocol concepts include:
-
-- handshake
-- discovery
-- commands
-- replies
-- events
-- live data
-- live analysis
-- default ports
-- protocol versioning
-
-Important rule:
-A major version increase is treated as a breaking protocol change.
-
-If you change protocol messages, ports, handshake behavior, discovery behavior, transport channels, or version semantics, call that out explicitly.
-
 ## Repository Map
 
 ### Read these first for broad orientation
@@ -406,10 +371,17 @@ Avoid:
 - cross-layer shortcuts
 - broad cleanup unrelated to the task
 
-### Specialized changes
+### Change-specific guides
+
+When upgrading NuGet packages or changing package versions, read
+`Documentation/Guides/PackageUpgrades.md` first and follow its instructions.
+
+When changing protocol messages, ports, handshake, discovery, transport channels,
+or version semantics, read `Documentation/Guides/ProtocolAndConnectivity.md` first
+and follow its instructions. Explicitly call out protocol-impacting changes.
 
 When modifying algorithmic code in `Product/Infrastructure/FoosVision.Vision`,
-read `Documentation/Skills/VisionAlgorithmsSkill.md` first and follow it.
+read `Documentation/Guides/VisionAlgorithms.md` first and follow its instructions.
 
 When changing configuration behavior, config schema, config defaults, diagnostics settings,
 or recorder/viewer settings propagation, check `Documentation/Configuration.md` and
@@ -432,18 +404,16 @@ A task is done when, where applicable:
 
 When working in this repository:
 
-- orient on the existing structure before proposing or changing code
-- prefer repo facts over generic architecture advice
-- be concrete and implementation-focused
-- keep changes compatible with the existing architecture, naming, and product workflow
-- do not speculate about behavior that is not encoded in the repo, documentation, or user request
+- read the code and documentation relevant to the task; scale investigation to the scope of the change
+- base changes on repository evidence and existing architecture, naming, and product workflows
+- distinguish verified behavior from assumptions and hypotheses; investigate uncertainties that affect correctness
+- carry authorized work through implementation, relevant verification, and required documentation; ask when a material decision cannot be resolved from the request or repository context
 - for small documentation-only edits, keep verification minimal; use a targeted diff/status check and do not run tests or broad cleanup unless there is a specific risk
 
 When using the CLI or shell:
 
-- follow the Build and Run command-execution rules
+- run build and test commands sequentially as required by Build and Run; independent read-only inspection may run in parallel
 - use `rg`/`rg --files` for searching when available
-- do not chain independent verification commands with shell parallelization operators or separate sessions
 
 ### Git Staging Workflow
 
@@ -461,19 +431,16 @@ Treat the Git index as user-managed state:
 
 ### Editing Strategy
 
-- prefer small, file-by-file edits over large multi-file batches
+- keep edits focused and reviewable; related implementation, tests, and wiring may be changed together
 - for `.csproj`, `.props`, `.targets`, `.slnx`, and similar project files, prefer minimal and explicit edits
-- do not combine project scaffolding, dependency changes, solution changes, implementation, and tests into one large patch
-- after project or solution structure changes, stop and verify before continuing with implementation
-- if one patch fails repeatedly, switch to a smaller safer approach instead of increasing patch size
-- avoid rewriting entire files unless that is clearly the safest option
+- after project or solution structure changes, verify the affected structure before building further on it
+- if an editing approach fails repeatedly, switch to a simpler approach
+- avoid unrelated whole-file rewrites and formatting churn
 
 ### Windows / PowerShell
 
-- when using shell-based file edits on Windows, prefer small independent write steps over one large PowerShell script
-- be careful with quoting, here-strings, and escaping when writing XML, JSON, or C# source through PowerShell
-- prefer direct file writes only when patch-based editing is unreliable
-- if direct file writes are used, verify the resulting file content before continuing
+- account for PowerShell quoting, here-strings, and escaping when writing XML, JSON, or C# source
+- choose an editing method that keeps changes precise and preserves encoding and LF line endings; verify the resulting diff
 
 ### Context7 Usage
 
