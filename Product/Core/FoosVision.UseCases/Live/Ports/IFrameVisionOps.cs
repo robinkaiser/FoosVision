@@ -4,7 +4,7 @@
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.UseCases.Game.Ports;
+namespace FoosVision.UseCases.Live.Ports;
 
 public interface IFrameVisionOps
 {

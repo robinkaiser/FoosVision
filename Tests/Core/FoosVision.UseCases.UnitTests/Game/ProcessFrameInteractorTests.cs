@@ -6,8 +6,8 @@ using FoosVision.Domain.Game.Services.GameTracking;
 using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
-using FoosVision.UseCases.Game.Ports;
 using FoosVision.UseCases.Game.ProcessFrame;
+using FoosVision.UseCases.Live.Ports;
 using NSubstitute;
 
 namespace FoosVision.UseCases.UnitTests.Game;

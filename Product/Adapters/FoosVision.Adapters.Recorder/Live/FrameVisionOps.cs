@@ -7,7 +7,7 @@ using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Ports.Media;
 using FoosVision.Ports.Vision;
-using FoosVision.UseCases.Game.Ports;
+using FoosVision.UseCases.Live.Ports;
 
 namespace FoosVision.Adapters.Recorder.Live;
 

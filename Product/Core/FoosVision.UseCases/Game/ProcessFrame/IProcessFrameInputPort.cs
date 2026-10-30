@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
-using FoosVision.UseCases.Game.Ports;
+using FoosVision.UseCases.Live.Ports;
 
 namespace FoosVision.UseCases.Game.ProcessFrame;
 

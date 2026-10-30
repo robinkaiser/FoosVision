@@ -1,7 +1,7 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-10-30. Status: Arbeitspaket 1 implementiert und geprüft.
-Weitere Arbeitspakete sind nicht umgesetzt.
+Stand: 2026-10-30. Status: Arbeitspakete 1–3 implementiert und geprüft.
+Arbeitspakete 4–11 sind offen; Training ist noch nicht in die App-Laufzeit integriert.
 
 ## Ziel und Umfang
 
@@ -66,9 +66,8 @@ bestehenden FoosVision-Projekte. Neue Typnamen sind Arbeitsnamen.
 - Von Beginn an ein Strategy-Pattern in der Training-Domain verwenden. Mehrere Strategien
   können per JSON gleichzeitig aktiviert und beliebig kombiniert werden, beispielsweise
   Tick-Tack Pass + Snake oder Snake + Pull. Jede Trainingsstrategie kapselt ihre Regeln für Vorbereitung,
-  Ansage und Auslösung sowie Abbruch/erneute Bereitschaft. „Auflage“ setzt keine Ballruhe
-  voraus: Snake unterstützt sowohl pendelnde als auch ruhende Setups innerhalb
-  derselben Strategie `snakeShot`.
+  Ansage und Auslösung sowie Abbruch/erneute Bereitschaft. Snake (`snakeShot`) erkennt
+  ausschließlich den Setup-Bereich mit 1000 ms Vorbereitungsdelay, ohne Ruhe-/Pendelerkennung.
 - TrainingSession besitzt die Instanzen aller aktivierten Strategien und den gemeinsamen
   Session-/Versuchs-Lifecycle. In der Vorbereitungsphase werden alle aktivierten Strategien
   ausgewertet. Die erkannte Strategie übernimmt den jeweiligen Versuch mit ihren Optionen.
@@ -89,138 +88,88 @@ bestehenden FoosVision-Projekte. Neue Typnamen sind Arbeitsnamen.
 
 ## 0. Produktentscheidungen vor der jeweiligen Implementierung festlegen
 
-Bestätigte Entscheidungen stehen im folgenden Abschnitt. Offen bleiben nur die
-ausdrücklich als Vorschlag oder spätere Konkretisierung markierten Details.
+Für Arbeitspaket 3 am 2026-10-30 mit dem Nutzer konkretisiert. Diese Entscheidungen
+ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwendung.
 
-### Festgelegte Strategien
+### Bestätigte Erkennungsregeln
 
-| Strategie      | Vorbereitung erkennen                                       | Spätere Ansage           | Auslösung erkennen                                       |
-| -------------- | ----------------------------------------------------------- | ------------------------ | -------------------------------------------------------- |
-| Snake          | Mittiges pendelndes oder ruhendes Setup auf der Dreierreihe | Push, Pull, Middle       | Schussbewegung links/rechts oder weg von der Stange      |
-| Zieher         | Ball ruht auf Höhe des spielerfernen Torpfostens            | Short, Middle, Long      | Schussbewegung mit Mindestweg und Mindestgeschwindigkeit |
-| Tick-Tack Pass | Tick-Tack auf der Fünferreihe nahe einer Tischseite         | Wall, Lane, Sling/Split  | Passauslösung; genaue Erkennungsregel noch festzulegen   |
+- **Beide Teams:** Eigene Dreier-/Fünferreihe und Angriffsrichtung aus Tischgeometrie und
+  Team ableiten. Prozentangaben quer zum Tor werden zwischen oberer und unterer Bande
+  an der betreffenden Reihe berechnet, einschließlich perspektivischer Feldkanten.
+- **Snake (`snakeShot`):** Mittlere 15 % der Spielfeldbreite, also 42,5–57,5 %.
+  Richtung Zieltor gilt 20–35 % des Abstandes zwischen den Stangenmitten der eigenen
+  Dreierreihe und der benachbarten gegnerischen Zweierreihe (0 % unter der Dreierreihe,
+  100 % unter der Zweierreihe). Dreierbesitz erforderlich. 1000 ms durchgehend im Bereich
+  abwarten, dann Ready; keine Unterscheidung zwischen Pendeln und Ruhe. Das Delay ist
+  eine Code-Konstante. Zulässige Bewegung im Bereich startet den Timer nicht neu.
+- **Zieher (`pullShot`):** Dreierbesitz reicht für die Position in Richtung Tor.
+  Querposition für A 25–35 % von oben, für B gespiegelt 65–75 %. 1000 ms Ruhe;
+  die bisherige Toleranz gilt: jeder Positionswert höchstens `dx² + dy² <= 50` vom
+  Mittelwert des Vorbereitungsfensters entfernt (rund 7,1 Pixel). Nach Ready wird
+  Bewegung gegen diese Ruheposition bewertet.
+- **Tick-Tack (`tickTackPass`):** Fünferbesitz und Querposition 0–25 % oder 75–100 %,
+  für beide Teams und beide Banden. Zwei Richtungswechsel bestätigen die Vorbereitung.
+  Position in Richtung Tor ist für die Vorbereitung nicht eingeschränkt. Als benannte
+  V1-Code-Konstante zählen Richtungswechsel erst ab 5 Pixeln vom letzten Extrempunkt;
+  dadurch zählt Trackingrauschen nicht als Tick-Tack.
+- **Schussabschluss bei Snake/Pull:** Highspeed ab 4 km/h auf mindestens einer Achse und
+  beobachteter Ball auf der Zweierreihe des Zieltores. Beide Fakten gehören zur aktuellen
+  Bewegung, ihre Reihenfolge ist beliebig. Danach 250 ms Nachlauf anhand der Frame-Zeit,
+  dann einmaliges Abschlussereignis. Keine Bewertung der angesagten Variante oder eines Tores.
+- **Passabschluss:** Ball auf eigener Dreierreihe oder in gegnerischer Defense bestätigt
+  den Pass. Seitliches Verlassen des Setup-Bereichs bei weiterem eigenen Fünferbesitz
+  oder Bewegung entgegen der Angriffsrichtung führt zum Abbruch.
+- **Entscheidungsfenster nach Setup-Verlust:** Nicht im ersten Bewegungsframe abbrechen.
+  V1 verwendet vorläufig 750 ms als benannte Code-Konstante, um Schuss-/Passabschluss
+  abzuwarten. Ohne Bestätigung folgt Aborted. Ein bereits bestätigter Schuss darf seinen
+  250-ms-Nachlauf abschließen. Dies ist ein Auswertungsfenster, keine weitere Trackingglättung.
+- **Anchor:** Letzten gültigen Setup-Frame samt Ballposition und Besitz vor der Bewegung
+  festhalten. Eigene Training-Verträge; die bestehenden Game-Replay-Strategien und deren
+  Parameter bleiben unverändert. Keine Extraktion von ReplayDecision aus Game für Training.
 
-Die Auslösung ist zunächst ein fachliches Ereignis mit Frame/Zeitstempel und Position,
-kein Nachweis eines erfolgreichen Schusses oder einer korrekt ausgeführten Variante.
-Es kann später den Trainings-Replay auslösen bzw. dessen Zeitfenster verankern.
+### Bestätigter Ablauf und Optionen
 
-### Bestätigte Entscheidungen
+- **Bedienung/Ausgabe:** Dritter Start-/Stop-Button folgt später; alle Einstellungen per
+  Recorder-JSON. Nur der Recorder spricht. Ansagen sind korrelierte Usecase-Ausgaben ohne
+  Audio-Rückmeldung; Sprachausgabe startet oder verlängert keine fachlichen Timer.
+- **Wartezeit:** Ready und Start der zufälligen Wartezeit im selben Übergang, nach dem
+  Vorbereitungsdelay. Je Strategie einmal pro Versuch ziehen. Startwerte: Tick-Tack
+  1–10 Sekunden, Snake 1–12 Sekunden, Pull 1–10 Sekunden; zunächst `uniform`.
+  Unterstützte Verteilungen für gleichverteiltes `u` in [0,1): `uniform = u`,
+  `preferLong = sqrt(u)`, `preferShort = 1 - sqrt(u)`; Zeit = min + (max - min) * Anteil.
+  Min = max ergibt feste Wartezeit. Keine zusätzlichen Bias-Parameter.
+- **Varianten:** Snake: Push/Pull/Middle; Pull: Short/Middle/Long; Tick-Tack: Wall/Lane/Split.
+  Gleichverteilte zufällige Auswahl, direkte Wiederholungen erlaubt. Stabile IDs und
+  sprechbare Texte im Core; keine Erfolgsprüfung der angesagten Variante.
+- **Timeout:** Nach Variantenansage 3 Sekunden bis Bewegungsbeginn. Rechtzeitig gestartete
+  Bewegungen dürfen ihr Entscheidungsfenster und gegebenenfalls den Nachlauf abschließen.
+- **Vorzeitige Ausführung/Setup-Verlust:** Einmal Aborted mit intern getrennten Gründen;
+  keine Variantenansage mehr für diesen Versuch. Alte Ansagen invalidieren, dabei die
+  eigene Aborted-Ausgabe gültig lassen. Nächstes Ready invalidiert auch alte Aborted-Ausgaben.
+- **Erneuter Versuch:** Vollständige neue Vorbereitung, frische Erkennungshistorien aller
+  Strategien. Unverändert liegender Snake/Pull nach Timeout erzeugt kein weiteres Ready.
+  Ein bereits beobachteter Austritt bzw. eine neue Pull-Ruheposition reicht zum erneuten
+  Ansetzen; kein zusätzlicher künstlicher Außen-Frame nach einem abgeschlossenen Schuss.
+- **Kombinationen:** Alle aktivierten Strategien suchen parallel anhand desselben Snapshots;
+  erste erkannte Strategie übernimmt. Keine besondere Mehrdeutigkeitsbehandlung und keine
+  zusätzliche Zufallsziehung zur Priorisierung. Während des Versuchs keine Konkurrenz.
+- **Tracking/Zeit:** Vorhandene Glättung und Verlustphasen von BallTracking/LiveTracking
+  verwenden. Keine zusätzliche Verdeckungstoleranz oder pauschale Zeitlückenregel.
+  Keine Ansagen ohne neue Frames, keine Variantenansage ohne beobachteten Ball;
+  endgültiger Trackingverlust führt zum Abbruch. Doppelte/rückläufige Frame-Zeit ignorieren.
+- **Geometrieänderung:** Kleine laufende Korrekturen normal übernehmen; weder Versuch noch
+  Erkennungshistorie deswegen zurücksetzen. Keine zusätzliche Änderungserkennung.
+- **Protokoll:** Protokoll- und Major-Version bleiben für diese Prototyp-Erweiterung
+  unverändert. Spätere Protokolländerungen trotzdem dokumentieren; beide Rollen mit
+  demselben aktualisierten Build prüfen. Keine Ansage-Protokollnachrichten.
+- **Replay:** Technische Ausführung erst in Arbeitspaket 9. Wiederholung bis zur nächsten
+  bestätigten Vorbereitung/Ready; Ballbewegung nach einem Pass beendet die Schleife nicht.
 
-- **Bedienung und Ausgabe:** Dritter Start-/Stop-Button im Viewer; alle Trainingsoptionen
-  per Recorder-JSON. Nur der Recorder spricht über seinen Lautsprecher.
-- **Protokollversion:** Für diese Erweiterung weder Protokoll- noch Major-Version
-  erhöhen. FoosVision ist weiterhin ein Prototyp; die Versionsentscheidung ist geklärt
-  und muss in späteren Arbeitspaketen nicht erneut abgestimmt werden. Protokolländerungen
-  trotzdem dokumentieren; eine unveränderte Versionsnummer garantiert keine Kompatibilität
-  mit älteren Builds.
-- **Beide Teams:** Training funktioniert gleichermaßen auf A3/B3 und für Passübungen
-  auf A5/B5. Keine fest verdrahtete Trainingsseite. Pro Versuch die erkannte Reihe und
-  Teamzuordnung festhalten; Besitzwechsel nicht als Fortsetzung desselben Versuchs behandeln.
-- **Strategiekombinationen:** Eine Session unterstützt mehrere gleichzeitig aktivierte
-  Strategien. Zwischen Versuchen kann die nächste Vorbereitung zu jeder aktivierten
-  Strategie gehören, ohne JSON-Änderung oder Session-Neustart. Wartezeit und Varianten
-  gehören weiterhin zur jeweils erkannten Strategie. Pro Versuch gibt es eine zuständige
-  Strategie; kein gemeinsamer Timer und keine Vermischung ihrer Ansagen.
-- **Vorbereitung:** Snake unterstützt sowohl Pendel-Snakes als auch ruhende Setups.
-  Beide gehören zu `snakeShot`; die konkrete Erkennung wird erst im zugehörigen
-  Arbeitspaket ausgearbeitet. Zieher verwendet einen ruhenden
-  Ball auf Höhe des spielerfernen Torpfostens: Der Ball liegt vom Spieler weg; ein langer
-  Zieher zieht ihn zur spielernahen Torseite. Die umgekehrte Richtung wäre ein Schieber.
-  „Links“ ist damit keine feste Bildschirmrichtung. Dies für A/B aus Tisch-/Teamgeometrie
-  ableiten; keinen mechanischen Anschlag oder zusätzliche Figurenerkennung voraussetzen.
-  Tick-Tack Pass startet nahe einer der beiden Tischseiten; beispielsweise bestätigt
-  der zweite Richtungswechsel die Vorbereitung. Exakte Bereiche und Schwellen werden
-  erst im jeweiligen Arbeitspaket relativ zum Spielfeld festgelegt.
-- **Wartezeit:** Jede Strategie besitzt eigene Min-/Max-Dauer und Verteilungswahl,
-  passend zur Vorbereitung und den unterschiedlichen Limits auf Fünfer- und Dreierreihe.
-  Sobald der Recorder die Vorbereitung bestätigt, fordert er etwa „Snake ready“ oder
-  „Pull ready“ an und startet im selben Zustandsübergang die Wartezeit. Bei 2–6 Sekunden
-  fordert er die Variantenansage frühestens 2 und spätestens 6 Sekunden danach an.
-  Die tatsächliche lokale Ausgabelatenz wird ignoriert; keinen Audio-Abschluss abwarten.
-  Einmal pro Versuch ziehen, nicht in jedem Frame neu. Ready ist
-  die Bestätigung der Vorbereitung, die spätere Variantenansage nennt das Schuss-/Passziel.
-- **Vorzeitige Auslösung:** Versuch abbrechen und Abbruch ansagen, etwa „Aborted“.
-  Noch ausstehende Variantenansage verwerfen. Normales Snake-Pendeln/Tick-Tack ist keine
-  Auslösung und startet die Wartezeit nicht erneut.
-- **Verlust der Vorbereitung nach Ready:** Auch ohne Schuss/Pass abbrechen und erneut
-  vollständige Vorbereitung verlangen. Tick-Tack: Ball verlässt den Setup-Bereich.
-  Pull: Ball bewegt sich leicht, ohne die Mindestbewegung und Geschwindigkeit eines
-  Schusses zu erreichen. Snake: Ball rollt langsam aus der Klemmposition. Die Strategie
-  unterscheidet zulässige Vorbereitung, verlorene Vorbereitung und echte Auslösung.
-  Konkrete Schwellen und zeitliche Toleranzen werden im jeweiligen Arbeitspaket festgelegt.
-  Diese Prüfung gilt nach Ready bis zur echten Auslösung, auch nach der Variantenansage;
-  sie darf eine reguläre Auslösung nicht nachträglich als Setup-Verlust werten.
-- **Abbruchbezeichnung:** Empfehlung: „Aborted“ für vorzeitige Auslösung oder Verlust
-  der Vorbereitung. Intern unterschiedliche Gründe erfassen, dieselbe kurze Ansage nutzen.
-  „Failed“ wäre eher für eine spätere Bewertung eines tatsächlich ausgeführten Versuchs
-  geeignet; eine solche Erfolgsbewertung gehört noch nicht zum aktuellen Umfang.
-- **Neuer Versuch:** Nach regulärer Auslösung oder Abbruch muss der Ball erneut
-  in die strategiespezifische Vorbereitung gebracht werden. Neu bestätigen und einmal
-  „Ready“ ansagen. Ein unverändert fortgesetztes Vorbereitungsmuster erzeugt keine
-  weiteren Versuche oder Ansagen.
-- **Varianten:** Stabile IDs, sprechbare Texte und strategieeigene Auswahlregel vorsehen.
-  Konkrete Auswahlverteilung, Wiederholungsregel und optionale Teilmengen noch festlegen.
-- **Veraltete Ansagen:** Verwerfen. Dafür keinen zusätzlichen Fehlerdialog, keinen
-  technischen Versuchsabbruch und keinen Wiederholungs-/Recovery-Ablauf vorsehen.
-  „Aborted“ bleibt die fachliche Antwort auf vorzeitige Auslösung oder Verlust der
-  Vorbereitung, kein Audiofehler-Handling.
-- **Replay:** Wiederholen bis zur nächsten bestätigten Vorbereitung/„Ready“, dann zu
-  Live wechseln. Tracking und Vorbereitungserkennung laufen während Replay weiter.
-  Ballbesitz oder weitere Ballbewegung nach einem Pass beenden Replay nicht wie bei Game.
+### Erst für spätere Arbeitspakete offen
 
-### Vorschlag zur Wartezeitverteilung
-
-Jede Strategie erhält ihren eigenen Wait-Block. Folgender JSON-Ausschnitt zeigt die
-vorgeschlagene Struktur; Zahlen sind Beispiele, keine Defaults oder festgelegten Zeitlimits:
-
-```json
-{
-  "training": {
-    "enabledStrategies": ["tickTackPass", "snakeShot"],
-    "strategies": {
-      "snakeShot": {
-        "wait": { "minSeconds": 2, "maxSeconds": 6, "distribution": "preferLong" }
-      },
-      "pullShot": {
-        "wait": { "minSeconds": 1, "maxSeconds": 5, "distribution": "uniform" }
-      },
-      "tickTackPass": {
-        "wait": { "minSeconds": 1, "maxSeconds": 3, "distribution": "uniform" }
-      }
-    }
-  }
-}
-```
-
-Vorgeschlagene Werte: `uniform`, `preferLong`, `preferShort`. Eine einfache, kontinuierliche
-Verteilung ohne weitere Nutzerparameter: Für gleichverteiltes u zwischen 0 und 1 wird
-der Anteil am Intervall u, sqrt(u) bzw. 1 - sqrt(u). Wartezeit = min + (max - min) * Anteil.
-Damit liegt bei `preferLong` die Wartezeit mit 75 % Wahrscheinlichkeit in der längeren
-Intervallhälfte; `preferShort` ist spiegelbildlich. min = max ergibt eine feste Wartezeit.
-Die Stärke ist zunächst bewusst fest; ein zusätzlicher Bias-Parameter nur bei echtem Bedarf.
-Dieser Verteilungsvorschlag ist noch abzustimmen.
-
-### Noch zu konkretisieren – teilweise erst im jeweiligen Arbeitspaket
-
-- [ ] **Erkennung:** Konkrete Bereiche, Ruhe-/Pendelzeiten, Richtungswechsel und Schwellen
-  gegen Trackingrauschen später pro Strategie festlegen. Beim Tick-Tack ausdrücklich
-  Vorbereitung durch Richtungswechsel von der eigentlichen Passauslösung unterscheiden.
-  Für Snake die Erkennung pendelnder und ruhender Setups sowie den Umgang mit Wechseln
-  zwischen beiden während der Wartephase im Strategie-Arbeitspaket festlegen.
-- [ ] **Mehrdeutige Vorbereitung:** Vor Implementierung der Strategiekoordination eine
-  deterministische Regel festlegen, falls mehrere Strategien gleichzeitig Ready melden.
-  Vorschlag: Bei Mehrdeutigkeit noch keinen Versuch starten, bis die Vorbereitung eindeutig
-  ist; nicht zufällig oder abhängig von der Iterationsreihenfolge auswählen.
-- [ ] **Verdeckung/Nicht-Schießen:** Toleranz für kurze Tracking-Aussetzer und Musterverlust sowie
-  gegebenenfalls einen Timeout nach Ansage festlegen. Kein neuer Versuch ohne erneute Vorbereitung.
-- [ ] **Passname:** „Sling“ oder „Split“ für den Pass zwischen Wall und Lane entscheiden;
-  Arbeitsbezeichnung im Plan: Split, ohne damit einen etablierten Fachbegriff zu behaupten.
-- [ ] **Replay-Details:** Auslöser, Vor-/Nachlauf und Geschwindigkeit später festlegen;
-  ebenso, ob vorzeitig abgebrochene Versuche ein Replay erhalten. Das Ende durch die
-  nächste Vorbereitung ist bereits entschieden, keine feste Schleifenzahl als Trainingsende.
-
-Abnahme: Bestätigte Entscheidungen umsetzen; verbleibende Details vor dem jeweils
-abhängigen Arbeitspaket klären. Noch keine Implementierungs-Checkboxen als erledigt markieren.
+- [ ] Replay-Clip-Vor-/Nachlauf, Geschwindigkeit und Replay bei abgebrochenen Versuchen
+  für Arbeitspaket 9 konkretisieren. Der fachliche Schussnachlauf von 250 ms und der
+  Setup-Anchor aus Arbeitspaket 3 ersetzen noch keine Clip-/Playback-Konfiguration.
 
 ## 1. Gemeinsamen Tracking-Kern fachlich abgrenzen
 
@@ -317,90 +266,62 @@ Umgesetzt am 2026-10-30:
 
 Abhängigkeit: Schritte 0–2.
 
-- [ ] TrainingSession mit Session-ID, Versuch-ID, Zustand und unveränderlichen
-  Trainingsoptionen pro Session implementieren.
-- [ ] Alten SequenceRecognizer, ISequenceRecognizer und nur dort verwendete Zustandstypen
-  sowie Prototyp-Tests entfernen; zuvor Referenzen prüfen. Neue Strategietests ersetzen
-  die alten Tests fachlich, ohne deren Heuristiken konservieren zu müssen.
-- [ ] Schmalen Domain-Vertrag, beispielsweise ITrainingStrategy, definieren. Eingang:
-  Tracking-Fakten, Frame/Zeit, Tisch-/Teamkontext und nötige Versuchsereignisse.
-  Ausgang: typisierte Entscheidungen wie Vorbereitung bestätigt, Ansage angefordert,
-  Versuch ausgelöst oder abgebrochen. Keine JSON-, Protokoll- oder Audio-Typen.
-- [ ] Zustandsbesitz eindeutig halten: TrainingSession verwaltet IDs und gemeinsamen
-  Lifecycle, Strategie verwaltet Erkennungshistorie und ihre Ablaufregeln. Ergebnisse
-  werden einmalig pro Übergang ausgegeben; keine zweite konkurrierende Zustandsmaschine
-  im Presenter oder ein zentraler Switch auf Strategie-IDs pro Frame.
-- [ ] Koordination mehrerer aktivierter Strategien ergänzen. In der Suche denselben
-  Tracking-Snapshot an alle Vorbereitungserkennungen geben; höchstens einen Versuch
-  starten. Strategie-ID, Team/Reihe und zugehörige Optionen für diesen Versuch festhalten.
-  Während eines aktiven Versuchs startet keine zweite Strategie einen konkurrierenden
-  Timer oder eine Ansage. Nach Auslösung/Abbruch stehen wieder alle aktivierten Strategien
-  zur Verfügung; alte Erkennungshistorien so zurücksetzen, dass eine neue Vorbereitung
-  erforderlich ist. Dies gilt auch während Replay des vorigen Versuchs.
-- [ ] SnakeShotTrainingStrategy, PullShotTrainingStrategy und TickTackPassTrainingStrategy
-  (Arbeitsnamen) implementieren,
-  einschließlich jeweiliger Vorbereitung, Ansagevarianten, Wartephase und Auslösung.
-  Nach Ready läuft die strategiespezifische Wartephase unter der passenden Haltebedingung;
-  Snake unterstützt pendelnde und ruhende Vorbereitung; die jeweiligen Haltebedingungen
-  und Übergänge werden in diesem Arbeitspaket festgelegt. Zulässiges Tick-Tack bleibt
-  erlaubt, Zieher erfordert weiterhin Ballruhe.
-- [ ] Gemeinsamen Ablauf abbilden: Vorbereitung suchen → Ready anfordern und Wartezeit
-  starten → bei Ablauf Variantenansage anfordern und Auslösung freigeben →
-  Auslösung abwarten → Versuch ausgelöst → erneut bereit. Abbrüche explizit verarbeiten.
-  Alle Übergänge entscheidet der Recorder ohne Audio-Rückmeldung. Auslösung liefert einen zeitlichen Anker,
-  ohne schon an einen konkreten Replay-Transport gekoppelt zu sein.
-- [ ] Vorzeitige Auslösung erzeugt Abbruch mit Aborted-Ansage; alte Variantenansage
-  invalidieren. Ready, Variante und Aborted als getrennte, korrelierte Ausgabeereignisse
-  behandeln. Versuchsabschluss darf seine eigene Aborted-Ausgabe nicht pauschal verwerfen;
-  beim nächsten Ready dürfen dagegen keine alten Ansagen mehr nachlaufen.
-- [ ] Verlust der Vorbereitung nach Ready als separaten Strategieausgang mit Abbruchgrund
-  modellieren. Wartezeit und ausstehende Variantenansage verwerfen, einmal Aborted ausgeben
-  und zur vollständigen Vorbereitungserkennung zurückkehren. Kein automatisches Fortsetzen
-  des alten Timers, sobald der Ball wieder im Bereich liegt.
-- [ ] Echte Auslösung anhand strategiespezifischer Bewegungs-/Geschwindigkeitskriterien
-  von bloßem Setup-Verlust unterscheiden. Entscheidungsreihenfolge und gegebenenfalls
-  kurze Beobachtungsfenster definieren, damit die Anlaufbewegung eines Schusses nicht
-  schon als Setup-Verlust abgebrochen wird. Kein Replay allein durch Setup-Verlust auslösen.
-- [ ] Wartezeit über injizierbare Zufallsquelle einmal pro Vorbereitung bestimmen.
-  Verteilung bleibt Domain-Logik; Grenzen/Verteilungswahl kommen aus dem eigenen
-  Config-Block der gewählten Strategie. Timer zusammen mit der Ready-Anforderung starten.
-- [ ] Strategie bei Stop/Neustart zurücksetzen. Umgang mit aktualisierter Tischgeometrie
-  festlegen: Historie neu bewerten oder verwerfen, damit Koordinatenänderungen keine
-  scheinbare Ballbewegung/Auslösung erzeugen.
-- [ ] Für Zeitentscheidungen monotone, explizit übergebene Zeitwerte verwenden;
-  Frame-Zeit und gegebenenfalls Live-Uhr nicht vermischen. Kein Task.Delay in der Domain.
-  Vorschlag für V1: bei ausbleibenden Frames keine Ansage auslösen; nach großen
-  Zeitlücken Auflage neu bestätigen. Regel deterministisch testen.
-- [ ] Variantenauswahl injizierbar und in Tests deterministisch gestalten. Fachliches
-  Ergebnis enthält Variante, Versuch und Ansage-ID statt Android-/TTS-Aufrufen.
-- [ ] StartTraining, StopTraining, ProcessFrame sowie Kalibrierungsabschluss mit
-  eigenen Ports und TrainingSessionStore-Vertrag ergänzen. Start setzt gültiges Setup voraus.
-- [ ] Ansagen ausschließlich als Usecase-Ausgaben behandeln; keine Ready-Zeitrückmeldung
-  oder zusätzliche Fehlerbehandlung für verworfene Ansagen als Trainingszustand modellieren.
+- [x] Eigenständige TrainingSession mit Session-ID, fortlaufender Versuch-ID,
+  autoritativem Zustand und unveränderlichem Session-Snapshot der Optionen implementieren.
+- [x] Alten SequenceRecognizer, ISequenceRecognizer, Zustandstypen und Prototyp-Tests
+  nach Referenzprüfung entfernen; durch neue Strategietests ersetzen.
+- [x] Schmalen ITrainingStrategy-Vertrag mit Tracking-Fakten, Vorbereitungs-/Ausführungs-
+  ergebnissen, Team/Reihe, Frame-Zeit und Training-Anchor definieren. Keine JSON-,
+  Protokoll-, Frame-Puffer- oder Audio-Typen in der Training-Domain.
+- [x] Zustandsbesitz trennen: TrainingSession verwaltet IDs, Wait-/Ansage-/Timeout-Lifecycle;
+  Strategien besitzen Erkennungshistorie, Vorbereitung und Ausführungsregeln. Kein Switch
+  auf Strategie-IDs pro Frame; Erzeugung über eine Factory beim Session-Start.
+- [x] Mehrere aktivierte Strategien koordinieren: denselben Snapshot auswerten, erste
+  erkannte Vorbereitung wählen, Optionen/Team/Reihe pro Versuch halten, Konkurrenz
+  während des Versuchs ausschließen und Historien danach zurücksetzen.
+- [x] SnakeShotTrainingStrategy, PullShotTrainingStrategy und
+  TickTackPassTrainingStrategy gemäß den vereinfachten Regeln aus Abschnitt 0 implementieren.
+- [x] Ablauf Vorbereitung → Ready/Wartezeit → Variantenansage → Ausführung/Auswertung
+  → Abschluss oder Aborted → vollständige neue Vorbereitung implementieren.
+- [x] Ansagen mit Session/Versuch/Ansage-ID korrelieren. Invalidation bei Abbruch und
+  beim nächsten Ready ausgeben; eigene Aborted-Ausgabe nicht pauschal verwerfen.
+- [x] Setup-Verlust und vorzeitige Ausführung mit getrennten Abbruchgründen behandeln;
+  Timeout und endgültigen Trackingverlust berücksichtigen. Keine Audiofehler als Zustand.
+- [x] Kurzes Auswertungsfenster statt sofortigem Abort, 4-km/h-Schussregel mit Ziel-Zweier,
+  Pass-Besitzregeln und 250-ms-Schussnachlauf ergänzen. Anchor vor Bewegung festhalten;
+  keine Game-Replay-Strategien ändern und keinen Replay-Transport implementieren.
+- [x] Wartezeitverteilungen und gleichverteilte strategieeigene Varianten über injizierbare
+  Zufallsquelle deterministisch auswählen; eine Wait-Ziehung pro Ready.
+- [x] Stop setzt Strategien zurück und invalidiert Ansagen. Neue Session erhält frische
+  Tracking-/Strategieinstanzen. Kleine Geometrieupdates ändern den Versuch nicht.
+- [x] Explizite monotone Frame-Zeit für alle Fristen verwenden; keine Tasks/Wall-Clock-Timer
+  in der Domain, keine Audio-Rückmeldung für Zustandsfortschritt.
+- [x] StartTraining, StopTraining, ProcessFrame und Kalibrierungsabschlüsse mit eigenen
+  Ports und TrainingSessionStore-Vertrag ergänzen. Start verlangt gültiges Setup;
+  Fehler/Cancellation räumen teilweise gestartete Ressourcen auf.
+- [x] IFrameVisionOps bei tatsächlicher zweiter Nutzung nach UseCases/Live/Ports verschieben;
+  Game und vorhandene Recorder-Implementierung lediglich auf den gemeinsamen Import umstellen.
 
-Tests: Sowohl Snake-Pendeln als auch ein gültiges ruhendes Snake-Setup bestätigen die
-Vorbereitung und halten die Wartephase. Einzelne Bewegung oder Rauschen genügt nicht
-als Pendelerkennung. Wechsel zwischen pendelndem und ruhendem Setup gemäß der noch
-festzulegenden Regel testen. Überschreiten des Pendelbereichs nach links/rechts und Bewegung
-weg von der Stange lösen bei erfüllten Schusskriterien aus. Zieher erkennt Ruhe auf Höhe des spielerfernen Torpfostens und
-löst erst bei ausreichendem Bewegungsweg und ausreichender Geschwindigkeit aus. Tick-Tack zählt gültige Richtungswechsel,
-erkennt die Vorbereitung an beiden Tischseiten und unterscheidet sie von der Passauslösung.
-Alle Strategien für beide Teams testen. Zusätzlich falsche Reihe, gespiegelter Tisch,
-Zeitgrenzen, Verdeckung, Zeitlücke, vorzeitige Auslösung, einmalige Ansage/Auslösung,
-erneuter Versuch, Stop/Neustart, Geometrieänderung und strategieeigene Variantenauswahl.
-Zusätzlich: Tick-Tack verlässt den Bereich, Pull driftet ohne Schuss, Snake rollt langsam
-aus der Klemmposition; jeweils Aborted nur einmal, Timer/alte Ansage verworfen und neue
-Vorbereitung erforderlich. Dieselben Fälle nach Variantenansage prüfen. Echte Auslösung
-und deren Anlaufphase dürfen nicht fälschlich als Setup-Verlust klassifiziert werden.
-Zufallsverteilung mit vorgegebenen Zufallswerten prüfen: Grenzen, Monotonie, Spiegelung,
-min = max und nur eine Ziehung pro Versuch; keine flakigen statistischen Zufallstests.
-Unterschiedliche Wait-Optionen je Strategie und Timerbeginn zusammen mit der Ready-Anforderung
-prüfen. Zustandsfortschritt benötigt keine Rückmeldung oder tatsächliche Audioausgabe.
-Kombinationen Tick-Tack + Snake und Snake + Pull testen: Wechsel zwischen Versuchen,
-inaktive Strategien ignorieren, korrekte Wartezeit/Varianten je erkannter Strategie,
-keine konkurrierenden Ansagen, mehrdeutige Erkennung und frische Vorbereitung nach Abbruch.
+Umgesetzt am 2026-10-30:
 
-Abnahme: Vollständiger erster Trainingsablauf ist in-memory ohne Kamera, Netzwerk oder Audio testbar.
+- TrainingFrameResult liefert Tracking-Fakten, aktuellen Zustand/Versuch/Variante,
+  Kalibrierungsanforderungen und einmalige fachliche Ereignisse. Recorder-Presenter und
+  Laufzeitverdrahtung folgen erst in Arbeitspaket 6.
+- ProcessFrame übersetzt das Domain-Ergebnis in einen eigenen Usecase-Response mit
+  gruppierten Tracking-/Kalibrierungsdaten, Trainingsstatus und optionalen Ausgaben für
+  Vorbereitung, Ansage, Invalidation, Abschluss und Abbruch. Wenige konkrete Records
+  halten die jeweils zugehörigen Daten zusammen; fehlende Ausgaben sind null.
+  ProcessFrame und Stop befüllen ihre Ausgaben direkt im Interactor, ohne Ereignishierarchie
+  oder Mapper. Invalidation wird vor Statusmeldungen und der neuen Ansage angewendet;
+  der zuvor invalidierte Versuch bleibt separat korreliert. Trainingsverhalten bleibt erhalten.
+- TrainingOptions validiert Aktivierung und Wartegrenzen und hält eine unveränderliche
+  Kopie der aktivierten Menge. ITrainingOptionsProvider ist der schmale spätere Mapping-Port;
+  JSON-Konfiguration/Settings-Mapping aus Arbeitspaket 4 sind noch nicht implementiert.
+- ProcessFrame und Kalibrierungsabschlüsse prüfen Session-IDs; während Vision gewechselte
+  Sessions werden verworfen. Stop beendet die Domain-Session vor dem Frame-Source-Shutdown.
+- Keine neuen Projekte/Projektabhängigkeiten, Protokoll-, JSON-, App- oder Audioänderungen.
+  Game einschließlich ReplayDecision bleibt fachlich unverändert. Kein Release-Note-Eintrag,
+  da dieser Core-Schnitt noch keine sichtbare Trainingsfunktion ausliefert.
 
 ## 4. JSON-Konfiguration und Settings-Mapping ergänzen
 
@@ -639,8 +560,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
 2. Gemeinsames Tracking und Kalibrierung mit Game-Regressionsschutz extrahieren (1–2):
    Arbeitspakete 1 und 2 abgeschlossen; die bedingte spätere Portverschiebung
    ist bei Arbeitspaket 2 dokumentiert.
-3. Strategie-Vertrag, Snake, Zieher, Tick-Tack Pass, Koordination und JSON-Kombinationen
-   implementieren (3–4).
+3. Strategie-Vertrag, Snake, Zieher, Tick-Tack Pass und Koordination
+   implementiert (3). JSON-Konfiguration und Mapping folgen als Arbeitspaket 4.
 4. Protokoll und Recorder-Laufzeit anschließen (5–6).
 5. Viewer-Bedienung und lokale Recorder-Sprachausgabe zum ersten vollständigen Feature
    ergänzen (7–8); Sprachausgabe kann nach Schritt 6 unabhängig von Schritt 7 entstehen.
