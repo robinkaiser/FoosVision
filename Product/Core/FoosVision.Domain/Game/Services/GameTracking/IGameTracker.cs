@@ -5,7 +5,7 @@ using FoosVision.Common.Types;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.Domain.TrackingCore.Services.GameTracking;
+namespace FoosVision.Domain.Game.Services.GameTracking;
 
 public interface IGameTracker
 {

@@ -2,23 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
+using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.Domain.TrackingCore.Services.GameTracking;
+namespace FoosVision.Domain.TrackingCore.Services.LiveTracking;
 
-public enum GameTrackingPhase
+public enum LiveTrackingPhase
 {
     Live,
     BallTemporarilyLost,
     BallLost,
-    ReplaySuggested,
-    Timeout,
 }
 
-public record GameTrackingSnapshot(
+/// <summary>Live tracking facts without mode-specific foul or replay decisions.</summary>
+public record LiveTrackingSnapshot(
     Frame Frame,
-    GameTrackingPhase Phase,
+    LiveTrackingPhase Phase,
     bool IsBallFound,
     Point BallPosition,
     Vector2 BallVelocityPxPerS,
@@ -27,6 +26,4 @@ public record GameTrackingSnapshot(
     BallPossession LastKnownPossession,
     int PossessionTimeMs,
     int LastObservedBallAgeMs,
-    bool IsTimeFoul,
-    bool IsReplaySuggested,
-    ReplayAnchor? ReplayAnchor);
+    BarType? ClosestBar);

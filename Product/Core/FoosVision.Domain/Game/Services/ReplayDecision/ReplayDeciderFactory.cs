@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using FoosVision.Domain.Game.Services.ReplayDecision.Strategies;
 using FoosVision.Domain.Table.ValueObjects;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision.Strategies;
 
-namespace FoosVision.Domain.TrackingCore.Services.ReplayDecision;
+namespace FoosVision.Domain.Game.Services.ReplayDecision;
 
 public static class ReplayDeciderFactory
 {

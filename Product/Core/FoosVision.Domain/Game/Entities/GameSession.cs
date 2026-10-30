@@ -3,9 +3,9 @@
 
 using System.Diagnostics.CodeAnalysis;
 using FoosVision.Common.Types;
+using FoosVision.Domain.Game.Services.GameTracking;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.Table.ValueObjects;
-using FoosVision.Domain.TrackingCore.Services.GameTracking;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
 namespace FoosVision.Domain.Game.Entities;

@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Domain.Game.Entities;
+using FoosVision.Domain.Game.Services.GameTracking;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.Services.BallTracking;
-using FoosVision.Domain.TrackingCore.Services.GameTracking;
+using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.Services.Possession;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
 using FoosVision.UseCases.Dependencies.Settings;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Game.Ports;
@@ -55,7 +56,8 @@ public class StartGameInteractor : IStartGameInputPort
         PossessionCalculator calculator = new(tableConfig);
         IReplayDecider replayDecider = ReplayDeciderFactory.CreateDefault(tableConfig);
         BallTracker ballTracker = new(BallTrackerParams.Default, tableConfig);
-        GameTracker gameTracker = new(GameTrackerParams.Default, ballTracker, calculator, replayDecider);
+        LiveTracker liveTracker = new(LiveTrackerParams.Default, ballTracker, calculator);
+        GameTracker gameTracker = new(liveTracker, replayDecider);
         GameSession session = new(guid, gameTracker, tableConfig);
 
         _SessionStore.SaveActive(session);

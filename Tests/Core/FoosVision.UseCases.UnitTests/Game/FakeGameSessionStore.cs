@@ -3,7 +3,7 @@
 
 using FoosVision.Common.Types;
 using FoosVision.Domain.Game.Entities;
-using FoosVision.Domain.TrackingCore.Services.GameTracking;
+using FoosVision.Domain.Game.Services.GameTracking;
 using FoosVision.Domain.UnitTests;
 using FoosVision.UseCases.Game.Ports;
 using NSubstitute;

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
-namespace FoosVision.Domain.TrackingCore.Services.GameTracking;
+namespace FoosVision.Domain.TrackingCore.Services.LiveTracking;
 
-public record class GameTrackerParams
+public record class LiveTrackerParams
 {
     public TimeSpan PossessionHoldTime { get; init; } = TimeSpan.FromMilliseconds(2000);
 
-    public static readonly GameTrackerParams Default = new();
+    public static readonly LiveTrackerParams Default = new();
 }

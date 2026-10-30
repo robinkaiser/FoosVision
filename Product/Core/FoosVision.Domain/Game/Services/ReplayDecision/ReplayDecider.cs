@@ -4,7 +4,7 @@
 using FoosVision.Common.Types;
 using FoosVision.Domain.Table.ValueObjects;
 
-namespace FoosVision.Domain.TrackingCore.Services.ReplayDecision;
+namespace FoosVision.Domain.Game.Services.ReplayDecision;
 
 public class ReplayDecider : IReplayDecider
 {

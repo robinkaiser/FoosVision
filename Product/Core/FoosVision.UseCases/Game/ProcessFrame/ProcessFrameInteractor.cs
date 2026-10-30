@@ -3,7 +3,7 @@
 
 using FoosVision.Common.Types;
 using FoosVision.Domain.Game.Entities;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.UseCases.Game.Ports;
 

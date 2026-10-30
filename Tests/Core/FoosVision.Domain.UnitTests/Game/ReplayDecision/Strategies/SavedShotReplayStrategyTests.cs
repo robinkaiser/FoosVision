@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
+using FoosVision.Domain.Game.Services.ReplayDecision.Strategies;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.Table.ValueObjects;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision.Strategies;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.Domain.UnitTests.TrackingCore.ReplayDecision.Strategies;
+namespace FoosVision.Domain.UnitTests.Game.ReplayDecision.Strategies;
 
 public class SavedShotReplayStrategyTests
 {

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
 namespace FoosVision.Adapters.Recorder.Game.Orchestration;

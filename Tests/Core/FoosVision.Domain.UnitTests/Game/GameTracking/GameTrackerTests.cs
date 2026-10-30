@@ -2,16 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
+using FoosVision.Domain.Game.Services.GameTracking;
+using FoosVision.Domain.Game.Services.ReplayDecision.Strategies;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.Services.BallTracking;
-using FoosVision.Domain.TrackingCore.Services.GameTracking;
+using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.Services.Possession;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision.Strategies;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using NSubstitute;
 
-namespace FoosVision.Domain.UnitTests.TrackingCore.GameTracking;
+namespace FoosVision.Domain.UnitTests.Game.GameTracking;
 
 public class GameTrackerTests
 {
@@ -32,7 +33,7 @@ public class GameTrackerTests
         _ReplayDecider = Substitute.For<IReplayDecider>();
         _ReplayDecider.Decide(Arg.Any<Frame>(), Arg.Any<bool>(), Arg.Any<ReplayCandidate?>())
             .Returns(Option<ReplayAnchor>.None());
-        _Testee = new(GameTrackerParams.Default, _BallTracker, _PossessionCalculator, _ReplayDecider);
+        _Testee = new(new LiveTracker(LiveTrackerParams.Default, _BallTracker, _PossessionCalculator), _ReplayDecider);
     }
 
     [Fact]
@@ -169,13 +170,11 @@ public class GameTrackerTests
     public void Default_windows_retire_visual_ball_before_possession_hold_expires()
     {
         BallTrackerParams ballTrackerParams = BallTrackerParams.Default;
-        GameTrackerParams gameTrackerParams = GameTrackerParams.Default;
+        LiveTrackerParams liveTrackerParams = LiveTrackerParams.Default;
         BallTracker ballTracker = new(ballTrackerParams, TableConfig.Config);
         PossessionCalculator possessionCalculator = new(TableConfig.Config);
         GameTracker testee = new(
-            gameTrackerParams,
-            ballTracker,
-            possessionCalculator,
+            new LiveTracker(liveTrackerParams, ballTracker, possessionCalculator),
             new ReplayDecider([new BallDisappearedReplayStrategy(TableConfig.Config)]));
         Frame observedFrame = new(1, _1s);
         Frame visuallyLostFrame = new(2, _1s + 600_000_000L);
@@ -186,7 +185,7 @@ public class GameTrackerTests
         var visuallyLostSnapshot = testee.ApplyObservations(visuallyLostFrame, []);
 
         Assert.Equal(TimeSpan.FromMilliseconds(500), ballTrackerParams.TrackedBallMaxUnobservedTime);
-        Assert.Equal(TimeSpan.FromSeconds(2), gameTrackerParams.PossessionHoldTime);
+        Assert.Equal(TimeSpan.FromSeconds(2), liveTrackerParams.PossessionHoldTime);
         Assert.Equal(GameTrackingPhase.Live, observedSnapshot.Phase);
         Assert.Equal(GameTrackingPhase.BallTemporarilyLost, visuallyLostSnapshot.Phase);
         Assert.False(visuallyLostSnapshot.IsBallFound);
@@ -330,12 +329,63 @@ public class GameTrackerTests
         Assert.Equal(1000, snapshot.LastObservedBallAgeMs);
     }
 
+    [Theory]
+    [InlineData(PossessionArea.Defense, 15000)]
+    [InlineData(PossessionArea.FiveBar, 10000)]
+    [InlineData(PossessionArea.ThreeBar, 15000)]
+    [InlineData(PossessionArea.None, 0)]
+    public void Game_applies_time_foul_only_after_area_limit(PossessionArea area, int limitMs)
+    {
+        _PossessionCalculator.Compute(Arg.Any<Point>()).Returns(new BallPossession(Team.A, area));
+        Frame start = new(1, _1s);
+        Frame atLimit = new(2, _1s + limitMs * 1_000_000L);
+        Frame afterLimit = new(3, atLimit.TimestampNs + 1_000_000L);
+        ArrangeSnapshots(
+            CreateSnapshot(start, CreateTrackedBall(start, 1, 100, 100, TrackingStatus.Observed, TrackingConfidence.High)),
+            CreateSnapshot(atLimit, CreateTrackedBall(atLimit, 1, 100, 100, TrackingStatus.Observed, TrackingConfidence.High)),
+            CreateSnapshot(afterLimit, CreateTrackedBall(afterLimit, 1, 100, 100, TrackingStatus.Observed, TrackingConfidence.High)));
+
+        _Testee.ApplyObservations(start, []);
+        GameTrackingSnapshot atLimitSnapshot = _Testee.ApplyObservations(atLimit, []);
+        GameTrackingSnapshot afterLimitSnapshot = _Testee.ApplyObservations(afterLimit, []);
+
+        Assert.False(atLimitSnapshot.IsTimeFoul);
+        Assert.Equal(area != PossessionArea.None, afterLimitSnapshot.IsTimeFoul);
+    }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 3000)]
+    public void Replay_precedence_preserves_possession_timer_on_expired_loss(bool suggestReplay, int recoveredTimeMs)
+    {
+        Frame observedFrame = CreateFrame(1, 1);
+        Frame lostFrame = CreateFrame(2, 3);
+        Frame recoveredFrame = CreateFrame(3, 4);
+        TrackedBall observed = CreateTrackedBall(observedFrame, 1, 100, 100, TrackingStatus.Observed, TrackingConfidence.High);
+        TrackedBall recovered = observed with { Frame = recoveredFrame };
+        ReplayAnchor anchor = new(observedFrame, observed.Position, _AnyPossession, 0, ReplayTriggerKind.BallDisappeared);
+        ArrangeSnapshots(CreateSnapshot(observedFrame, observed), CreateSnapshot(lostFrame, null),
+            CreateSnapshot(recoveredFrame, recovered));
+        _ReplayDecider.Decide(lostFrame, false, null)
+            .Returns(suggestReplay ? Option<ReplayAnchor>.Some(anchor) : Option<ReplayAnchor>.None());
+
+        _Testee.ApplyObservations(observedFrame, []);
+        GameTrackingSnapshot lost = _Testee.ApplyObservations(lostFrame, []);
+        GameTrackingSnapshot recovery = _Testee.ApplyObservations(recoveredFrame, []);
+
+        Assert.Equal(suggestReplay, lost.IsReplaySuggested);
+        Assert.Equal(suggestReplay ? anchor : null, lost.ReplayAnchor);
+        Assert.Equal(BallPossession.None, lost.Possession);
+        Assert.Equal(0, lost.PossessionTimeMs);
+        Assert.False(lost.IsTimeFoul);
+        Assert.Equal(recoveredTimeMs, recovery.PossessionTimeMs);
+    }
+
     private GameTracker CreateTesteeWithHoldTime(TimeSpan holdTime)
     {
         return new(
-            GameTrackerParams.Default with { PossessionHoldTime = holdTime },
-            _BallTracker,
-            _PossessionCalculator,
+            new LiveTracker(LiveTrackerParams.Default with { PossessionHoldTime = holdTime },
+                _BallTracker, _PossessionCalculator),
             _ReplayDecider);
     }
 

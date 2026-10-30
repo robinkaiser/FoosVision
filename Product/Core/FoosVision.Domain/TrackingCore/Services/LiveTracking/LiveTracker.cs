@@ -5,41 +5,46 @@ using FoosVision.Common.Types;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.Services.BallTracking;
 using FoosVision.Domain.TrackingCore.Services.Possession;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.Domain.TrackingCore.Services.GameTracking;
+namespace FoosVision.Domain.TrackingCore.Services.LiveTracking;
 
-public class GameTracker : IGameTracker
+/// <summary>Tracks live facts for one session. Create fresh tracking components for each session.</summary>
+public class LiveTracker
 {
-    private readonly GameTrackerParams _Params;
+    private readonly LiveTrackerParams _Params;
     private readonly IBallTracker _BallTracker;
     private readonly IPossessionCalculator _PossessionCalculator;
-    private readonly IReplayDecider _ReplayDecider;
 
     private bool _HasObservedBall;
     private Frame _LastObservedBallFrame;
     private BallPossession _LastPossession;
-    private BallPossession _LastKnownPossession;
+    private BallPossession _LastKnownPossession = BallPossession.None;
     private long _PossessionStartTimestampNs;
     private int _LastPossessionTimeMs;
 
-    public GameTracker(
-        GameTrackerParams parameters,
+    public LiveTracker(
+        LiveTrackerParams parameters,
         IBallTracker ballTracker,
-        IPossessionCalculator possessionCalculator,
-        IReplayDecider replayDecider)
+        IPossessionCalculator possessionCalculator)
     {
         _Params = parameters;
         _BallTracker = ballTracker;
         _PossessionCalculator = possessionCalculator;
-        _ReplayDecider = replayDecider;
         ResetCurrentPossession();
     }
 
-    public GameTrackingSnapshot? Latest { get; private set; }
+    public LiveTrackingSnapshot? Latest { get; private set; }
 
-    public GameTrackingSnapshot ApplyObservations(Frame frame, IEnumerable<ObservedBall> observations)
+    public LiveTrackingSnapshot ApplyObservations(Frame frame, IEnumerable<ObservedBall> observations)
+    {
+        LiveTrackingSnapshot snapshot = ObserveFrame(frame, observations);
+        CompleteFrame();
+        return snapshot;
+    }
+
+    // Allow the mode to consume this frame's facts before committing possession expiration.
+    internal LiveTrackingSnapshot ObserveFrame(Frame frame, IEnumerable<ObservedBall> observations)
     {
         var visualSnapshot = _BallTracker.ApplyObservations(frame, observations);
         var observedBall = visualSnapshot.Candidates.FirstOrDefault(static c => c.Status == TrackingStatus.Observed);
@@ -55,17 +60,15 @@ public class GameTracker : IGameTracker
     {
         _BallTracker.UpdateTableConfig(tableConfig);
         _PossessionCalculator.UpdateTableConfig(tableConfig);
-        _ReplayDecider.UpdateTableConfig(tableConfig);
     }
 
-    private GameTrackingSnapshot ApplyObservedFrame(
+    private LiveTrackingSnapshot ApplyObservedFrame(
         Frame frame,
         TrackedBall trackedBall,
         IReadOnlyList<TrackedBall> candidates)
     {
         var possession = _PossessionCalculator.Compute(trackedBall.Position);
         int possessionTimeMs = UpdatePossessionTime(frame, possession);
-        bool isTimeFoul = IsTimeFoul(possession.Area, possessionTimeMs);
 
         _HasObservedBall = true;
         _LastObservedBallFrame = trackedBall.Frame;
@@ -75,64 +78,35 @@ public class GameTracker : IGameTracker
             _LastKnownPossession = possession;
         }
 
-        ReplayCandidate? replayCandidate = null;
+        BarType? closestBar = _PossessionCalculator.FindClosestBarType(trackedBall.Position)
+            .TryGetValue(out BarType bar) ? bar : null;
 
-        if (_PossessionCalculator.FindClosestBarType(trackedBall.Position).TryGetValue(out BarType bar))
-        {
-            replayCandidate = new ReplayCandidate(
-                trackedBall.Frame,
-                trackedBall.Position,
-                possession,
-                possessionTimeMs,
-                trackedBall.VelocityPxPerS,
-                trackedBall.Confidence,
-                bar);
-        }
-
-        ReplayAnchor? replayAnchor = DecideReplay(trackedBall.Frame, true, replayCandidate);
-
-        return GameTrackingSnapshotFactory.Observed(
+        return LiveTrackingSnapshotFactory.Observed(
             frame,
             trackedBall,
             candidates,
             possession,
             _LastKnownPossession,
             possessionTimeMs,
-            isTimeFoul,
-            replayAnchor);
+            closestBar);
     }
 
-    private GameTrackingSnapshot ApplyUnobservedFrame(Frame frame, IReadOnlyList<TrackedBall> candidates)
+    private LiveTrackingSnapshot ApplyUnobservedFrame(Frame frame, IReadOnlyList<TrackedBall> candidates)
     {
         var visualBall = candidates.Count > 0 ? candidates[0] : null;
         var position = visualBall?.Position ?? default;
         var velocity = visualBall?.VelocityPxPerS ?? default;
         int lastObservedBallAgeMs = GetLastObservedBallAgeMs(frame);
 
-        ReplayAnchor? replayAnchor = DecideReplay(frame, false, null);
-
-        if (replayAnchor != null)
-        {
-            return GameTrackingSnapshotFactory.Lost(
-                frame,
-                position,
-                velocity,
-                candidates,
-                _LastKnownPossession,
-                lastObservedBallAgeMs,
-                replayAnchor);
-        }
-
         if (!_HasObservedBall)
         {
-            return GameTrackingSnapshotFactory.Lost(
+            return LiveTrackingSnapshotFactory.Lost(
                 frame,
                 position,
                 velocity,
                 candidates,
                 _LastKnownPossession,
-                lastObservedBallAgeMs,
-                replayAnchor: null);
+                lastObservedBallAgeMs);
         }
 
         long lostTimeNs = frame.TimestampNs - _LastObservedBallFrame.TimestampNs;
@@ -141,36 +115,31 @@ public class GameTracker : IGameTracker
         if (isTemporarilyLost)
         {
             int possessionTimeMs = GetCurrentPossessionTimeMs(frame);
-            return GameTrackingSnapshotFactory.TemporarilyLost(
+            return LiveTrackingSnapshotFactory.TemporarilyLost(
                 frame,
                 position,
                 velocity,
                 candidates,
                 _LastKnownPossession,
                 possessionTimeMs,
-                lastObservedBallAgeMs,
-                IsTimeFoul(_LastKnownPossession.Area, possessionTimeMs));
+                lastObservedBallAgeMs);
         }
 
-        ResetCurrentPossession();
-
-        return GameTrackingSnapshotFactory.Lost(
+        return LiveTrackingSnapshotFactory.Lost(
             frame,
             position,
             velocity,
             candidates,
             _LastKnownPossession,
-            lastObservedBallAgeMs,
-            replayAnchor: null);
+            lastObservedBallAgeMs);
     }
 
-    private ReplayAnchor? DecideReplay(Frame frame, bool isBallObserved, ReplayCandidate? candidate)
+    internal void CompleteFrame()
     {
-        var anchor = _ReplayDecider.Decide(frame, isBallObserved, candidate);
-
-        return anchor.TryGetValue(out ReplayAnchor? replayAnchor)
-            ? replayAnchor
-            : null;
+        if (Latest?.Phase == LiveTrackingPhase.BallLost)
+        {
+            ResetCurrentPossession();
+        }
     }
 
     private int GetLastObservedBallAgeMs(Frame frame)
@@ -238,16 +207,5 @@ public class GameTracker : IGameTracker
 
         _LastPossessionTimeMs = (int)(elapsedNs / 1_000_000L);
         return _LastPossessionTimeMs;
-    }
-
-    private static bool IsTimeFoul(PossessionArea area, int possessionTimeMs)
-    {
-        return area switch
-        {
-            PossessionArea.Defense => possessionTimeMs > 15000,
-            PossessionArea.FiveBar => possessionTimeMs > 10000,
-            PossessionArea.ThreeBar => possessionTimeMs > 15000,
-            _ => false,
-        };
     }
 }

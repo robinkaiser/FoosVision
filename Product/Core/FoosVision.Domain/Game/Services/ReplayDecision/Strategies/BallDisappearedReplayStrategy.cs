@@ -6,7 +6,7 @@ using FoosVision.Domain.Table.Services;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.Domain.TrackingCore.Services.ReplayDecision.Strategies;
+namespace FoosVision.Domain.Game.Services.ReplayDecision.Strategies;
 
 // State machine:
 //

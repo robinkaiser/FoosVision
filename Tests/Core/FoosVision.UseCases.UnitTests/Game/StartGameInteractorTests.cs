@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
+using FoosVision.Domain.Game.Entities;
 using FoosVision.Domain.Table.ValueObjects;
+using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Domain.UnitTests;
 using FoosVision.UseCases.Dependencies.Settings;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Game.StartGame;
+using FoosVision.UseCases.Game.StopGame;
 using NSubstitute;
 
 namespace FoosVision.UseCases.UnitTests.Game;
@@ -75,5 +78,41 @@ public class StartGameInteractorTests
 
         Assert.True(_FakeStore.LoadActive().TryGetValue(out var session));
         await _Output.Received().ReportStarted(Arg.Is<StartGameResponse>(r => r.SessionId == session.Id));
+    }
+
+    [Fact]
+    public async Task Restart_creates_fresh_ball_possession_and_replay_state()
+    {
+        _FakeStore.Clear();
+        await _Testee.Handle(new(), _Output, CancellationToken.None);
+        Assert.True(_FakeStore.LoadActive().TryGetValue(out GameSession first));
+        ObservedBall observation = new(new Point(1100, 450), ObservationQualityThresholds.Default.HighQuality);
+        first.ApplyObservations(new Frame(1, 1_000_000_000L), [observation]);
+        first.ApplyObservations(new Frame(2, 1_500_000_000L), [observation]);
+        first.ApplyObservations(new Frame(3, 2_000_000_000L), [observation]);
+
+        StopGameInteractor stop = new(_FakeStore, _FrameSource);
+        await stop.Handle(new(), Substitute.For<IStopGameOutputPort>(), CancellationToken.None);
+        await _Testee.Handle(new(), _Output, CancellationToken.None);
+        Assert.True(_FakeStore.LoadActive().TryGetValue(out GameSession second));
+        Assert.NotEqual(first.Id, second.Id);
+
+        Frame lostFrame = new(4, 3_000_000_000L);
+        IReadOnlyList<Change> changes = second.ApplyObservations(lostFrame, []);
+        TrackedBallInfo lost = Assert.Single(changes.OfType<TrackedBallInfo>());
+        Assert.False(lost.IsFound);
+        Assert.Empty(lost.Candidates);
+        Assert.Equal(BallPossession.None, lost.Possession);
+        Assert.Equal(0, lost.PossessionTimeMs);
+        Assert.DoesNotContain(changes, change => change is ReplayRequest);
+
+        IReadOnlyList<Change> recovered = second.ApplyObservations(new Frame(5, 3_100_000_000L), [observation]);
+        TrackedBallInfo found = Assert.Single(recovered.OfType<TrackedBallInfo>());
+        Assert.True(found.IsFound);
+        Assert.Equal(0, found.PossessionTimeMs);
+        Assert.Empty(found.Candidates);
+
+        // The first session had enough history for a replay; it must not arm the second one.
+        Assert.Single(first.ApplyObservations(lostFrame, []).OfType<ReplayRequest>());
     }
 }

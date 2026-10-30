@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.Table.ValueObjects;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
-namespace FoosVision.Domain.UnitTests.TrackingCore.ReplayDecision;
+namespace FoosVision.Domain.UnitTests.Game.ReplayDecision;
 
 public class ReplayDeciderTests
 {

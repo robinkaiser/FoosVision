@@ -4,7 +4,7 @@
 using System.Threading.Channels;
 using FoosVision.Common.Logging;
 using FoosVision.Common.Types;
-using FoosVision.Domain.TrackingCore.Services.ReplayDecision;
+using FoosVision.Domain.Game.Services.ReplayDecision;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Ports.Media;
 using FoosVision.Protocol.Connectivity.Abstractions;
