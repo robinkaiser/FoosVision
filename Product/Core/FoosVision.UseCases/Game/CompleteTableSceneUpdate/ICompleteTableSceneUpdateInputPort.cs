@@ -3,7 +3,7 @@
 
 namespace FoosVision.UseCases.Game.CompleteTableSceneUpdate;
 
-public record CompleteTableSceneUpdateRequest();
+public record CompleteTableSceneUpdateRequest(Guid SessionId);
 
 public interface ICompleteTableSceneUpdateInputPort
 {

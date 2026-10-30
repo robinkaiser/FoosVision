@@ -3,7 +3,7 @@
 
 using FoosVision.Common.Types;
 
-namespace FoosVision.Adapters.Recorder.Game.Orchestration;
+namespace FoosVision.Adapters.Recorder.Calibration;
 
 public interface ICalibrationCoordinator
 {

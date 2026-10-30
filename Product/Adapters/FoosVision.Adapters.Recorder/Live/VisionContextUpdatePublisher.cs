@@ -6,7 +6,7 @@ using FoosVision.Ports.Vision;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.LiveAnalysis;
 
-namespace FoosVision.Adapters.Recorder.Game;
+namespace FoosVision.Adapters.Recorder.Live;
 
 public class VisionContextUpdatePublisher : IDisposable
 {

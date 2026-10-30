@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using FoosVision.Adapters.Recorder.Calibration;
 using FoosVision.Adapters.Recorder.Game.Live;
 using FoosVision.Adapters.Recorder.Game.Orchestration;
 using FoosVision.Common.Types;

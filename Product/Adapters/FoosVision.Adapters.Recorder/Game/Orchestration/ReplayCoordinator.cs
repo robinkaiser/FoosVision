@@ -31,7 +31,8 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
     public ReplayCoordinator(
         IEncodedReplayBuffer replayBuffer,
         ILiveVideoStreamController liveVideoStreamController,
-        IRecorderLiveAnalysisPublisher liveAnalysisPublisher)
+        IRecorderLiveAnalysisPublisher liveAnalysisPublisher,
+        TaskScheduler? workerScheduler = null)
     {
         _ReplayBuffer = replayBuffer;
         _LiveVideoStreamController = liveVideoStreamController;
@@ -42,7 +43,11 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
             SingleWriter = false,
             FullMode = BoundedChannelFullMode.DropWrite,
         });
-        _Worker = Task.Run(() => ProcessRequests(_Cts.Token));
+        _Worker = Task.Factory.StartNew(
+            () => ProcessRequests(_Cts.Token),
+            CancellationToken.None,
+            TaskCreationOptions.DenyChildAttach,
+            workerScheduler ?? TaskScheduler.Default).Unwrap();
     }
 
     public Task RequestReplay(

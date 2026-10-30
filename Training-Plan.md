@@ -67,7 +67,8 @@ bestehenden FoosVision-Projekte. Neue Typnamen sind Arbeitsnamen.
   können per JSON gleichzeitig aktiviert und beliebig kombiniert werden, beispielsweise
   Tick-Tack Pass + Snake oder Snake + Pull. Jede Trainingsstrategie kapselt ihre Regeln für Vorbereitung,
   Ansage und Auslösung sowie Abbruch/erneute Bereitschaft. „Auflage“ setzt keine Ballruhe
-  voraus: Bei Snake ist die vorbereitende Bewegung ausdrücklich Teil der Erkennung.
+  voraus: Snake unterstützt sowohl pendelnde als auch ruhende Setups innerhalb
+  derselben Strategie `snakeShot`.
 - TrainingSession besitzt die Instanzen aller aktivierten Strategien und den gemeinsamen
   Session-/Versuchs-Lifecycle. In der Vorbereitungsphase werden alle aktivierten Strategien
   ausgewertet. Die erkannte Strategie übernimmt den jeweiligen Versuch mit ihren Optionen.
@@ -93,11 +94,11 @@ ausdrücklich als Vorschlag oder spätere Konkretisierung markierten Details.
 
 ### Festgelegte Strategien
 
-| Strategie      | Vorbereitung erkennen                               | Spätere Ansage           | Auslösung erkennen                                       |
-| -------------- | --------------------------------------------------- | ------------------------ | -------------------------------------------------------- |
-| Snake          | Mittiges, stetes Pendeln auf der Dreierreihe        | Push, Pull, Middle       | Schussbewegung links/rechts oder weg von der Stange      |
-| Zieher         | Ball ruht auf Höhe des spielerfernen Torpfostens    | Short, Middle, Long      | Schussbewegung mit Mindestweg und Mindestgeschwindigkeit |
-| Tick-Tack Pass | Tick-Tack auf der Fünferreihe nahe einer Tischseite | Wall, Lane, Sling/Split  | Passauslösung; genaue Erkennungsregel noch festzulegen   |
+| Strategie      | Vorbereitung erkennen                                       | Spätere Ansage           | Auslösung erkennen                                       |
+| -------------- | ----------------------------------------------------------- | ------------------------ | -------------------------------------------------------- |
+| Snake          | Mittiges pendelndes oder ruhendes Setup auf der Dreierreihe | Push, Pull, Middle       | Schussbewegung links/rechts oder weg von der Stange      |
+| Zieher         | Ball ruht auf Höhe des spielerfernen Torpfostens            | Short, Middle, Long      | Schussbewegung mit Mindestweg und Mindestgeschwindigkeit |
+| Tick-Tack Pass | Tick-Tack auf der Fünferreihe nahe einer Tischseite         | Wall, Lane, Sling/Split  | Passauslösung; genaue Erkennungsregel noch festzulegen   |
 
 Die Auslösung ist zunächst ein fachliches Ereignis mit Frame/Zeitstempel und Position,
 kein Nachweis eines erfolgreichen Schusses oder einer korrekt ausgeführten Variante.
@@ -120,7 +121,9 @@ Es kann später den Trainings-Replay auslösen bzw. dessen Zeitfenster verankern
   Strategie gehören, ohne JSON-Änderung oder Session-Neustart. Wartezeit und Varianten
   gehören weiterhin zur jeweils erkannten Strategie. Pro Versuch gibt es eine zuständige
   Strategie; kein gemeinsamer Timer und keine Vermischung ihrer Ansagen.
-- **Vorbereitung:** Snake beginnt mit stetem Pendeln. Zieher verwendet einen ruhenden
+- **Vorbereitung:** Snake unterstützt sowohl Pendel-Snakes als auch ruhende Setups.
+  Beide gehören zu `snakeShot`; die konkrete Erkennung wird erst im zugehörigen
+  Arbeitspaket ausgearbeitet. Zieher verwendet einen ruhenden
   Ball auf Höhe des spielerfernen Torpfostens: Der Ball liegt vom Spieler weg; ein langer
   Zieher zieht ihn zur spielernahen Torseite. Die umgekehrte Richtung wäre ein Schieber.
   „Links“ ist damit keine feste Bildschirmrichtung. Dies für A/B aus Tisch-/Teamgeometrie
@@ -202,6 +205,8 @@ Dieser Verteilungsvorschlag ist noch abzustimmen.
 - [ ] **Erkennung:** Konkrete Bereiche, Ruhe-/Pendelzeiten, Richtungswechsel und Schwellen
   gegen Trackingrauschen später pro Strategie festlegen. Beim Tick-Tack ausdrücklich
   Vorbereitung durch Richtungswechsel von der eigentlichen Passauslösung unterscheiden.
+  Für Snake die Erkennung pendelnder und ruhender Setups sowie den Umgang mit Wechseln
+  zwischen beiden während der Wartephase im Strategie-Arbeitspaket festlegen.
 - [ ] **Mehrdeutige Vorbereitung:** Vor Implementierung der Strategiekoordination eine
   deterministische Regel festlegen, falls mehrere Strategien gleichzeitig Ready melden.
   Vorschlag: Bei Mehrdeutigkeit noch keinen Versuch starten, bis die Vorbereitung eindeutig
@@ -260,27 +265,53 @@ Umgesetzt am 2026-10-30:
 
 Abhängigkeit: Schritt 1.
 
-- [ ] Aktualisierungsregeln aus GameSession als kleinen gemeinsamen Domain-Baustein
+- [x] Aktualisierungsregeln aus GameSession als kleinen gemeinsamen Domain-Baustein
   extrahieren: Intervalle, Konfidenz/Bewegung, gegenseitige Sperre laufender Updates
   und Abschluss. Instanz gehört jeweils zur aktiven Session.
-- [ ] Bestehende `UseCases/Calibration` weiterverwenden. Session-spezifische
+- [x] Bestehende `UseCases/Calibration` weiterverwenden. Session-spezifische
   CompleteTableUpdate-/CompleteTableSceneUpdate-Usecases bleiben dünne Einstiegspunkte.
-- [ ] `UseCases/Game/Ports/IFrameVisionOps` in einen passend benannten gemeinsamen
+- [x] `UseCases/Game/Ports/IFrameVisionOps` in einen passend benannten gemeinsamen
   Usecase-Bereich verschieben, sobald beide Modi ihn nutzen. Keine Puffer in den Core ziehen.
-- [ ] Recorder `Game/Live/FrameVisionOps`, `Game/Orchestration/CalibrationCoordinator`,
+- [x] Recorder `Game/Live/FrameVisionOps`, `Game/Orchestration/CalibrationCoordinator`,
   Vision-Ops und `Game/VisionContextUpdatePublisher` auf tatsächliche Game-Kopplung prüfen.
   Gemeinsame Ausführung in Recorder-Live-/Calibration-Bereiche verschieben; kleine
   session-spezifische Rückmeldungen über schmale Schnittstellen anschließen.
-- [ ] `FrameProcessingLoop`, BallFinder, Masken, Tracking-Nachrichten und Frame-Metriken
+- [x] `FrameProcessingLoop`, BallFinder, Masken, Tracking-Nachrichten und Frame-Metriken
   wiederverwenden. Training bekommt eigene Frame-Input-/Output-Anbindung und Presenter;
   gemeinsame Mapping- und Publikationsarbeit wird extrahiert, nicht die gesamte Game-Klasse kopiert.
-- [ ] Fehler und Abbruch einer Kalibrierung lösen In-Progress-Zustände zuverlässig auf.
+- [x] Fehler und Abbruch einer Kalibrierung lösen In-Progress-Zustände zuverlässig auf.
   Späte Ergebnisse einer alten Session dürfen keine neue Session aktualisieren.
 
 Tests: Kalibrierungsanforderungen, Abschluss/Fehler/Stop, Vision-Kontext und gemeinsame
 Live-Publikation in bestehenden Domain-, Usecase- und Recorder-Adapter-Testprojekten.
 
 Abnahme: Game läuft weiterhin unverändert; gemeinsame Bausteine hängen nicht von GameSession ab.
+
+Umgesetzt am 2026-10-30:
+
+- `CalibrationCore/Services/TableUpdateSchedule` besitzt pro aktiver Session
+  die bisherigen Aktualisierungsintervalle, Konfidenz-/Bewegungsregeln, gegenseitige
+  Sperre und Abschlussoperationen. Game delegiert diese Regeln; Priorität und Grenzwerte
+  bleiben erhalten. Der Besitzer serialisiert die Zugriffe wie bisher in `GameSession`.
+- Recorder `Calibration` führt Tisch-/Szenenupdates mit den bestehenden Calibration-
+  Usecases und Vision-Ports aus. `CalibrationSession` liefert schmale, pro Anforderung
+  erfasste Rückmeldungen und eine Gültigkeitsprüfung statt einer GameSession-Abhängigkeit.
+  Fehlende Frames, Fehler und verworfene Ergebnisse lösen den Abschluss aus; gepoolte
+  Frames werden freigegeben. Ergebnisse nach Stop/Session-Wechsel werden verworfen,
+  einschließlich einer während der Erkennung veralteten Tischkonfiguration vor dem Speichern.
+  Die dünnen Game-Abschluss-Usecases prüfen zusätzlich die anfordernde Session-ID.
+- Recorder `Live` enthält `FrameVisionOps`, `VisionContextUpdatePublisher` und
+  `LiveFramePublisher` mit neutralen Frame-Fakten, Tracking-Mapping und Maskenpublikation.
+  Game behält seinen Presenter und liefert Zeitfoul explizit; Replay bleibt unverändert
+  Game-spezifisch. FrameProcessingLoop, BallFinder und vorhandene Frame-Metriken werden
+  weiterverwendet; keine Kopie der Game-Frame-Verarbeitung wurde eingeführt.
+- Die bedingte Verschiebung von `IFrameVisionOps` ist noch nicht fällig: Es gibt weiterhin
+  nur Game als konsumierenden Modus. Der Port bleibt bis zur tatsächlichen zweiten Nutzung
+  unter `UseCases/Game/Ports`. Eigene Training-Input-/Output-Ports und Presenter folgen
+  mit den Trainings-Usecases bzw. ihrer Recorder-Anbindung in Arbeitspaket 3 und 6.
+- Keine neuen Projektabhängigkeiten, Protokoll- oder Konfigurationsänderungen.
+  Die Korrekturen bei fehlenden Frames und veralteten Kalibrierungsergebnissen stehen
+  in den Release-Notes; weitere Trainingsfunktionen wurden nicht implementiert.
 
 ## 3. Training-Domain und Usecases für den ersten Versuch implementieren
 
@@ -310,7 +341,9 @@ Abhängigkeit: Schritte 0–2.
   (Arbeitsnamen) implementieren,
   einschließlich jeweiliger Vorbereitung, Ansagevarianten, Wartephase und Auslösung.
   Nach Ready läuft die strategiespezifische Wartephase unter der passenden Haltebedingung;
-  zulässiges Snake-Pendeln/Tick-Tack bleibt erlaubt, Zieher erfordert weiterhin Ballruhe.
+  Snake unterstützt pendelnde und ruhende Vorbereitung; die jeweiligen Haltebedingungen
+  und Übergänge werden in diesem Arbeitspaket festgelegt. Zulässiges Tick-Tack bleibt
+  erlaubt, Zieher erfordert weiterhin Ballruhe.
 - [ ] Gemeinsamen Ablauf abbilden: Vorbereitung suchen → Ready anfordern und Wartezeit
   starten → bei Ablauf Variantenansage anfordern und Auslösung freigeben →
   Auslösung abwarten → Versuch ausgelöst → erneut bereit. Abbrüche explizit verarbeiten.
@@ -345,8 +378,10 @@ Abhängigkeit: Schritte 0–2.
 - [ ] Ansagen ausschließlich als Usecase-Ausgaben behandeln; keine Ready-Zeitrückmeldung
   oder zusätzliche Fehlerbehandlung für verworfene Ansagen als Trainingszustand modellieren.
 
-Tests: Snake-Pendeln bestätigt Vorbereitung und hält Wartephase; einzelne Bewegung oder
-Rauschen genügt nicht. Überschreiten des Pendelbereichs nach links/rechts und Bewegung
+Tests: Sowohl Snake-Pendeln als auch ein gültiges ruhendes Snake-Setup bestätigen die
+Vorbereitung und halten die Wartephase. Einzelne Bewegung oder Rauschen genügt nicht
+als Pendelerkennung. Wechsel zwischen pendelndem und ruhendem Setup gemäß der noch
+festzulegenden Regel testen. Überschreiten des Pendelbereichs nach links/rechts und Bewegung
 weg von der Stange lösen bei erfüllten Schusskriterien aus. Zieher erkennt Ruhe auf Höhe des spielerfernen Torpfostens und
 löst erst bei ausreichendem Bewegungsweg und ausreichender Geschwindigkeit aus. Tick-Tack zählt gültige Richtungswechsel,
 erkennt die Vorbereitung an beiden Tischseiten und unterscheidet sie von der Passauslösung.
@@ -602,7 +637,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
 
 1. Entscheidungen für Meilenstein 1 festhalten.
 2. Gemeinsames Tracking und Kalibrierung mit Game-Regressionsschutz extrahieren (1–2):
-   Arbeitspaket 1 abgeschlossen; Arbeitspaket 2 offen.
+   Arbeitspakete 1 und 2 abgeschlossen; die bedingte spätere Portverschiebung
+   ist bei Arbeitspaket 2 dokumentiert.
 3. Strategie-Vertrag, Snake, Zieher, Tick-Tack Pass, Koordination und JSON-Kombinationen
    implementieren (3–4).
 4. Protokoll und Recorder-Laufzeit anschließen (5–6).

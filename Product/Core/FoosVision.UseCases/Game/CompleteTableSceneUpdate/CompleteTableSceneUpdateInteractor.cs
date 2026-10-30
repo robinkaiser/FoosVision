@@ -22,6 +22,8 @@ public class CompleteTableSceneUpdateInteractor : ICompleteTableSceneUpdateInput
             return Task.CompletedTask;
         }
 
+        if (session.Id != request.SessionId) return Task.CompletedTask;
+
         session.CompleteTableSceneUpdate();
 
         return Task.CompletedTask;

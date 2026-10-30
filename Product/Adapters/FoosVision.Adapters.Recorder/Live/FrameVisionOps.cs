@@ -9,7 +9,7 @@ using FoosVision.Ports.Media;
 using FoosVision.Ports.Vision;
 using FoosVision.UseCases.Game.Ports;
 
-namespace FoosVision.Adapters.Recorder.Game.Live;
+namespace FoosVision.Adapters.Recorder.Live;
 
 public class FrameVisionOps : IFrameVisionOps
 {

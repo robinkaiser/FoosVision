@@ -22,6 +22,8 @@ public class CompleteTableUpdateInteractor : ICompleteTableUpdateInputPort
             return Task.CompletedTask;
         }
 
+        if (session.Id != request.SessionId) return Task.CompletedTask;
+
         session.CompleteTableUpdate();
 
         return Task.CompletedTask;

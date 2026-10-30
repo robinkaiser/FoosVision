@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Common.Live;
+using FoosVision.Adapters.Recorder.Calibration;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Adapters.Recorder.Game;
 using FoosVision.Adapters.Recorder.Game.Control;
 using FoosVision.Adapters.Recorder.Game.Live;
 using FoosVision.Adapters.Recorder.Game.Orchestration;
+using FoosVision.Adapters.Recorder.Live;
 using FoosVision.Common.Metrics;
 using FoosVision.Ports.Media;
 using FoosVision.Ports.Vision;
@@ -71,19 +73,24 @@ internal class GameModule : IDisposable
         CompleteTableSceneUpdate = new CompleteTableSceneUpdateInteractor(SessionStore);
 
         var updateTable = new UpdateTableInteractor(tableConfigStore);
-        var tableUpdatePresenter = new TableUpdatePresenter(SessionStore, liveDataPublisher);
         var updateTableScene = new UpdateTableSceneInteractor(tableConfigStore);
 
         var calibration = new CalibrationCoordinator(
             updateTable,
-            tableUpdatePresenter,
             tableConfigFinder,
             updateTableScene,
-            updateTableScenePresenter,
             tableSceneUpdater,
             frameFeed,
-            CompleteTableUpdate,
-            CompleteTableSceneUpdate);
+            () =>
+            {
+                if (!SessionStore.LoadActive().TryGetValue(out var session)) return null;
+                return new CalibrationSession(
+                    () => SessionStore.LoadActive().TryGetValue(out var active) && active.Id == session.Id,
+                    new TableUpdatePresenter(session, liveDataPublisher),
+                    updateTableScenePresenter,
+                    () => CompleteTableUpdate.Handle(new(session.Id), CancellationToken.None),
+                    () => CompleteTableSceneUpdate.Handle(new(session.Id), CancellationToken.None));
+            });
 
         _ReplayCoordinator = new ReplayCoordinator(replayBuffer, liveVideoStreamController, liveAnalysisPublisher);
 

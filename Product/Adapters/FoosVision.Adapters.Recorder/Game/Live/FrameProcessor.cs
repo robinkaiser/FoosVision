@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
-using System.Diagnostics.CodeAnalysis;
 using FoosVision.Adapters.Common.Live;
+using FoosVision.Adapters.Recorder.Live;
 using FoosVision.Common.Logging;
 using FoosVision.Common.Metrics;
 using FoosVision.Ports.Media;
 using FoosVision.Ports.Vision;
 using FoosVision.UseCases.Game.Ports;
 using FoosVision.UseCases.Game.ProcessFrame;
+using System.Diagnostics.CodeAnalysis;
 
 namespace FoosVision.Adapters.Recorder.Game.Live;
 

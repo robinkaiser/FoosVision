@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
-using FoosVision.Adapters.Recorder.Game;
+using FoosVision.Adapters.Recorder.Live;
 using FoosVision.Ports.Vision;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.LiveAnalysis;

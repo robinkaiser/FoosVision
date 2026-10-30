@@ -124,7 +124,8 @@ public class ReplayCoordinatorTests
         FakeReplayBuffer replayBuffer = new();
         FakeLiveDataPublisher publisher = new();
         FakeLiveVideoStreamController liveVideoStream = new();
-        using ReplayCoordinator testee = new(replayBuffer, liveVideoStream, publisher);
+        ManualTaskScheduler scheduler = new();
+        using ReplayCoordinator testee = new(replayBuffer, liveVideoStream, publisher, scheduler);
 
         await testee.RequestReplay(
             new Frame(12, 5 * _1s),
@@ -133,6 +134,9 @@ public class ReplayCoordinatorTests
             new BallPossession(Team.A, PossessionArea.ThreeBar),
             9250,
             ReplayTriggerKind.BallDisappeared);
+        // Drain the worker through its finally block, including release of the send gate.
+        // A published message alone does not mean the worker has finished the request.
+        await scheduler.RunNext();
         ReplayMessage firstMessage = await publisher.WaitForReplay();
 
         await testee.RequestReplay(
@@ -142,6 +146,7 @@ public class ReplayCoordinatorTests
             new BallPossession(Team.B, PossessionArea.FiveBar),
             10_000,
             ReplayTriggerKind.BallDisappeared);
+        await scheduler.RunNext();
         ReplayMessage secondMessage = await publisher.WaitForReplay(2);
 
         Assert.Equal(12UL, firstMessage.TriggerFrameId);
@@ -149,6 +154,8 @@ public class ReplayCoordinatorTests
         Assert.Equal(2, publisher.PublishReplayCallCount);
         Assert.Equal(2, publisher.PublishReplayStartedCallCount);
         Assert.Equal(["pause", "resume", "pause", "resume"], liveVideoStream.Calls);
+        // Allow shutdown continuations to run automatically during Dispose.
+        scheduler.RunInline = true;
     }
 
     [Fact]
@@ -174,6 +181,61 @@ public class ReplayCoordinatorTests
         Assert.Equal(anchorFrame.TimestampNs + _700ms, message.ReplayEndTimestampNs);
         Assert.Equal(anchorFrame.TimestampNs, replayBuffer.RequestedStartTimeNs);
         Assert.Equal(anchorFrame.TimestampNs + _700ms, replayBuffer.RequestedEndTimeNs);
+    }
+
+    private sealed class ManualTaskScheduler : TaskScheduler
+    {
+        private readonly Lock _Gate = new();
+        private readonly Queue<Task> _Tasks = new();
+        private readonly SemaphoreSlim _Queued = new(0);
+
+        public bool RunInline { get; set; }
+
+        public async Task RunNext()
+        {
+            await _Queued.WaitAsync(TestContext.Current.CancellationToken);
+            Task task;
+            lock (_Gate)
+            {
+                task = _Tasks.Dequeue();
+            }
+            Execute(task);
+        }
+
+        private void Execute(Task task)
+        {
+            SynchronizationContext? previous = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(null);
+            try
+            {
+                TryExecuteTask(task);
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(previous);
+            }
+        }
+
+        protected override void QueueTask(Task task)
+        {
+            if (RunInline)
+            {
+                Execute(task);
+                return;
+            }
+            lock (_Gate)
+            {
+                _Tasks.Enqueue(task);
+            }
+            _Queued.Release();
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
+
+        protected override IEnumerable<Task> GetScheduledTasks()
+        {
+            lock (_Gate) return _Tasks.ToArray();
+        }
     }
 
     private class FakeReplayBuffer : IEncodedReplayBuffer

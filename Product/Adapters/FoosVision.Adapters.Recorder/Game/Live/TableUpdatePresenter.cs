@@ -6,29 +6,26 @@ using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.Live;
 using FoosVision.UseCases.Calibration.UpdateTable;
-using FoosVision.UseCases.Game.Ports;
+using FoosVision.Domain.Game.Entities;
 
 namespace FoosVision.Adapters.Recorder.Game.Live;
 
 public class TableUpdatePresenter : IUpdateTableOutputPort
 {
-    private readonly IGameSessionStore _SessionStore;
+    private readonly GameSession _Session;
     private readonly IRecorderLiveDataPublisher _LiveDataPublisher;
 
     public TableUpdatePresenter(
-        IGameSessionStore sessionStore,
+        GameSession session,
         IRecorderLiveDataPublisher liveDataPublisher)
     {
-        _SessionStore = sessionStore;
+        _Session = session;
         _LiveDataPublisher = liveDataPublisher;
     }
 
     public Task ReportSuccess(TableConfiguration config)
     {
-        if (_SessionStore.LoadActive().TryGetValue(out var session))
-        {
-            session.UpdateTableConfig(config);
-        }
+        _Session.UpdateTableConfig(config);
 
         TableUpdateMessage update = new()
         {

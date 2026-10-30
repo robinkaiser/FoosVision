@@ -4,7 +4,9 @@
 using FoosVision.Adapters.Recorder.Setup.Live;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.Live;
-using FoosVision.UseCases.Game.Ports;
+using FoosVision.Domain.Game.Entities;
+using FoosVision.Domain.Game.Services.GameTracking;
+using FoosVision.Domain.Table.ValueObjects;
 using NSubstitute;
 
 namespace FoosVision.Adapters.Recorder.UnitTests.Setup.Live;
@@ -29,7 +31,7 @@ public class TableUpdatePresenterTests
     {
         RecordingLiveDataPublisher liveDataPublisher = new();
         Recorder.Game.Live.TableUpdatePresenter testee = new(
-            Substitute.For<IGameSessionStore>(),
+            new GameSession(Guid.NewGuid(), Substitute.For<IGameTracker>(), new TableConfiguration(null!, default, default)),
             liveDataPublisher);
 
         await testee.ReportFailure("Detect table configuration failed.");
