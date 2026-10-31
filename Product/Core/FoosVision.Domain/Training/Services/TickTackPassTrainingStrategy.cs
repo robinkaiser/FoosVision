@@ -11,11 +11,11 @@ namespace FoosVision.Domain.Training.Services;
 
 public class TickTackPassTrainingStrategy : ITrainingStrategy
 {
+    private const double _BandSideFraction = 0.25;
+
     // A reversal must move this far from the previous extreme; subpixel jitter is not a tick-tack.
     public const double DirectionChangeMinDistancePx = 5;
 
-    private static readonly IReadOnlyList<TrainingVariant> _Variants = Array.AsReadOnly<TrainingVariant>(
-        [new("wall", "Wall"), new("lane", "Lane"), new("split", "Split")]);
     private TableConfiguration _TableConfig;
     private Team _Team = Team.None;
     private int _Side;
@@ -36,7 +36,7 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
 
     public TrainingStrategyOptions Options { get; }
     public string ReadyText => "Tick tack ready";
-    public IReadOnlyList<TrainingVariant> Variants => _Variants;
+    public IReadOnlyList<TrainingVariant> Variants => Options.Variants;
 
     public TrainingPreparation? FindPreparation(LiveTrackingSnapshot snapshot)
     {
@@ -176,6 +176,10 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
         }
 
         double side = TrainingGeometry.SideFraction(_TableConfig, TrainingGeometry.FiveBar(team), snapshot.BallPosition);
-        return side >= 0 && side <= 0.25 ? -1 : side >= 0.75 && side <= 1 ? 1 : 0;
+
+        return
+            side >= 0 &&
+            side <= _BandSideFraction ? -1 : side >= 1 - _BandSideFraction &&
+            side <= 1 ? 1 : 0;
     }
 }

@@ -40,6 +40,7 @@ public class RecorderRuntime : IRecorderRuntime
             versionProvider,
             new RecorderHandshakeDiagnosticsProvider(),
             new RecorderHandshakeViewerSettingsProvider(),
+            new RecorderTrainingOptionsProvider(),
             videoDumpWriter,
             publishObservations,
             publishBallDetectionMask,

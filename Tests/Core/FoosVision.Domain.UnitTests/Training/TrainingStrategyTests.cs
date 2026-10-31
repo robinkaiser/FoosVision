@@ -13,6 +13,18 @@ namespace FoosVision.Domain.UnitTests.Training;
 
 public class TrainingStrategyTests
 {
+    [Fact]
+    public void Session_only_detects_enabled_strategies_and_announces_configured_variant_text()
+    {
+        TrainingOptions options = new([new(TrainingStrategyKind.PullShot, new(0, 0, WaitDistribution.Uniform), [new("long", "Lang")])]);
+        FoosVision.Domain.Training.Entities.TrainingSession session = Session(options);
+        session.ApplyTracking(Snapshot(0, SnakePosition(Team.A)));
+        Assert.Null(session.ApplyTracking(Snapshot(1000, SnakePosition(Team.A))).Attempt);
+        session.ApplyTracking(Snapshot(2000, Pull(Team.A)));
+        Assert.Equal(TrainingStrategyKind.PullShot, session.ApplyTracking(Snapshot(3000, Pull(Team.A))).Attempt!.Strategy);
+        Assert.Equal(new TrainingVariant("long", "Lang"), session.ApplyTracking(Snapshot(3001, Pull(Team.A))).Variant);
+    }
+
     [Theory]
     [InlineData(Team.A, false)]
     [InlineData(Team.B, false)]

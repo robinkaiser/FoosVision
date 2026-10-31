@@ -35,6 +35,7 @@ public class VideoPlayerRuntime : IVideoPlayerRuntime
             new AssemblyRecorderVersionProvider(),
             new VideoPlayerHandshakeDiagnosticsProvider(),
             new VideoPlayerHandshakeViewerSettingsProvider(),
+            new VideoPlayerTrainingOptionsProvider(),
             new NullVideoDumpWriter(),
             publishObservations,
             publishBallDetectionMask,

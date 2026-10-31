@@ -68,7 +68,46 @@ public record TrainingWaitOptions
     }
 }
 
-public record TrainingStrategyOptions(TrainingStrategyKind Kind, TrainingWaitOptions Wait);
+public enum TrainingVariantSelection
+{
+    RandomWithRepeats,
+}
+
+public record TrainingStrategyOptions
+{
+    public TrainingStrategyOptions(TrainingStrategyKind kind, TrainingWaitOptions wait,
+        IEnumerable<TrainingVariant>? variants = null,
+        TrainingVariantSelection variantSelection = TrainingVariantSelection.RandomWithRepeats)
+    {
+        Kind = kind;
+        Wait = wait;
+        VariantSelection = variantSelection;
+        Variants = Array.AsReadOnly((variants ?? DefaultVariants(kind)).ToArray());
+    }
+
+    public TrainingStrategyKind Kind { get; }
+    public TrainingWaitOptions Wait { get; }
+    public IReadOnlyList<TrainingVariant> Variants { get; }
+    public TrainingVariantSelection VariantSelection { get; }
+
+    internal void Validate()
+    {
+        string[] allowed = [.. DefaultVariants(Kind).Select(variant => variant.Id)];
+        if (Wait is null || !Enum.IsDefined(VariantSelection) || Variants.Count == 0 ||
+            Variants.Any(variant => variant is null || !allowed.Contains(variant.Id, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(variant.Text)) ||
+            Variants.Select(variant => variant.Id).Distinct(StringComparer.Ordinal).Count() != Variants.Count)
+        {
+            throw new ArgumentException("Invalid strategy variants or selection.");
+        }
+    }
+
+    private static TrainingVariant[] DefaultVariants(TrainingStrategyKind kind) => kind switch
+    {
+        TrainingStrategyKind.SnakeShot => [new("push", "Push"), new("pull", "Pull"), new("middle", "Middle")],
+        TrainingStrategyKind.PullShot => [new("short", "Short"), new("middle", "Middle"), new("long", "Long")],
+        _ => [new("wall", "Wall"), new("lane", "Lane"), new("split", "Split")],
+    };
+}
 
 public class TrainingOptions
 {
@@ -79,6 +118,11 @@ public class TrainingOptions
             snapshot.Select(option => option.Kind).Distinct().Count() != snapshot.Length)
         {
             throw new ArgumentException("Enable at least one strategy, without duplicates or unknown kinds.", nameof(strategies));
+        }
+
+        foreach (TrainingStrategyOptions option in snapshot)
+        {
+            option.Validate();
         }
 
         Strategies = Array.AsReadOnly(snapshot);

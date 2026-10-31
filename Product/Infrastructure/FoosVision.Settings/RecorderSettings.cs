@@ -16,6 +16,9 @@ public class RecorderSettings
     [JsonRequired]
     public RecorderDiagnosticsSettings Diagnostics { get; set; } = RecorderDiagnosticsSettings.CreateDefault();
 
+    [JsonRequired]
+    public RecorderTrainingSettings Training { get; set; } = RecorderTrainingSettings.CreateDefault();
+
     public static RecorderSettings CreateDefault()
     {
         return new RecorderSettings();
@@ -33,12 +36,18 @@ public class RecorderSettings
             throw new InvalidOperationException($"{nameof(Viewer)} is required.");
         }
 
-        if (Viewer is null)
+        if (Diagnostics is null)
         {
-            throw new InvalidOperationException($"{nameof(Viewer)} is required.");
+            throw new InvalidOperationException($"{nameof(Diagnostics)} is required.");
+        }
+
+        if (Training is null)
+        {
+            throw new InvalidOperationException($"{nameof(Training)} is required.");
         }
 
         Viewer.Validate();
         Diagnostics.Validate();
+        Training.Validate();
     }
 }

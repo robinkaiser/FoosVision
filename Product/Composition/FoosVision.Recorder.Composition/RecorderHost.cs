@@ -6,6 +6,7 @@ using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Core.Capture;
 using FoosVision.Protocol.Messages.Events;
+using FoosVision.UseCases.Training.Ports;
 using NetMQ;
 
 namespace FoosVision.Recorder.Composition;
@@ -20,6 +21,7 @@ public class RecorderHost : IDisposable
         IRecorderVersionProvider versionProvider,
         IHandshakeDiagnosticsProvider diagnosticsProvider,
         IHandshakeViewerSettingsProvider viewerSettingsProvider,
+        ITrainingOptionsProvider? trainingOptionsProvider,
         IVideoDumpWriter videoDumpWriter,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
@@ -30,6 +32,7 @@ public class RecorderHost : IDisposable
             versionProvider,
             diagnosticsProvider,
             viewerSettingsProvider,
+            trainingOptionsProvider,
             videoDumpWriter,
             publishObservations,
             publishBallDetectionMask,

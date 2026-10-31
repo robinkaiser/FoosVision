@@ -46,6 +46,23 @@ public class TrainingOptionsTests
         => Assert.Throws<ArgumentOutOfRangeException>(() => new TrainingWaitOptions(min, max, WaitDistribution.Uniform));
 
     [Fact]
+    public void Strategy_options_snapshot_variants_and_reject_invalid_variants()
+    {
+        List<TrainingVariant> variants = [new("pull", "Ziehen")];
+        TrainingStrategyOptions snake = new(TrainingStrategyKind.SnakeShot, new(1, 2, WaitDistribution.Uniform), variants);
+        variants.Clear();
+        Assert.Equal(new TrainingVariant("pull", "Ziehen"), Assert.Single(snake.Variants));
+        Assert.Throws<ArgumentException>(() => new TrainingOptions([
+            new(TrainingStrategyKind.SnakeShot, snake.Wait, [new("wall", "Wall")])]));
+        Assert.Throws<ArgumentException>(() => new TrainingOptions([
+            new(TrainingStrategyKind.PullShot, snake.Wait, [new("short", " ")])]));
+        Assert.Throws<ArgumentException>(() => new TrainingOptions([
+            new(TrainingStrategyKind.TickTackPass, snake.Wait, [])]));
+        Assert.Throws<ArgumentException>(() => new TrainingOptions([
+            new(TrainingStrategyKind.SnakeShot, snake.Wait, variantSelection: (TrainingVariantSelection)99)]));
+    }
+
+    [Fact]
     public void Enabled_options_are_a_snapshot_and_must_be_unique_and_nonempty()
     {
         List<TrainingStrategyOptions> enabled = [TrainingTestData.Option(TrainingStrategyKind.SnakeShot)];

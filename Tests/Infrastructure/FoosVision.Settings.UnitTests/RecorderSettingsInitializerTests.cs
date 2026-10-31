@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using System.Text.Json;
+
 namespace FoosVision.Settings.UnitTests;
 
 public class RecorderSettingsInitializerTests
@@ -56,6 +58,7 @@ public class RecorderSettingsInitializerTests
         Assert.False(context.Settings.Diagnostics.Vision.DebugVisualizations.ShowObservations);
         Assert.False(context.Settings.Diagnostics.Vision.DebugVisualizations.ShowBallDetectionMask);
         Assert.Null(context.ConfigError);
+        Assert.Equal(3, context.Settings.Training.EnabledStrategies.Count);
     }
 
     [Fact]
@@ -107,6 +110,11 @@ public class RecorderSettingsInitializerTests
                     "showBallDetectionMask": true
                   }
                 }
+              },
+              "training": {
+                "snakeShot": {
+                  "maxWaitSeconds": 7
+                }
               }
             }
             """;
@@ -129,6 +137,7 @@ public class RecorderSettingsInitializerTests
         Assert.Equal(7, context.Settings.Diagnostics.RuntimeMetrics.ReportIntervalSeconds);
         Assert.True(context.Settings.Diagnostics.Vision.DebugVisualizations.ShowObservations);
         Assert.True(context.Settings.Diagnostics.Vision.DebugVisualizations.ShowBallDetectionMask);
+        Assert.Equal(7, context.Settings.Training.SnakeShot.MaxWaitSeconds);
     }
 
     [Fact]

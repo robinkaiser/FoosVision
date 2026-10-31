@@ -83,6 +83,73 @@ Alternative PC workflow:
         "showBallDetectionMask": false
       }
     }
+  },
+  "training": {
+    "enabledStrategies": [
+      "snakeShot",
+      "pullShot",
+      "tickTackPass"
+    ],
+    "snakeShot": {
+      "minWaitSeconds": 1,
+      "maxWaitSeconds": 12,
+      "waitDistribution": "uniform",
+      "variantSelection": "randomWithRepeats",
+      "variants": [
+        {
+          "id": "push",
+          "text": "Push"
+        },
+        {
+          "id": "pull",
+          "text": "Pull"
+        },
+        {
+          "id": "middle",
+          "text": "Middle"
+        }
+      ]
+    },
+    "pullShot": {
+      "minWaitSeconds": 1,
+      "maxWaitSeconds": 10,
+      "waitDistribution": "uniform",
+      "variantSelection": "randomWithRepeats",
+      "variants": [
+        {
+          "id": "short",
+          "text": "Short"
+        },
+        {
+          "id": "middle",
+          "text": "Middle"
+        },
+        {
+          "id": "long",
+          "text": "Long"
+        }
+      ]
+    },
+    "tickTackPass": {
+      "minWaitSeconds": 1,
+      "maxWaitSeconds": 10,
+      "waitDistribution": "uniform",
+      "variantSelection": "randomWithRepeats",
+      "variants": [
+        {
+          "id": "wall",
+          "text": "Wall"
+        },
+        {
+          "id": "lane",
+          "text": "Lane"
+        },
+        {
+          "id": "split",
+          "text": "Split"
+        }
+      ]
+    }
   }
 }
 ```
@@ -171,3 +238,14 @@ Validation rules:
 - `viewer.liveVideo.udpReceiveBufferBytes` must be at least `524288`.
 
 Operational diagnostics workflows are documented in [Diagnostics](Diagnostics.md).
+
+## Training Settings
+
+- `enabledStrategies`: active strategies: `snakeShot` (Snake), `pullShot` (Pull), `tickTackPass` (Tick-Tack Pass). An empty list enables all strategies.
+
+Each strategy has these settings:
+
+- `minWaitSeconds` / `maxWaitSeconds`: minimum/maximum delay between Ready and the variant announcement, in seconds. Equal values give a fixed delay.
+- `waitDistribution`: `uniform` gives all delays equal probability; `preferLong` favors longer delays; `preferShort` favors shorter delays.
+- `variantSelection`: `randomWithRepeats` selects variants randomly with equal probability, allowing immediate repeats.
+- `variants`: variants to choose from. Each entry has a unique `id` and a spoken `text`. Include at least one variant.

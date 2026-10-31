@@ -11,6 +11,7 @@ using FoosVision.Protocol.Messages.Events;
 using FoosVision.Recorder.Composition.Diagnostics;
 using FoosVision.Recorder.Composition.InMemoryStores;
 using FoosVision.Recorder.Composition.Modules;
+using FoosVision.UseCases.Training.Ports;
 using FoosVision.Vision;
 
 namespace FoosVision.Recorder.Composition;
@@ -49,6 +50,7 @@ internal class RecorderCompositionRoot : IDisposable
         IRecorderVersionProvider versionProvider,
         IHandshakeDiagnosticsProvider diagnosticsProvider,
         IHandshakeViewerSettingsProvider viewerSettingsProvider,
+        ITrainingOptionsProvider? trainingOptionsProvider,
         IVideoDumpWriter videoDumpWriter,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,

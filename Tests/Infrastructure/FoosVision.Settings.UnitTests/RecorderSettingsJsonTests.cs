@@ -26,7 +26,8 @@ public class RecorderSettingsJsonTests
                   "enabled": true,
                   "reportIntervalSeconds": 5
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -64,7 +65,8 @@ public class RecorderSettingsJsonTests
                 }
               },
               "diagnostics": {
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -81,7 +83,8 @@ public class RecorderSettingsJsonTests
             {
               "version": 1,
               "diagnostics": {
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -97,7 +100,8 @@ public class RecorderSettingsJsonTests
               "viewer": {
               },
               "diagnostics": {
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -118,7 +122,8 @@ public class RecorderSettingsJsonTests
                 }
               },
               "diagnostics": {
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -138,7 +143,8 @@ public class RecorderSettingsJsonTests
                   "decoderLowLatency": true,
                   "udpReceiveBufferBytes": 2097152
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -157,7 +163,8 @@ public class RecorderSettingsJsonTests
                     "format": "CompactJn"
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -176,7 +183,8 @@ public class RecorderSettingsJsonTests
                     "rollingInterval": "Dy"
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -195,7 +203,8 @@ public class RecorderSettingsJsonTests
                     "minimumLevel": "Info"
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -214,7 +223,8 @@ public class RecorderSettingsJsonTests
                     "retentionDays": -1
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -233,7 +243,8 @@ public class RecorderSettingsJsonTests
                     "retainedFileCountLimit": -1
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -252,7 +263,8 @@ public class RecorderSettingsJsonTests
                     "serverUrl": "seq.local:5341"
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -271,7 +283,8 @@ public class RecorderSettingsJsonTests
                     "minimumLevel": "Debg"
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -288,7 +301,8 @@ public class RecorderSettingsJsonTests
                 "video": {
                   "retentionDays": -1
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -305,7 +319,8 @@ public class RecorderSettingsJsonTests
                 "video": {
                   "maxTotalSizeBytes": 0
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -325,7 +340,8 @@ public class RecorderSettingsJsonTests
                   "decoderLowLatency": true,
                   "udpReceiveBufferBytes": 2097152
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -345,7 +361,8 @@ public class RecorderSettingsJsonTests
                   "decoderLowLatency": true,
                   "udpReceiveBufferBytes": 2097152
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -365,7 +382,8 @@ public class RecorderSettingsJsonTests
                   "decoderLowLatency": true,
                   "udpReceiveBufferBytes": 2097152
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -385,7 +403,8 @@ public class RecorderSettingsJsonTests
                   "decoderLowLatency": true,
                   "udpReceiveBufferBytes": 262144
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -402,7 +421,8 @@ public class RecorderSettingsJsonTests
                 "runtimeMetrics": {
                   "reportIntervalSeconds": 0
                 }
-              }
+              },
+              "training": {}
             }
             """;
 
@@ -421,7 +441,8 @@ public class RecorderSettingsJsonTests
                     "formt": "CompactJson"
                   }
                 }
-              }
+              },
+              "training": {}
             }
             """;
 

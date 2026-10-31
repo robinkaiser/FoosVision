@@ -1,7 +1,7 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-10-30. Status: Arbeitspakete 1–3 implementiert und geprüft.
-Arbeitspakete 4–11 sind offen; Training ist noch nicht in die App-Laufzeit integriert.
+Stand: 2026-10-31. Status: Arbeitspakete 1–4 implementiert und geprüft.
+Arbeitspakete 5–11 sind offen; Training ist noch nicht in die App-Laufzeit integriert.
 
 ## Ziel und Umfang
 
@@ -327,36 +327,72 @@ Umgesetzt am 2026-10-30:
 
 Abhängigkeit: festgelegte Optionen aus Schritt 0 und Core-Verträge aus Schritt 3.
 
-- [ ] Eigenen `training`-Abschnitt in RecorderSettings/RecorderSettingsJson vorsehen:
+- [x] Eigenen `training`-Abschnitt in RecorderSettings/RecorderSettingsJson vorsehen:
   Liste aktivierter Strategien (`enabledStrategies`; IDs `snakeShot`, `pullShot`, `tickTackPass`
   als Arbeitsnamen),
   je Strategie einen eigenen Block für minimale/maximale Wartezeit, Verteilungswahl,
-  Variantenauswahlregel und typisierte Erkennungsparameter. Keinen globalen Wait-Wert
+  Variantenauswahlregel und Varianten mit Ansagetexten. Erkennungsparameter bleiben
+  Implementierungskonstanten der Strategien. Keinen globalen Wait-Wert
   verwenden, der ungewollt Fünfer- und Dreiertraining gleich behandelt.
   Konkrete Einheiten in Feldnamen und Dokumentation angeben; Defaults erst nach
   Produktentscheidung festlegen. Keine frei kombinierbaren Auflage-/Ansage-/Auslöser-IDs,
   die fachlich unpassende Kombinationen erlauben.
-- [ ] Ansage-Einstellungen wie Sprache und Sprechgeschwindigkeit ausschließlich in der
-  Recorder-Konfiguration vorsehen. Keine Audiooptionen an den Viewer übertragen.
-- [ ] Settings-DTOs über Composition in Core-Optionen übersetzen. Das bislang eigenständige
+- [x] Keine `speech`-Konfiguration vorsehen. Keine Audiooptionen an den Viewer übertragen.
+- [x] Settings-DTOs über Composition in Core-Optionen übersetzen. Das bislang eigenständige
   Settings-Projekt benötigt dafür keine Domain-Abhängigkeit. Schmalen Settings-Port ergänzen,
   ohne Recorder-JSON-Typen in Usecases zu übernehmen.
-- [ ] Validierung für Bereiche, leere Variantenlisten/Texte, doppelte IDs und
+- [x] Validierung für Bereiche, leere Variantenlisten/Texte, doppelte IDs und
   widersprüchliche Optionen hinzufügen. Unbekannte Strategie-IDs, zur Strategie unpassende
-  Varianten und Parameter zurückweisen. Bestehende Dateien ohne training verwenden Defaults.
-  Aktivierungsliste auf unbekannte/doppelte IDs prüfen und mindestens eine aktivierte
-  Strategie für den Trainingsstart verlangen. Konfigurierte, aber nicht aktivierte
+  Varianten zurückweisen. Unbekannte Eigenschaften einschließlich `recognition` und `speech`
+  zurückweisen. `training` ist wie `viewer` und `diagnostics` ein Pflichtabschnitt.
+  Aktivierungsliste auf unbekannte/doppelte IDs prüfen. Eine leere Liste aktiviert alle
+  drei Strategien mit ihren konfigurierten Optionen. Konfigurierte, aber nicht aktivierte
   Strategien nehmen nicht an der Erkennung teil.
   Wartegrenzen müssen endlich, nicht negativ und min <= max sein; Verteilungswert validieren.
   Schema-Versionierung und unbekannte Eigenschaften bewusst behandeln.
-- [ ] Config.example.json-Generierung und bestehenden Texteditor/Validator erweitern.
+- [x] Config.example.json-Generierung und bestehenden Texteditor/Validator erweitern.
   Recorder-Neustart und Viewer-Reconnect bleiben der Übernahmeweg.
 
 Tests: RecorderSettingsJsonTests und Initializer-Tests mit alten, gültigen neuen und
 ungültigen Konfigurationen für alle drei Strategien; Auswahl/Mapping, unzulässige Kombinationen
 und Session-Snapshot der Einstellungen prüfen.
 
-Abnahme: Alte Konfigurationen funktionieren; neue Optionen gelangen validiert an ihren Besitzer.
+Abnahme: Der Trainingsabschnitt ist verpflichtend; seine Optionen gelangen validiert an ihren Besitzer.
+
+Umgesetzt am 2026-10-30:
+
+- Verpflichtender `training`-Abschnitt mit `[JsonRequired]` und `CreateDefault()` wie bei den
+  anderen Recorder-Settings (Nutzerentscheidung vom 2026-10-31). Dateien ohne diesen Abschnitt
+  sind ungültig und verwenden den bestehenden Initializer-Fallback ohne Überschreiben der Datei.
+  Die Defaults bleiben: alle drei Strategien, Snake 1–12 Sekunden,
+  Pull/Tick-Tack 1–10 Sekunden, `uniform`. Jede Strategie besitzt eigene Wartewerte,
+  `randomWithRepeats` und eine Teilmenge ihrer Varianten mit Ansagetexten.
+  Die bestätigten Erkennungswerte bleiben Implementierungskonstanten der Strategien;
+  Vorbereitungsdelay, Richtungswechselanzahl/-distanz, Schussgeschwindigkeit,
+  Entscheidungsfenster, Nachlauf und Ausführungstimeout bleiben Code-Konstanten.
+- Endliche Werte, Bereiche, IDs, Texte, Auswahlregeln, zur Strategie passende Varianten
+  sowie explizite Nullwerte werden validiert. Unbekannte JSON-Eigenschaften
+  bleiben auch in neuen Blöcken verboten. Deaktivierte Blöcke werden ebenfalls validiert;
+  nur aktivierte Strategien gelangen in die Core-Optionen und damit in die Erkennung.
+  Eine leere Aktivierung verwendet alle drei Strategien mit ihren konfigurierten Optionen.
+  Der Fallback liegt im Settings-Provider
+ `training` steht in RecorderSettings und der generierten/dokumentierten Beispielkonfiguration am Ende.
+- Bestehendes Provider-Muster übernommen: `RecorderTrainingOptionsProvider` im Recorder-App-Modul
+  und `VideoPlayerTrainingOptionsProvider` im VideoPlayer lesen ihre jeweiligen Startup-Settings.
+  Beide übersetzen validierte DTOs in unveränderliche Core-Optionen. Der vorhandene
+  `ITrainingOptionsProvider` wird über RecorderHost an Compose gereicht; dort folgt in
+  Arbeitspaket 6 die direkte Übergabe an das Trainingsmodul. 
+  SettingsStore bleibt ausschließlich für Kamera- und Tischkonfiguration zuständig.
+  Das Trainingsmodul und dessen Laufzeitanschluss bleiben Arbeitspaket 6 vorbehalten.
+  Der Provider hält einen Startup-Snapshot; jede Session erhält unveränderliche Optionen.
+  Keine neue Projektabhängigkeit, insbesondere weder Composition zu Settings noch Settings zu Domain.
+- Beispielgenerierung und Texteditor verwenden bereits denselben RecorderSettingsJson-Validator
+  und unterstützen den neuen Abschnitt dadurch ohne eigene Parsing-/Validierungslogik.
+  Recorder-Neustart und Viewer-Reconnect bleiben der Übernahmeweg. Configuration.md und
+  die aktuellen Release Notes sind aktualisiert. Diagnostics.md geprüft: keine Änderung
+  an Diagnostikverhalten oder Diagnostik-Schema in diesem Arbeitspaket.
+- Game-Code und Game-Verhalten sowie Protokoll und Viewer-Handshake bleiben unverändert.
+  Keine Apps, Tools oder Geräteworkflows gestartet.
 
 ## 5. Protokoll und Transport vollständig erweitern
 
@@ -561,7 +597,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
    Arbeitspakete 1 und 2 abgeschlossen; die bedingte spätere Portverschiebung
    ist bei Arbeitspaket 2 dokumentiert.
 3. Strategie-Vertrag, Snake, Zieher, Tick-Tack Pass und Koordination
-   implementiert (3). JSON-Konfiguration und Mapping folgen als Arbeitspaket 4.
+   implementiert (3). JSON-Konfiguration und Settings-Mapping sind abgeschlossen (4),
+   einschließlich Validierung, Provider-Snapshot und Konfigurationsdokumentation.
 4. Protokoll und Recorder-Laufzeit anschließen (5–6).
 5. Viewer-Bedienung und lokale Recorder-Sprachausgabe zum ersten vollständigen Feature
    ergänzen (7–8); Sprachausgabe kann nach Schritt 6 unabhängig von Schritt 7 entstehen.

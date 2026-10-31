@@ -10,15 +10,15 @@ namespace FoosVision.Domain.Training.Services;
 
 public class PullShotTrainingStrategy : ShotTrainingStrategy
 {
-    private static readonly IReadOnlyList<TrainingVariant> _Variants = Array.AsReadOnly<TrainingVariant>(
-        [new("short", "Short"), new("middle", "Middle"), new("long", "Long")]);
+    private const double _MinSideFraction = 0.25;
+    private const double _MaxSideFraction = 0.35;
 
     public PullShotTrainingStrategy(TrainingStrategyOptions options, TableConfiguration tableConfig) : base(options, tableConfig)
     {
     }
 
     public override string ReadyText => "Pull ready";
-    public override IReadOnlyList<TrainingVariant> Variants => _Variants;
+    public override IReadOnlyList<TrainingVariant> Variants => Options.Variants;
     protected override bool RequiresRest => true;
 
     protected override bool IsInSetup(LiveTrackingSnapshot snapshot, Team team)
@@ -29,6 +29,9 @@ public class PullShotTrainingStrategy : ShotTrainingStrategy
             side = 1 - side;
         }
 
-        return snapshot.Possession == new BallPossession(team, PossessionArea.ThreeBar) && side >= 0.25 && side <= 0.35;
+        return
+            snapshot.Possession == new BallPossession(team, PossessionArea.ThreeBar) &&
+            side >= _MinSideFraction &&
+            side <= _MaxSideFraction;
     }
 }
