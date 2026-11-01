@@ -67,66 +67,51 @@ public class ReplaySessionTests
     }
 
     [Fact]
-    public void Cannot_return_to_live_before_required_loops_are_completed()
+    public void Recorder_request_waits_for_required_completed_loops()
     {
         ReplaySession testee = CreateSession(requiredCompletedLoops: 2);
-        testee.Start(new ReplayId(42, 1_000_000), Anchor(), TableConfig.Config);
+        ReplayId replayId = new(42, 1_000_000);
+        testee.Start(replayId, Anchor(), TableConfig.Config);
+        testee.RequestReturnToLive(replayId);
+        Assert.False(testee.CanReturnToLive);
         testee.CompleteLoop();
-
-        bool canReturnToLive = testee.CanReturnToLive(new Point(100, 200));
-
-        Assert.False(canReturnToLive);
+        Assert.False(testee.CanReturnToLive);
+        testee.CompleteLoop();
+        Assert.True(testee.CanReturnToLive);
     }
 
     [Fact]
-    public void Cannot_return_to_live_after_required_loops_without_live_ball()
+    public void Completed_loop_without_recorder_request_keeps_replay_active()
     {
         ReplaySession testee = CreateSession();
         testee.Start(new ReplayId(42, 1_000_000), Anchor(), TableConfig.Config);
         testee.CompleteLoop();
-
-        bool canReturnToLive = testee.CanReturnToLive(null);
-
-        Assert.False(canReturnToLive);
-        Assert.True(testee.HasCompletedRequiredLoops);
+        Assert.False(testee.CanReturnToLive);
     }
 
     [Fact]
-    public void Cannot_return_to_live_when_first_live_ball_after_required_loops_is_found()
+    public void Request_after_completed_loop_allows_return_without_live_ball()
     {
         ReplaySession testee = CreateSession();
-        testee.Start(new ReplayId(42, 1_000_000), Anchor(), TableConfig.Config);
+        ReplayId replayId = new(42, 1_000_000);
+        testee.Start(replayId, Anchor(), TableConfig.Config);
         testee.CompleteLoop();
-
-        bool canReturnToLive = testee.CanReturnToLive(new Point(100, 200));
-
-        Assert.False(canReturnToLive);
+        testee.RequestReturnToLive(replayId);
+        testee.RequestReturnToLive(replayId);
+        Assert.True(testee.CanReturnToLive);
     }
 
     [Fact]
-    public void Cannot_return_to_live_after_required_loops_when_live_ball_moves_less_than_ten_pixels()
+    public void Old_request_does_not_end_replacement_replay()
     {
         ReplaySession testee = CreateSession();
-        testee.Start(new ReplayId(42, 1_000_000), Anchor(), TableConfig.Config);
+        ReplayId oldReplay = new(42, 1_000_000);
+        testee.Start(oldReplay, Anchor(), TableConfig.Config);
+        testee.RequestReturnToLive(oldReplay);
+        testee.Start(new(84, 2_000_000), Anchor(), TableConfig.Config);
         testee.CompleteLoop();
-
-        _ = testee.CanReturnToLive(new Point(100, 200));
-        bool canReturnToLive = testee.CanReturnToLive(new Point(109, 200));
-
-        Assert.False(canReturnToLive);
-    }
-
-    [Fact]
-    public void Can_return_to_live_after_required_loops_when_live_ball_moves_ten_pixels()
-    {
-        ReplaySession testee = CreateSession();
-        testee.Start(new ReplayId(42, 1_000_000), Anchor(), TableConfig.Config);
-        testee.CompleteLoop();
-
-        _ = testee.CanReturnToLive(new Point(100, 200));
-        bool canReturnToLive = testee.CanReturnToLive(new Point(110, 200));
-
-        Assert.True(canReturnToLive);
+        testee.RequestReturnToLive(oldReplay);
+        Assert.False(testee.CanReturnToLive);
     }
 
     [Fact]

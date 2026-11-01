@@ -5,7 +5,7 @@ namespace FoosVision.Adapters.Viewer.Session.Playback;
 
 public interface IPlaybackController
 {
-    event Func<Task>? ReplayLoopCompleted;
+    event Func<EncodedReplayPlayback, Task>? ReplayLoopCompleted;
 
     event Func<long, Task>? ReplayPositionChanged;
 

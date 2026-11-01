@@ -11,7 +11,7 @@ public class ReplayPlaybackRequestMapperTests
     [Fact]
     public void TryMap_maps_h264_goal_check_to_encoded_replay_request()
     {
-        ReplayMessage message = CreateReplayMessage();
+        ReplayClipMessage message = CreateReplayClipMessage();
 
         bool result = ReplayPlaybackRequestMapper.TryMap(message, out PlaybackRequest request, out string reason);
 
@@ -32,7 +32,7 @@ public class ReplayPlaybackRequestMapperTests
     [InlineData(EncodedReplayCodecMessage.H265)]
     public void TryMap_rejects_unsupported_codecs(EncodedReplayCodecMessage codec)
     {
-        ReplayMessage message = CreateReplayMessage() with
+        ReplayClipMessage message = CreateReplayClipMessage() with
         {
             Codec = codec,
         };
@@ -47,7 +47,7 @@ public class ReplayPlaybackRequestMapperTests
     [Fact]
     public void TryMap_rejects_empty_replay()
     {
-        ReplayMessage message = CreateReplayMessage() with
+        ReplayClipMessage message = CreateReplayClipMessage() with
         {
             AccessUnits = [],
         };
@@ -59,9 +59,9 @@ public class ReplayPlaybackRequestMapperTests
         Assert.Equal("Replay contains no access units.", reason);
     }
 
-    private static ReplayMessage CreateReplayMessage()
+    private static ReplayClipMessage CreateReplayClipMessage()
     {
-        return new ReplayMessage
+        return new ReplayClipMessage
         {
             ReplayStartTimestampNs = 1_900_000_000,
             ReplayEndTimestampNs = 2_900_000_000,

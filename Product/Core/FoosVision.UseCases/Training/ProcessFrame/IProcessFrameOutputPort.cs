@@ -21,7 +21,8 @@ public record ProcessFrameResponse(
     TrainingAnnouncementRequest? Announcement,
     TrainingAnnouncementInvalidation? AnnouncementInvalidation,
     TrainingAttemptCompletion? CompletedAttempt,
-    TrainingAttemptAbort? AbortedAttempt);
+    TrainingAttemptAbort? AbortedAttempt,
+    Frame? ReturnToLiveReplayFrame = null);
 
 public record TrackingFrameResponse(
     Frame Frame,

@@ -18,9 +18,9 @@ using FoosVision.Protocol.Messages.Live;
 using FoosVision.Protocol.Messages.LiveAnalysis;
 using FoosVision.UseCases.Replay.CompleteReplayAnalysis;
 using FoosVision.UseCases.Replay.CompleteReplayLoop;
-using FoosVision.UseCases.Replay.ObserveLiveTracking;
 using FoosVision.UseCases.Replay.Ports;
 using FoosVision.UseCases.Replay.ProcessReplayFrame;
+using FoosVision.UseCases.Replay.RequestReturnToLive;
 using FoosVision.UseCases.Replay.StartReplayAnalysis;
 using FoosVision.UseCases.Replay.StopReplay;
 
@@ -31,7 +31,7 @@ internal class ViewerReplayCoordinator :
     IProcessReplayFrameOutputPort,
     ICompleteReplayAnalysisOutputPort,
     ICompleteReplayLoopOutputPort,
-    IObserveLiveTrackingOutputPort,
+    IRequestReturnToLiveOutputPort,
     IStopReplayOutputPort,
     IDisposable
 {
@@ -39,6 +39,8 @@ internal class ViewerReplayCoordinator :
 
     private static readonly Source _Log = new("Viewer.Session.Active.ViewerReplayCoordinator");
 
+    private readonly Lock _ReplaySync = new();
+    private readonly ReplayMessageReceiver _Messages = new();
     private readonly Lock _AnalysisSync = new();
     private readonly Lock _ReplacementSync = new();
     private readonly IOverlaySink _OverlaySink;
@@ -55,13 +57,15 @@ internal class ViewerReplayCoordinator :
     private readonly ProcessReplayFrameInteractor _ProcessReplayFrame;
     private readonly CompleteReplayAnalysisInteractor _CompleteReplayAnalysis;
     private readonly CompleteReplayLoopInteractor _CompleteReplayLoop;
-    private readonly ObserveLiveTrackingInteractor _ObserveLiveTracking;
+    private readonly RequestReturnToLiveInteractor _RequestReturnToLive;
     private readonly StopReplayInteractor _StopReplay;
+    private EncodedReplayPlayback? _PlayingReplay;
     private ReplayAnalysis? _ReplayAnalysis;
     private ReplayPossessionOverlay? _ReplayPossessionOverlay;
     private CancellationTokenSource? _ReplayReplacementCts;
     private long _ReplayGeneration;
     private int _ReplayPending;
+    private bool _Disposed;
 
     public ViewerReplayCoordinator(
         IOverlaySink overlaySink,
@@ -89,7 +93,7 @@ internal class ViewerReplayCoordinator :
         _ProcessReplayFrame = new ProcessReplayFrameInteractor(_ReplaySessionStore);
         _CompleteReplayAnalysis = new CompleteReplayAnalysisInteractor(_ReplaySessionStore);
         _CompleteReplayLoop = new CompleteReplayLoopInteractor(_ReplaySessionStore);
-        _ObserveLiveTracking = new ObserveLiveTrackingInteractor(_ReplaySessionStore);
+        _RequestReturnToLive = new RequestReturnToLiveInteractor(_ReplaySessionStore);
         _StopReplay = new StopReplayInteractor(_ReplaySessionStore);
         _PlaybackCoordinator.ReplayLoopCompleted += OnReplayLoopCompleted;
         _PlaybackCoordinator.ReplayPositionChanged += OnReplayPositionChanged;
@@ -101,22 +105,63 @@ internal class ViewerReplayCoordinator :
 
     public void HandleReplayStarted(ReplayStartedMessage message)
     {
-        ReplayReplacement replacement = BeginReplayReplacement();
-        _ = PreparePendingReplayAsync(replacement);
+        lock (_ReplaySync)
+        {
+            if (_Disposed || !_Messages.AcceptStarted(message.SessionId, new(message.TriggerFrameId, message.TriggerTimestampNs)))
+            {
+                return;
+            }
+
+            ReplayReplacement replacement = BeginReplayReplacement();
+            _ = PreparePendingReplayAsync(replacement);
+        }
     }
 
-    public void HandleReplay(ReplayMessage message)
+    public void HandleReplayClip(ReplayClipMessage message)
     {
-        ReplayReplacement replacement = BeginReplayReplacement();
-        _ = StartReplayAsync(message, replacement);
+        lock (_ReplaySync)
+        {
+            if (_Disposed || !_Messages.AcceptReplay(message.SessionId, new(message.TriggerFrameId, message.TriggerTimestampNs)))
+            {
+                return;
+            }
+
+            ReplayReplacement replacement = BeginReplayReplacement();
+            _ = StartReplayAsync(message, replacement);
+        }
     }
 
-    public Task ObserveLiveTrackingAsync(Point? liveBallPosition)
+    public void SetRecorderSession(Guid? sessionId)
     {
-        return _ObserveLiveTracking.Handle(
-            new ObserveLiveTrackingRequest(liveBallPosition),
-            this,
-            CancellationToken.None);
+        lock (_ReplaySync)
+        {
+            bool hadSession = _Messages.SessionId.HasValue;
+            if (_Disposed || !_Messages.SetSession(sessionId))
+            {
+                return;
+            }
+
+            CancelReplayReplacement();
+            _ = StopReplayAsync();
+            if (hadSession)
+            {
+                _ = _PlaybackCoordinator.StopAsync();
+            }
+        }
+    }
+
+    public void HandleReplayReturnToLive(ReplayReturnToLiveMessage message)
+    {
+        lock (_ReplaySync)
+        {
+            ReplayId replayId = new(message.TriggerFrameId, message.TriggerTimestampNs);
+            if (_Disposed || !_Messages.AcceptReturn(message.SessionId, replayId))
+            {
+                return;
+            }
+
+            _ = _RequestReturnToLive.Handle(new(replayId), this, CancellationToken.None);
+        }
     }
 
     public async Task StopReplayAsync()
@@ -179,6 +224,16 @@ internal class ViewerReplayCoordinator :
 
     public async Task ReportReturnToLive(ReturnToLiveResponse response)
     {
+        lock (_ReplaySync)
+        {
+            if (_Disposed)
+            {
+                return;
+            }
+
+            _Messages.CompleteReplay(response.ReplayId);
+        }
+
         ClearReplayPending();
         _Log.Information("Replay returned to live. TriggerFrameId={0} TriggerTimestampNs={1}", response.ReplayId.TriggerFrameId, response.ReplayId.TriggerTimestampNs);
         await _StartLivePlayback();
@@ -207,19 +262,42 @@ internal class ViewerReplayCoordinator :
     {
         GC.SuppressFinalize(this);
 
+        lock (_ReplaySync)
+        {
+            _Disposed = true;
+            _Messages.SetSession(null);
+        }
+
         _PlaybackCoordinator.ReplayLoopCompleted -= OnReplayLoopCompleted;
         _PlaybackCoordinator.ReplayPositionChanged -= OnReplayPositionChanged;
         CancelReplayReplacement();
     }
 
-    private Task OnReplayLoopCompleted()
+    private Task OnReplayLoopCompleted(EncodedReplayPlayback replay)
     {
-        if (IsReplayPending)
+        lock (_ReplaySync)
         {
+            if (_Disposed || IsReplayPending || !ReferenceEquals(replay, _PlayingReplay))
+            {
+                return Task.CompletedTask;
+            }
+
+            // Do not make a decoder loop await the stop operation that joins that same loop.
+            _ = CompleteReplayLoopAsync();
             return Task.CompletedTask;
         }
+    }
 
-        return _CompleteReplayLoop.Handle(new CompleteReplayLoopRequest(), this, CancellationToken.None);
+    private async Task CompleteReplayLoopAsync()
+    {
+        try
+        {
+            await _CompleteReplayLoop.Handle(new CompleteReplayLoopRequest(), this, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _Log.Warning("Replay loop completion failed: {0}", ex);
+        }
     }
 
     private Task OnReplayPositionChanged(long timeNs)
@@ -247,7 +325,7 @@ internal class ViewerReplayCoordinator :
         return Task.CompletedTask;
     }
 
-    private async Task StartReplayAsync(ReplayMessage message, ReplayReplacement replacement)
+    private async Task StartReplayAsync(ReplayClipMessage message, ReplayReplacement replacement)
     {
         CancellationToken ct = replacement.Cancellation.Token;
 
@@ -303,6 +381,14 @@ internal class ViewerReplayCoordinator :
             EncodedReplayFrameSource frameSource = new(_ReplayFrameDecoder, replay);
 
             await _StartReplayAnalysis.Handle(request, this, ct);
+            lock (_ReplaySync)
+            {
+                if (_Messages.IsReturnRequested(replayId) && IsCurrentReplayGeneration(replacement.Generation))
+                {
+                    _ = _RequestReturnToLive.Handle(new(replayId), this, ct);
+                }
+            }
+
             lock (_AnalysisSync)
             {
                 _ReplayPossessionOverlay = possessionOverlay;
@@ -390,7 +476,14 @@ internal class ViewerReplayCoordinator :
             await _PlaybackCoordinator.StartReplayAsync(
                 playbackRequest,
                 () => IsCurrentReplayGeneration(replacement.Generation),
-                ClearReplayPending,
+                () =>
+                {
+                    lock (_ReplaySync)
+                    {
+                        _PlayingReplay = replay;
+                        ClearReplayPending();
+                    }
+                },
                 ct);
 
             async Task ProduceReplayFramesAsync(ChannelWriter<ReplayFrame> writer, CancellationToken ct)

@@ -16,13 +16,13 @@ namespace FoosVision.Adapters.Viewer.UnitTests.Session.Active;
 public class ReplayTests
 {
     [Fact]
-    public async Task HandleReplay_stops_live_playback_and_shows_replay_analysis()
+    public async Task HandleReplayClip_stops_live_playback_and_shows_replay_analysis()
     {
         using ReplayCoordinatorContext context = new();
         ViewerReplayCoordinator sut = context.Sut;
 
         context.EnableReplayAnalysisPrerequisites();
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
 
         await ReplayCoordinatorContext.WaitUntil(() => context.OverlaySink.TrackingStates.Count == 1);
 
@@ -35,7 +35,6 @@ public class ReplayTests
         Assert.Equal(PossessionArea.FiveBar, replayState.PossessionArea);
         Assert.Equal(9266, replayState.PossessionTimeMs);
 
-        await sut.ObserveLiveTrackingAsync(new Point(960, 540));
 
         Assert.Single(context.OverlaySink.TrackingStates);
     }
@@ -54,7 +53,6 @@ public class ReplayTests
         Assert.DoesNotContain("start-replay-playback", context.Events);
         Assert.Empty(context.OverlaySink.TrackingStates);
 
-        await sut.ObserveLiveTrackingAsync(new Point(960, 540));
 
         Assert.Empty(context.OverlaySink.TrackingStates);
     }
@@ -85,7 +83,7 @@ public class ReplayTests
         sut.HandleReplayStarted(CreateReplayStartedMessage());
         await ReplayCoordinatorContext.WaitUntil(() => context.Events.Contains("stop-playback"));
 
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
 
         await ReplayCoordinatorContext.WaitUntil(() => context.OverlaySink.TrackingStates.Count == 1);
 
@@ -101,7 +99,7 @@ public class ReplayTests
         ViewerReplayCoordinator sut = context.Sut;
 
         context.EnableReplayAnalysisPrerequisites();
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
         await ReplayCoordinatorContext.WaitUntil(() => context.PlaybackController.ReplayStartTimestampNs.Count == 1);
 
         sut.HandleReplayStarted(CreateReplayStartedMessage(
@@ -116,7 +114,7 @@ public class ReplayTests
         Assert.Single(context.PlaybackController.ReplayStartTimestampNs);
 
         Assert.True(sut.IsReplayActive);
-        sut.HandleReplay(CreateReplayMessage(
+        sut.HandleReplayClip(CreateReplayClipMessage(
             triggerFrameId: 84,
             triggerTimestampNs: 4_000_000_000,
             anchorFrameId: 80,
@@ -137,10 +135,10 @@ public class ReplayTests
         context.EnableReplayAnalysisPrerequisites();
         context.ReplayFrameDecoder.BlockFirstDecode = true;
 
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
         await context.ReplayFrameDecoder.WaitUntilFirstDecodeBlocked();
 
-        sut.HandleReplay(CreateReplayMessage(
+        sut.HandleReplayClip(CreateReplayClipMessage(
             triggerFrameId: 84,
             triggerTimestampNs: 4_000_000_000,
             anchorFrameId: 80,
@@ -155,22 +153,21 @@ public class ReplayTests
     }
 
     [Fact]
-    public async Task Tracking_frame_returns_to_live_after_one_replay_loop_when_live_ball_moves_ten_pixels()
+    public async Task Recorder_request_returns_to_live_after_one_replay_loop()
     {
         using ReplayCoordinatorContext context = new();
         ViewerReplayCoordinator sut = context.Sut;
 
         context.EnableReplayAnalysisPrerequisites();
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
         await ReplayCoordinatorContext.WaitUntil(() => context.OverlaySink.TrackingStates.Count == 1);
 
-        await context.PlaybackController.CompleteReplayLoopAsync();
-        await sut.ObserveLiveTrackingAsync(new Point(100, 200));
-        await sut.ObserveLiveTrackingAsync(new Point(109, 200));
-
+        sut.HandleReplayReturnToLive(new()
+        {
+            SessionId = SessionId, TriggerFrameId = 42, TriggerTimestampNs = 2_000_000_000,
+        });
         Assert.DoesNotContain("start-playback", context.Events);
-
-        await sut.ObserveLiveTrackingAsync(new Point(110, 200));
+        await context.PlaybackController.CompleteReplayLoopAsync();
 
         await ReplayCoordinatorContext.WaitUntil(() => context.Events.Count(e => e == "start-playback") == 1);
 
@@ -185,11 +182,11 @@ public class ReplayTests
         ViewerReplayCoordinator sut = context.Sut;
 
         context.EnableReplayAnalysisPrerequisites();
-        ReplayMessage message = CreateReplayMessage() with
+        ReplayClipMessage message = CreateReplayClipMessage() with
         {
             Codec = EncodedReplayCodecMessage.H265,
         };
-        sut.HandleReplay(message);
+        sut.HandleReplayClip(message);
 
         await Task.Yield();
 
@@ -205,7 +202,7 @@ public class ReplayTests
         ViewerReplayCoordinator sut = context.Sut;
 
         context.ApplyVisionContext();
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
 
         await Task.Yield();
 
@@ -221,7 +218,7 @@ public class ReplayTests
         ViewerReplayCoordinator sut = context.Sut;
 
         context.ApplyTableConfiguration();
-        sut.HandleReplay(CreateReplayMessage());
+        sut.HandleReplayClip(CreateReplayClipMessage());
 
         await Task.Yield();
 

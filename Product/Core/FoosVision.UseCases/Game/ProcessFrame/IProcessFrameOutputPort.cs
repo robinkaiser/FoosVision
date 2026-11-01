@@ -24,7 +24,9 @@ public record ProcessFrameResponse(
     Point ReplayAnchorPosition,
     BallPossession ReplayAnchorPossession,
     int ReplayAnchorPossessionTimeMs,
-    ReplayTriggerKind ReplayTriggerKind);
+    ReplayTriggerKind ReplayTriggerKind,
+    Guid SessionId = default,
+    Frame? ReturnToLiveReplayFrame = null);
 
 public interface IProcessFrameOutputPort
 {

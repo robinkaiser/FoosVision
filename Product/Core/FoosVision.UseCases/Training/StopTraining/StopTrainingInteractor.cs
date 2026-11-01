@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Domain.Training.Entities;
-using FoosVision.Domain.Training.ValueObjects;
+using FoosVision.Domain.Training.Events;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Training.Ports;
 

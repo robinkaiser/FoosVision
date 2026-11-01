@@ -6,6 +6,7 @@ using FoosVision.Domain.TrackingCore.Services.BallTracking;
 using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.Services.Possession;
 using FoosVision.Domain.Training.Entities;
+using FoosVision.Domain.Training.Services;
 using FoosVision.Domain.Training.ValueObjects;
 using FoosVision.UseCases.Dependencies.Settings;
 using FoosVision.UseCases.Dependencies.Video;

@@ -10,10 +10,13 @@ namespace FoosVision.Adapters.Recorder.Game.Orchestration;
 public interface IReplayCoordinator
 {
     Task RequestReplay(
+        Guid sessionId,
         Frame triggerFrame,
         Frame anchorFrame,
         Point anchorPosition,
         BallPossession anchorPossession,
         int anchorPossessionTimeMs,
         ReplayTriggerKind triggerKind);
+
+    Task RequestReturnToLive(Guid sessionId, Frame triggerFrame);
 }

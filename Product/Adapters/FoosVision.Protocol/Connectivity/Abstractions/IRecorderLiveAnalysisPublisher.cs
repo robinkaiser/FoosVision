@@ -10,11 +10,13 @@ namespace FoosVision.Protocol.Connectivity.Abstractions;
 /// </summary>
 public interface IRecorderLiveAnalysisPublisher
 {
-    Task PublishReplayStarted(ReplayStartedMessage replayStarted, CancellationToken ct = default);
-
-    Task PublishReplay(ReplayMessage replay, CancellationToken ct = default);
-
     Task PublishVisionContext(VisionContextMessage visionContext, CancellationToken ct = default);
 
     Task PublishBallDetectionMask(BallDetectionMaskMessage ballDetectionMask, CancellationToken ct = default);
+
+    Task PublishReplayStarted(ReplayStartedMessage replayStarted, CancellationToken ct = default);
+
+    Task PublishReplayClip(ReplayClipMessage replayClip, CancellationToken ct = default);
+
+    Task PublishReplayReturnToLive(ReplayReturnToLiveMessage message, CancellationToken ct = default);
 }

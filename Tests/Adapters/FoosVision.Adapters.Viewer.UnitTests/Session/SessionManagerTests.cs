@@ -121,7 +121,7 @@ public class SessionManagerTests
                 .Returns(Substitute.For<IDisposable>());
 
             _LiveAnalysisSubscriber
-                .Subscribe<ReplayMessage>(Arg.Any<Action<ReplayMessage>>())
+                .Subscribe<ReplayClipMessage>(Arg.Any<Action<ReplayClipMessage>>())
                 .Returns(Substitute.For<IDisposable>());
         }
 
@@ -226,7 +226,7 @@ public class SessionManagerTests
 
     private sealed class NoOpPlaybackController : IPlaybackController
     {
-        public event Func<Task>? ReplayLoopCompleted;
+        public event Func<EncodedReplayPlayback, Task>? ReplayLoopCompleted;
 
         public event Func<long, Task>? ReplayPositionChanged;
 

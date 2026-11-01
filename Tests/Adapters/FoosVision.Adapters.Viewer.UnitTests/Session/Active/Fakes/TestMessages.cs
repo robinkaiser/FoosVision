@@ -9,13 +9,14 @@ namespace FoosVision.Adapters.Viewer.UnitTests.Session.Active.Fakes;
 
 internal static class TestMessages
 {
+    public static readonly Guid SessionId = Guid.NewGuid();
     public static RecorderRuntimeStateChanged CreateRuntimeState(RecorderRuntimeMode mode)
     {
         return new RecorderRuntimeStateChanged
         {
             Sequence = 1,
             Mode = mode,
-            ActiveSessionId = mode == RecorderRuntimeMode.Idle ? null : Guid.NewGuid(),
+            ActiveSessionId = mode == RecorderRuntimeMode.Idle ? null : SessionId,
             Reason = RecorderStateChangeReason.None,
             Detail = string.Empty,
         };
@@ -43,15 +44,16 @@ internal static class TestMessages
         };
     }
 
-    public static ReplayMessage CreateReplayMessage(
+    public static ReplayClipMessage CreateReplayClipMessage(
         ulong triggerFrameId = 42,
         long triggerTimestampNs = 2_000_000_000,
         ulong anchorFrameId = 40,
         long anchorTimestampNs = 1_900_000_000,
         long replayEndTimestampNs = 2_900_000_000)
     {
-        return new ReplayMessage
+        return new ReplayClipMessage
         {
+            SessionId = SessionId,
             TriggerFrameId = triggerFrameId,
             TriggerTimestampNs = triggerTimestampNs,
             AnchorFrameId = anchorFrameId,
@@ -84,6 +86,7 @@ internal static class TestMessages
     {
         return new ReplayStartedMessage
         {
+            SessionId = SessionId,
             TriggerFrameId = triggerFrameId,
             TriggerTimestampNs = triggerTimestampNs,
             AnchorFrameId = anchorFrameId,

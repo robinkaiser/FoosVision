@@ -58,7 +58,7 @@ public class VideoPlayer : Java.Lang.Object, ISurfaceHolderCallback, IDisposable
 
     public event Action<double?>? StreamFpsChanged;
 
-    public event Func<Task>? ReplayLoopCompleted;
+    public event Func<EncodedReplayPlayback, Task>? ReplayLoopCompleted;
 
     public event Func<long, Task>? ReplayPositionChanged;
 
@@ -421,7 +421,7 @@ public class VideoPlayer : Java.Lang.Object, ISurfaceHolderCallback, IDisposable
                     _StreamFrameRatePublisher.RecordFrame();
                 }
 
-                await NotifyReplayLoopCompletedAsync().ConfigureAwait(false);
+                await NotifyReplayLoopCompletedAsync(replay).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -437,9 +437,9 @@ public class VideoPlayer : Java.Lang.Object, ISurfaceHolderCallback, IDisposable
         }
     }
 
-    private async Task NotifyReplayLoopCompletedAsync()
+    private async Task NotifyReplayLoopCompletedAsync(EncodedReplayPlayback replay)
     {
-        Func<Task>? replayLoopCompleted = ReplayLoopCompleted;
+        Func<EncodedReplayPlayback, Task>? replayLoopCompleted = ReplayLoopCompleted;
         if (replayLoopCompleted == null)
         {
             return;
@@ -447,7 +447,7 @@ public class VideoPlayer : Java.Lang.Object, ISurfaceHolderCallback, IDisposable
 
         try
         {
-            await replayLoopCompleted().ConfigureAwait(false);
+            await replayLoopCompleted(replay).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

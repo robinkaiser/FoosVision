@@ -22,6 +22,7 @@ public class FramePresenterTests
     private readonly RecordingLiveAnalysisPublisher _LiveAnalysisPublisher;
     private readonly FakeBallDetectionMaskProvider _MaskProvider;
     private readonly byte[] _EncodedMask;
+    private readonly IReplayCoordinator _Replay = Substitute.For<IReplayCoordinator>();
 
     public FramePresenterTests()
     {
@@ -34,6 +35,16 @@ public class FramePresenterTests
         ];
 
         _MaskProvider = new(4, 4, _EncodedMask);
+    }
+
+    [Fact]
+    public async Task ReportProcessed_forwards_session_and_replay_return_decision()
+    {
+        FramePresenter testee = CreateTestee();
+        Guid sessionId = Guid.NewGuid();
+        Frame trigger = new(42, 2_000_000_000);
+        await testee.ReportProcessed(CreateResponse() with { SessionId = sessionId, ReturnToLiveReplayFrame = trigger });
+        await _Replay.Received(1).RequestReturnToLive(sessionId, trigger);
     }
 
     [Fact]
@@ -97,7 +108,7 @@ public class FramePresenterTests
         return new FramePresenter(
             _LiveDataPublisher,
             Substitute.For<ICalibrationCoordinator>(),
-            Substitute.For<IReplayCoordinator>(),
+            _Replay,
             _LiveAnalysisPublisher,
             _MaskProvider,
             publishObservations,
@@ -169,7 +180,7 @@ public class FramePresenterTests
             return Task.CompletedTask;
         }
 
-        public Task PublishReplay(ReplayMessage replay, CancellationToken ct = default)
+        public Task PublishReplayClip(ReplayClipMessage replay, CancellationToken ct = default)
         {
             return Task.CompletedTask;
         }
@@ -178,6 +189,9 @@ public class FramePresenterTests
         {
             return Task.CompletedTask;
         }
+
+        public Task PublishReplayReturnToLive(ReplayReturnToLiveMessage status, CancellationToken ct = default)
+            => Task.CompletedTask;
 
         public Task PublishBallDetectionMask(BallDetectionMaskMessage ballDetectionMask, CancellationToken ct = default)
         {

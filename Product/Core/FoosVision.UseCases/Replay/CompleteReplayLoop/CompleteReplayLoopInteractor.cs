@@ -3,6 +3,7 @@
 
 using FoosVision.Domain.Replay.Entities;
 using FoosVision.UseCases.Replay.Ports;
+using FoosVision.UseCases.Replay.RequestReturnToLive;
 
 namespace FoosVision.UseCases.Replay.CompleteReplayLoop;
 
@@ -24,5 +25,11 @@ public class CompleteReplayLoopInteractor : ICompleteReplayLoopInputPort
         }
 
         session.CompleteLoop();
+        if (session.CanReturnToLive)
+        {
+            ReplayId replayId = session.CurrentReplayId.Value;
+            _SessionStore.Clear();
+            await output.ReportReturnToLive(new ReturnToLiveResponse(replayId));
+        }
     }
 }

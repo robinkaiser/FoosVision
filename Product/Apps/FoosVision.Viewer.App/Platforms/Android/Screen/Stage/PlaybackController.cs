@@ -19,7 +19,7 @@ public class PlaybackController : IPlaybackController
         _VideoPlayer.ReplayPositionChanged += OnReplayPositionChanged;
     }
 
-    public event Func<Task>? ReplayLoopCompleted;
+    public event Func<EncodedReplayPlayback, Task>? ReplayLoopCompleted;
 
     public event Func<long, Task>? ReplayPositionChanged;
 
@@ -61,10 +61,10 @@ public class PlaybackController : IPlaybackController
         return completion.Task;
     }
 
-    private Task OnReplayLoopCompleted()
+    private Task OnReplayLoopCompleted(EncodedReplayPlayback replay)
     {
-        Func<Task>? replayLoopCompleted = ReplayLoopCompleted;
-        return replayLoopCompleted?.Invoke() ?? Task.CompletedTask;
+        Func<EncodedReplayPlayback, Task>? replayLoopCompleted = ReplayLoopCompleted;
+        return replayLoopCompleted?.Invoke(replay) ?? Task.CompletedTask;
     }
 
     private Task OnReplayPositionChanged(long timeNs)

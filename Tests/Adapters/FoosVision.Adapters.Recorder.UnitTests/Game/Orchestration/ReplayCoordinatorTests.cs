@@ -9,6 +9,7 @@ using FoosVision.Ports.Media;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.Live;
 using FoosVision.Protocol.Messages.LiveAnalysis;
+using NSubstitute;
 
 namespace FoosVision.Adapters.Recorder.UnitTests.Game.Orchestration;
 
@@ -18,6 +19,23 @@ public class ReplayCoordinatorTests
     private const long _700ms = 700L * 1_000_000L;
 
     [Fact]
+    public async Task RequestReturnToLive_publishes_correlated_recorder_decision()
+    {
+        IRecorderLiveAnalysisPublisher publisher = Substitute.For<IRecorderLiveAnalysisPublisher>();
+        using ReplayCoordinator testee = new(new FakeReplayBuffer(), new FakeLiveVideoStreamController(), publisher);
+        Guid sessionId = Guid.NewGuid();
+        Frame trigger = new(42, 123456);
+        await testee.RequestReplay(sessionId, trigger, trigger, new(100, 200), BallPossession.None, 0, ReplayTriggerKind.BallDisappeared);
+        await testee.RequestReturnToLive(sessionId, trigger);
+        await publisher.Received(1).PublishReplayReturnToLive(Arg.Is<ReplayReturnToLiveMessage>(message =>
+            message.SessionId == sessionId && message.TriggerFrameId == trigger.Id && message.TriggerTimestampNs == trigger.TimestampNs),
+            Arg.Any<CancellationToken>());
+        await testee.RequestReturnToLive(Guid.NewGuid(), trigger);
+        await testee.RequestReturnToLive(sessionId, new(41, 123455));
+        await publisher.Received(1).PublishReplayReturnToLive(Arg.Any<ReplayReturnToLiveMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task RequestReplay_publishes_replay_from_anchor_frame_for_one_second()
     {
         FakeReplayBuffer replayBuffer = new();
@@ -25,6 +43,7 @@ public class ReplayCoordinatorTests
         FakeLiveVideoStreamController liveVideoStream = new();
         using ReplayCoordinator testee = new(replayBuffer, liveVideoStream, publisher);
 
+        Guid sessionId = Guid.NewGuid();
         Frame triggerFrame = new(12, 5 * _1s);
         Frame anchorFrame = new(10, 3 * _1s);
         Point anchorPosition = new(100, 200);
@@ -32,14 +51,17 @@ public class ReplayCoordinatorTests
         const int anchorPossessionTimeMs = 9250;
 
         await testee.RequestReplay(
+            sessionId,
             triggerFrame,
             anchorFrame,
             anchorPosition,
             anchorPossession,
             anchorPossessionTimeMs,
             ReplayTriggerKind.BallDisappeared);
-        ReplayMessage message = await publisher.WaitForReplay();
+        ReplayClipMessage message = await publisher.WaitForReplay();
 
+        Assert.Equal(sessionId, message.SessionId);
+        Assert.Equal(sessionId, publisher.LastReplayStarted?.SessionId);
         Assert.Equal(triggerFrame.Id, message.TriggerFrameId);
         Assert.Equal(triggerFrame.TimestampNs, message.TriggerTimestampNs);
         Assert.Equal(anchorFrame.Id, message.AnchorFrameId);
@@ -72,6 +94,7 @@ public class ReplayCoordinatorTests
         using ReplayCoordinator testee = new(replayBuffer, new FakeLiveVideoStreamController(), publisher);
 
         Task request = testee.RequestReplay(
+            Guid.Empty,
             new Frame(12, 5 * _1s),
             new Frame(10, 3 * _1s),
             new Point(100, 200),
@@ -85,8 +108,10 @@ public class ReplayCoordinatorTests
         publisher.AllowPublish();
     }
 
-    [Fact]
-    public async Task RequestReplay_drops_second_request_while_first_is_being_sent()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RequestReplay_keeps_newest_pending_request_while_first_is_being_sent(bool supersedePending)
     {
         FakeReplayBuffer replayBuffer = new();
         FakeLiveDataPublisher publisher = new() { BlockPublishing = true };
@@ -94,6 +119,7 @@ public class ReplayCoordinatorTests
         using ReplayCoordinator testee = new(replayBuffer, liveVideoStream, publisher);
 
         await testee.RequestReplay(
+            Guid.Empty,
             new Frame(12, 5 * _1s),
             new Frame(10, 3 * _1s),
             new Point(100, 200),
@@ -103,6 +129,7 @@ public class ReplayCoordinatorTests
         await publisher.WaitUntilPublishStarted();
 
         await testee.RequestReplay(
+            Guid.Empty,
             new Frame(22, 8 * _1s),
             new Frame(20, 6 * _1s),
             new Point(300, 400),
@@ -110,12 +137,17 @@ public class ReplayCoordinatorTests
             10_000,
             ReplayTriggerKind.BallDisappeared);
 
+        if (supersedePending)
+        {
+            await testee.RequestReplay(
+                Guid.Empty, new(32, 11 * _1s), new(30, 9 * _1s), new(500, 400),
+                BallPossession.None, 0, ReplayTriggerKind.BallDisappeared);
+        }
         publisher.AllowPublish();
-        await publisher.WaitForReplay();
-        await Task.Delay(50, TestContext.Current.CancellationToken);
+        ReplayClipMessage newest = await publisher.WaitForReplay(2);
 
-        Assert.Equal(1, publisher.PublishReplayCallCount);
-        Assert.Equal(["pause", "resume"], liveVideoStream.Calls);
+        Assert.Equal(supersedePending ? 32UL : 22UL, newest.TriggerFrameId);
+        Assert.Equal(2, publisher.PublishReplayClipCallCount);
     }
 
     [Fact]
@@ -128,18 +160,19 @@ public class ReplayCoordinatorTests
         using ReplayCoordinator testee = new(replayBuffer, liveVideoStream, publisher, scheduler);
 
         await testee.RequestReplay(
+            Guid.Empty,
             new Frame(12, 5 * _1s),
             new Frame(10, 3 * _1s),
             new Point(100, 200),
             new BallPossession(Team.A, PossessionArea.ThreeBar),
             9250,
             ReplayTriggerKind.BallDisappeared);
-        // Drain the worker through its finally block, including release of the send gate.
-        // A published message alone does not mean the worker has finished the request.
+        // Drain the first queued request before submitting another one.
         await scheduler.RunNext();
-        ReplayMessage firstMessage = await publisher.WaitForReplay();
+        ReplayClipMessage firstMessage = await publisher.WaitForReplay();
 
         await testee.RequestReplay(
+            Guid.Empty,
             new Frame(22, 8 * _1s),
             new Frame(20, 6 * _1s),
             new Point(300, 400),
@@ -147,11 +180,11 @@ public class ReplayCoordinatorTests
             10_000,
             ReplayTriggerKind.BallDisappeared);
         await scheduler.RunNext();
-        ReplayMessage secondMessage = await publisher.WaitForReplay(2);
+        ReplayClipMessage secondMessage = await publisher.WaitForReplay(2);
 
         Assert.Equal(12UL, firstMessage.TriggerFrameId);
         Assert.Equal(22UL, secondMessage.TriggerFrameId);
-        Assert.Equal(2, publisher.PublishReplayCallCount);
+        Assert.Equal(2, publisher.PublishReplayClipCallCount);
         Assert.Equal(2, publisher.PublishReplayStartedCallCount);
         Assert.Equal(["pause", "resume", "pause", "resume"], liveVideoStream.Calls);
         // Allow shutdown continuations to run automatically during Dispose.
@@ -169,13 +202,14 @@ public class ReplayCoordinatorTests
         Frame anchorFrame = new(10, 3 * _1s);
 
         await testee.RequestReplay(
+            Guid.Empty,
             triggerFrame,
             anchorFrame,
             new Point(100, 200),
             new BallPossession(Team.A, PossessionArea.ThreeBar),
             9250,
             ReplayTriggerKind.SavedShot);
-        ReplayMessage message = await publisher.WaitForReplay();
+        ReplayClipMessage message = await publisher.WaitForReplay();
 
         Assert.Equal(anchorFrame.TimestampNs, message.ReplayStartTimestampNs);
         Assert.Equal(anchorFrame.TimestampNs + _700ms, message.ReplayEndTimestampNs);
@@ -261,19 +295,20 @@ public class ReplayCoordinatorTests
     private class FakeLiveDataPublisher : IRecorderLiveAnalysisPublisher
     {
         private readonly object _Gate = new();
-        private readonly List<ReplayMessage> _ReplayMessages = [];
-        private TaskCompletionSource<ReplayMessage>? _ReplayPublished;
+        private readonly List<ReplayClipMessage> _ReplayMessages = [];
+        private TaskCompletionSource<ReplayClipMessage>? _ReplayPublished;
         private int _ReplayPublishedCount;
         private readonly TaskCompletionSource _PublishStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _PublishAllowed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public bool BlockPublishing { get; init; }
 
-        public int PublishReplayCallCount { get; private set; }
+        public int PublishReplayClipCallCount { get; private set; }
 
         public int PublishReplayStartedCallCount { get; private set; }
 
         public ReplayStartedMessage? LastReplayStarted { get; private set; }
+        public ReplayReturnToLiveMessage? LastReturnToLive { get; private set; }
 
         public Task PublishReplayStarted(ReplayStartedMessage replayStarted, CancellationToken ct = default)
         {
@@ -282,9 +317,9 @@ public class ReplayCoordinatorTests
             return Task.CompletedTask;
         }
 
-        public async Task PublishReplay(ReplayMessage replay, CancellationToken ct = default)
+        public async Task PublishReplayClip(ReplayClipMessage replay, CancellationToken ct = default)
         {
-            PublishReplayCallCount++;
+            PublishReplayClipCallCount++;
             _PublishStarted.TrySetResult();
 
             if (BlockPublishing)
@@ -292,7 +327,7 @@ public class ReplayCoordinatorTests
                 await _PublishAllowed.Task.WaitAsync(ct);
             }
 
-            TaskCompletionSource<ReplayMessage>? replayPublished = null;
+            TaskCompletionSource<ReplayClipMessage>? replayPublished = null;
 
             lock (_Gate)
             {
@@ -314,12 +349,18 @@ public class ReplayCoordinatorTests
             return Task.CompletedTask;
         }
 
+        public Task PublishReplayReturnToLive(ReplayReturnToLiveMessage message, CancellationToken ct = default)
+        {
+            LastReturnToLive = message;
+            return Task.CompletedTask;
+        }
+
         public Task PublishBallDetectionMask(BallDetectionMaskMessage ballDetectionMask, CancellationToken ct = default)
         {
             return Task.CompletedTask;
         }
 
-        public Task<ReplayMessage> WaitForReplay(int count = 1)
+        public Task<ReplayClipMessage> WaitForReplay(int count = 1)
         {
             lock (_Gate)
             {
@@ -329,7 +370,7 @@ public class ReplayCoordinatorTests
                 }
 
                 _ReplayPublishedCount = count;
-                _ReplayPublished = new TaskCompletionSource<ReplayMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _ReplayPublished = new TaskCompletionSource<ReplayClipMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
                 return _ReplayPublished.Task.WaitAsync(TimeSpan.FromSeconds(1));
             }
         }

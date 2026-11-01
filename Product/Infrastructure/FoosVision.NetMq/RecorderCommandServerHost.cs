@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.NetMq.Internal;
+using FoosVision.Protocol;
 using FoosVision.Protocol.Connectivity.Abstractions;
-using FoosVision.Protocol.Messages.Commands;
 using FoosVision.Protocol.Messages.Common;
 using MessagePack;
 using NetMQ.Sockets;
@@ -84,15 +84,8 @@ public class RecorderCommandServerHost : IDisposable
 
     private static object DeserializeCommand(CommandMessageType type, byte[] payload, CancellationToken ct)
     {
-        return type switch
-        {
-            CommandMessageType.StartSetup => MessagePackSerializer.Deserialize<StartSetupCommand>(payload, cancellationToken: ct),
-            CommandMessageType.StopSetup => MessagePackSerializer.Deserialize<StopSetupCommand>(payload, cancellationToken: ct),
-
-            CommandMessageType.StartGame => MessagePackSerializer.Deserialize<StartGameCommand>(payload, cancellationToken: ct),
-            CommandMessageType.StopGame => MessagePackSerializer.Deserialize<StopGameCommand>(payload, cancellationToken: ct),
-
-            _ => throw new NotSupportedException($"Unsupported command type: {type}")
-        };
+        Type clrType = ProtocolTypeRegistry.GetCommandClrType(type);
+        return MessagePackSerializer.Deserialize(clrType, payload, cancellationToken: ct)
+            ?? throw new InvalidOperationException("Command payload is null.");
     }
 }

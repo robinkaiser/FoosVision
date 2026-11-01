@@ -17,12 +17,6 @@ public enum WaitDistribution
     PreferShort,
 }
 
-public interface ITrainingRandom
-{
-    /// <summary>Returns a finite value in [0, 1).</summary>
-    double NextUnit();
-}
-
 public record TrainingWaitOptions
 {
     public TrainingWaitOptions(double minSeconds, double maxSeconds, WaitDistribution distribution)

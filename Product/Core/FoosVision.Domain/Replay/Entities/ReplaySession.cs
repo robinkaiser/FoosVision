@@ -17,14 +17,13 @@ public class ReplaySession
 {
     public const int DefaultRequiredCompletedLoops = 1;
     private const int _BallSearchRegionRadiusPx = 192;
-    private const double _ReturnToLiveMovementThresholdPx = 10.0;
 
     private readonly IBallTracker _BallTracker;
     private readonly IReplayAnalyzer _ReplayAnalyzer;
     private readonly List<ReplayTrackedFrame> _TrackedFrames = [];
     private ReplayTrackAnchor? _TrackAnchor;
     private PossessionCalculator? _PossessionCalculator;
-    private Point? _ReturnToLiveReferencePosition;
+    private bool _ReturnToLiveRequested;
     private Point _LastKnownPosition;
 
     public ReplaySession(
@@ -58,7 +57,7 @@ public class ReplaySession
         CurrentReplayId = replayId;
         TableConfiguration = Option<TableConfiguration>.Some(tableConfiguration);
         CompletedLoops = 0;
-        _ReturnToLiveReferencePosition = null;
+        _ReturnToLiveRequested = false;
         _TrackAnchor = trackAnchor;
         _PossessionCalculator = new(tableConfiguration);
         _LastKnownPosition = trackAnchor.Position;
@@ -160,22 +159,14 @@ public class ReplaySession
         CompletedLoops++;
     }
 
-    public bool CanReturnToLive(Point? liveBallPosition)
+    public bool CanReturnToLive => IsActive && HasCompletedRequiredLoops && _ReturnToLiveRequested;
+
+    public void RequestReturnToLive(ReplayId replayId)
     {
-        if (!IsActive ||
-            !HasCompletedRequiredLoops ||
-            liveBallPosition == null)
+        if (CurrentReplayId.TryGetValue(out ReplayId current) && current == replayId)
         {
-            return false;
+            _ReturnToLiveRequested = true;
         }
-
-        if (_ReturnToLiveReferencePosition == null)
-        {
-            _ReturnToLiveReferencePosition = liveBallPosition.Value;
-            return false;
-        }
-
-        return GetDistance(_ReturnToLiveReferencePosition.Value, liveBallPosition.Value) >= _ReturnToLiveMovementThresholdPx;
     }
 
     public void Stop()
@@ -183,16 +174,9 @@ public class ReplaySession
         CurrentReplayId = Option<ReplayId>.None();
         TableConfiguration = Option<TableConfiguration>.None();
         CompletedLoops = 0;
-        _ReturnToLiveReferencePosition = null;
+        _ReturnToLiveRequested = false;
         _TrackAnchor = null;
         _PossessionCalculator = null;
         _TrackedFrames.Clear();
-    }
-
-    private static double GetDistance(Point a, Point b)
-    {
-        double dx = b.X - a.X;
-        double dy = b.Y - a.Y;
-        return Math.Sqrt((dx * dx) + (dy * dy));
     }
 }

@@ -1,7 +1,7 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-10-31. Status: Arbeitspakete 1–4 implementiert und geprüft.
-Arbeitspakete 5–11 sind offen; Training ist noch nicht in die App-Laufzeit integriert.
+Stand: 2026-11-01. Status: Arbeitspakete 1–5 implementiert und geprüft.
+Arbeitspakete 6–11 sind offen; Training ist noch nicht in die App-Laufzeit integriert.
 
 ## Ziel und Umfang
 
@@ -18,7 +18,7 @@ Bereitschaft werden ebenfalls strategiespezifisch erkannt. Konfiguration
 erfolgt ausschließlich über die bestehende Recorder-Config.json. Eine minimale
 Start-/Stop-Bedienung erfolgt über einen dritten Button im Viewer. Ansagen erfolgen
 ausschließlich über den Lautsprecher des Recorders. Der Viewer ist an der Sprachausgabe
-nicht beteiligt; er bedient Training und zeigt Status, Live-Bild und Replay.
+nicht beteiligt; er bedient Training und zeigt Live-Bild und Replay.
 
 Zweiter Meilenstein: Trainingsspezifische Zeitlupen mit eigenen Auslösern,
 Zeitfenstern auf Basis der bestehenden Replay-Pipeline. Das Replay wiederholt sich,
@@ -113,7 +113,7 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   V1-Code-Konstante zählen Richtungswechsel erst ab 5 Pixeln vom letzten Extrempunkt;
   dadurch zählt Trackingrauschen nicht als Tick-Tack.
 - **Schussabschluss bei Snake/Pull:** Highspeed ab 4 km/h auf mindestens einer Achse und
-  beobachteter Ball auf der Zweierreihe des Zieltores. Beide Fakten gehören zur aktuellen
+  beobachteter Ball im Defensebereich (1 oder 2) des Zieltores. Beide Fakten gehören zur aktuellen
   Bewegung, ihre Reihenfolge ist beliebig. Danach 250 ms Nachlauf anhand der Frame-Zeit,
   dann einmaliges Abschlussereignis. Keine Bewertung der angesagten Variante oder eines Tores.
 - **Passabschluss:** Ball auf eigener Dreierreihe oder in gegnerischer Defense bestätigt
@@ -287,7 +287,7 @@ Abhängigkeit: Schritte 0–2.
   beim nächsten Ready ausgeben; eigene Aborted-Ausgabe nicht pauschal verwerfen.
 - [x] Setup-Verlust und vorzeitige Ausführung mit getrennten Abbruchgründen behandeln;
   Timeout und endgültigen Trackingverlust berücksichtigen. Keine Audiofehler als Zustand.
-- [x] Kurzes Auswertungsfenster statt sofortigem Abort, 4-km/h-Schussregel mit Ziel-Zweier,
+- [x] Kurzes Auswertungsfenster statt sofortigem Abort, 4-km/h-Schussregel mit gegnerischem Defensebereich (1 oder 2),
   Pass-Besitzregeln und 250-ms-Schussnachlauf ergänzen. Anchor vor Bewegung festhalten;
   keine Game-Replay-Strategien ändern und keinen Replay-Transport implementieren.
 - [x] Wartezeitverteilungen und gleichverteilte strategieeigene Varianten über injizierbare
@@ -394,45 +394,75 @@ Umgesetzt am 2026-10-30:
 - Game-Code und Game-Verhalten sowie Protokoll und Viewer-Handshake bleiben unverändert.
   Keine Apps, Tools oder Geräteworkflows gestartet.
 
-## 5. Protokoll und Transport vollständig erweitern
+## 5. Protokoll und Transport erweitern; gemeinsame Replay-Steuerung
 
-Abhängigkeit: Schritte 3–4; Protokoll-Guide vor Änderungen erneut berücksichtigen.
+Abhängigkeit: Schritte 3-4; Protokoll-Guide berücksichtigt.
+Die Nutzerentscheidung vom 2026-10-31 ersetzt den ursprünglich geplanten Trainingsstatus:
+Der Viewer zeigt keine Strategie, Variante oder Trainingszustände an. GameSession und
+TrainingSession entscheiden am Recorder, wann Live wieder aufgenommen werden soll.
+Der Viewer zeigt bei regulärer Rückkehr immer mindestens einen vollständigen Replay-Durchlauf.
 
-- [ ] StartTraining/StopTraining, CommandMessageType und RecorderRuntimeMode.TrainingRunning
-  ergänzen. Bestehende numerische Werte nicht verändern.
-- [ ] Trainingsstatus definieren: Session-ID, Versuch-ID, Strategie-ID, Zustand, Variante
-  und ausreichend Kontext zur Erkennung veralteter Nachrichten. Strategieergebnisse
-  für Anzeige und Playback übersetzen; keine Strategieausführung oder Ansage im Viewer.
-- [ ] Vorbereitung-bestätigt/Replays-beenden und Versuchswechsel eindeutig korrelieren
-  und ordnen. Neues Ready am Recorder invalidiert alte Replay-Anforderungen. Viewer
-  beendet Replay bei der zugehörigen Statusnachricht; ein verspäteter alter Clip darf
-  die neue Live-Ansicht nicht ersetzen. Lokale Ready-Ausgabe wartet nicht auf den Viewer.
-- [ ] Konkreten bestehenden Kanal samt Liefergarantien prüfen. Duplikate und veraltete
-  Trainingsstatus-Nachrichten verwerfen. Keine Ansage-Nachrichten oder Audio-Rückkanäle einführen.
-- [ ] Ohne synchronisierte Geräteuhren keine Recorder-Zeitstempel direkt mit Viewer-Uhr
-  vergleichen. Frische über Session/Versuch, Nachrichtenreihenfolge und definierte
-  Fristlogik absichern; verbleibende Netzwerklatenz als Produktgrenze dokumentieren.
-- [ ] Versuchsabbruch/-wechsel und nötige Korrelationsinformationen übertragen.
-  HandshakeViewerSettings und Viewer-Mapping benötigen keine Erweiterung für Audiooptionen.
-- [ ] NetMQ-Typregistrierung, Serialisierung, Sender/Empfänger und Dispatch für alle
-  neuen Verträge ergänzen; vorhandene Kanäle und Ports möglichst unverändert nutzen.
-- [ ] Protokoll- und Major-Version unverändert lassen. Recorder und Viewer für die
-  Verifikation mit demselben aktualisierten Build betreiben. Auswirkungen auf ältere
-  Builds dokumentieren; keinen Versionssprung oder zusätzlichen Kompatibilitätsmechanismus
-  allein für diese Prototyp-Erweiterung einführen.
+- [x] StartTraining/StopTraining und TrainingRunning ergänzen. Auf Nutzerwunsch folgen
+  TrainingRunning = 3 und Faulted = 4 in dieser Reihenfolge; Protokollversion unverändert.
+- [x] Gemeinsame ReplayReturnToLiveMessage für Game und Training mit Session-ID und Replay-Trigger
+  definieren. ReplayStartedMessage/ReplayClipMessage um Session-ID ergänzen; keine Trainingsstatus-,
+  Varianten-, Ansage- oder Audionachrichten und keine Audiooptionen im Handshake.
+- [x] Game-Rückkehrentscheidung in GameSession verschieben: erste beobachtete Live-Position
+  nach einer festen Wartezeit von 6 Sekunden ab Replay-Trigger als Referenz, Rückkehr ab
+  10 Pixeln neuer Bewegung. Keine Durchlaufmeldung vom Viewer an den Recorder.
+- [x] TrainingSession fordert die Rückkehr für den vorherigen abgeschlossenen Versuch bei
+  der nächsten bestätigten Vorbereitung/Ready an. Live-Ballbewegung beendet Training-Replay
+  nicht. Beide Sessions wiederholen ihre Entscheidung auf folgenden Frames bis zum nächsten Replay.
+- [x] Game-Usecase, Recorder-Presenter und ReplayCoordinator an dieselbe Rückkehrnachricht
+  anschließen. Training gibt den Replay-Trigger im Usecase aus; technische Replay-Ausführung
+  und deren Presenter-Anschluss bleiben Arbeitspakete 6/9.
+- [x] Viewer korreliert Session und Replay, merkt sich frühe Rückkehrnachrichten (auch vor
+  Clip-Eingang) und kehrt erst nach einem vollständigen Durchlauf zurück. Späte Nachrichten
+  wirken nach dem ersten Durchlauf sofort. Alte Sessions/Replays und Duplikate verwerfen;
+  ein erledigter alter Clip darf Live nicht erneut ersetzen. Stop/Disconnect beendet sofort.
+- [x] Bestehenden Analyse-PUB/SUB-Kanal verwenden; NetMQ-Registry, Serialisierung,
+  Publisher und Subscriber-Dispatch ergänzen. Keine zusätzliche pauschale Transportfrist
+  und kein Vergleich zwischen Recorder-Zeitstempeln und Viewer-Uhr.
+- [x] Protokoll-/Major-Version unverändert lassen; beide Rollen müssen denselben neuen
+  Build verwenden, auch für Game. Liefergarantien, Netzwerklatenz und alte Builds dokumentieren.
 
-Tests: Nachrichten-Mapping, Dispatch, IDs, Duplikate und veraltete Antworten in bestehenden
-passenden Testprojekten. Falls kein geeigneter Platz für Serializer-/Transporttests
-existiert, vor einem neuen Testprojekt fragen. Keine echten Sockets in Unit-Tests.
+Umgesetzt am 2026-10-31, nach anschließender gemeinsamer Vereinfachung:
 
-Abnahme: Protokollauswirkungen sind explizit dokumentiert; beide Rollen unterstützen denselben Vertrag.
+- StartTraining = 20, StopTraining = 21, TrainingRunning = 3, Faulted = 4;
+  ReplayReturnToLive = 5 auf TCP 5559. Reihenfolge/Werte der beiden Runtime-Modi wurden auf
+  ausdrücklichen Nutzerwunsch ohne Protokollversionsänderung getauscht.
+  Die Analyse-Nachrichten heißen nun VisionContext = 1, BallDetectionMask = 2,
+  ReplayStarted = 3, ReplayClip = 4 und ReplayReturnToLive = 5. Nachrichtentypen,
+  Publisher und Registry verwenden dieselben Namen; auch diese Neuordnung erfolgt
+  auf Nutzerwunsch ohne Protokollversionsänderung und erfordert denselben Build auf beiden Geräten.
+  Replay-Identität besteht aus Session-ID und Trigger-Frame-ID/-Zeit. Recorder-Zeitstempel
+  ordnen nur Replays derselben Session; die Viewer-Uhr ist daran nicht beteiligt.
+- Die frühere Implementierung mit TrainingStatusMessage, TrainingMessageMapper,
+  Trainings-Replay-Kontext und 10-Sekunden-Frist wurde entfernt. Game und Training
+  verwenden denselben Vertrag und dieselbe Viewer-Ausführung.
+- Game-Rückkehrregel ist jetzt Domain-Verantwortung der Recorder-GameSession.
+  ReplaySession am Viewer verwaltet nur die Recorder-Anforderung und abgeschlossene Loops.
+  RequestReturnToLive ersetzt die bisherige ObserveLiveTracking-Auswertung im Viewer.
+- Training ermittelt die korrelierte Rückkehr bereits in Domain/Usecases; weder
+  Trainingslaufzeit noch TTS oder Trainingsclip-Erfassung wurden vorgezogen.
+- Nach dem Tischtest am 2026-11-01 wurde die zunächst bestätigte frühe Bewegungsprüfung
+  zurückgenommen: Die auslaufende Schussbewegung darf eine später bei ruhendem Ball
+  wiederholte Zeitlupe nicht beenden. Nach erneuter Nutzerentscheidung wartet Game pauschal
+  6 Sekunden ab Replay-Trigger und prüft dann auf neue Bewegung. Die Entscheidung bleibt
+  in der Recorder-GameSession; der Viewer meldet keinen Durchlauf an den Recorder.
+- Protokoll-Guide und Release Notes beschreiben den neuen Vertrag und die Game-Änderung.
+  PUB/SUB bleibt ohne Bestätigung/Replay-Historie; neue Status-/Audio-Protokolle,
+  Projektabhängigkeiten oder Testprojekte wurden nicht eingeführt.
+
+Abnahme: Beide Rollen verwenden denselben Replay-Vertrag; die modusspezifische
+Rückkehrentscheidung liegt am Recorder, die Mindestwiedergabe bleibt beim Viewer.
 
 ## 6. Recorder-Adapter, Composition und Lifecycle anschließen
 
 Abhängigkeit: Schritte 2–5.
 
 - [ ] TrainingCommandHandler, TrainingEventPresenter und Training-FramePresenter ergänzen.
-  Sie übersetzen Usecase-Ausgaben in Runtime-State, Live-Daten und Trainingsnachrichten.
+  Sie übersetzen Usecase-Ausgaben in Runtime-State, Live-Daten und gemeinsame Replay-Nachrichten.
   Ansage-Ausgaben werden lokal an die Recorder-Sprachkoordination übergeben, nicht
   als Nachrichten an den Viewer gesendet.
 - [ ] RecorderCommandRouter um Training erweitern. Gegenseitigen Ausschluss von Setup,
@@ -467,15 +497,15 @@ Abhängigkeit: Schritte 5–6.
 - [ ] Recordergebundene Module und Subscriptions erst nach erfolgreicher Verbindung
   erzeugen. ViewerHost/ViewerCompositionRoot und SessionManager führen Abhängigkeiten
   zur ActiveSession; kein globaler Trainingszustand beim App-Start.
-- [ ] ActiveSession um Trainingsstatus erweitern. Bestehende
-  Tracking-, Tisch-, Masken-, Playback- und Replay-Presenter wiederverwenden.
+- [ ] ActiveSession an Training anschließen. Bestehende Tracking-, Tisch-, Masken-,
+  Playback- und Replay-Presenter wiederverwenden; keine Trainingsstatusanzeige ergänzen.
 - [ ] SessionMode, PendingIntent und SessionUiStateCalculator explizit um Training
   erweitern. Setup/Game-Fallbacks entfernen; Verfügbarkeit aus Setup und Runtime-State ableiten.
 - [ ] Live-Playback, FPS, Overlay-Reset und Stop-Regeln für Training ergänzen. Auch
   Android OverlayView auf bisherige Game-only-Bedingungen prüfen.
-- [ ] Dritten Start-/Stop-Button und kompakten Trainingsstatus in
-  ViewerSessionController, ViewerControlsViewModel und allen vier Control-Layouts ergänzen.
-  Variante sichtbar machen; keine Konfigurationsmaske oder zusätzlichen Ansagefehlerdialog bauen.
+- [ ] Dritten Start-/Stop-Button in ViewerSessionController, ViewerControlsViewModel und
+  allen vier Control-Layouts ergänzen. Viewer zeigt Live oder Zeitlupe wie bei Game;
+  keine Strategie-, Varianten- oder Trainingsstatusanzeige und keine Konfigurationsmaske ergänzen.
 - [ ] Disconnect, Session-Wechsel und Dispose entfernen Trainings-Subscriptions und
   alte Anzeige-/Playback-Zustände. Audio-Lifecycle verbleibt vollständig beim Recorder.
 
@@ -534,23 +564,27 @@ Abhängigkeit: stabiler Meilenstein 1 und Replay-Entscheidungen aus Schritt 0.
   extrahieren. Game liefert seine bisherigen Dauern explizit; Training liefert eigene.
 - [ ] Replay-Puffergrenzen, noch nicht erfassten Nachlauf, Keyframe-Anforderungen,
   Überlappungen und nicht verfügbare Segmente behandeln. Nicht unbegrenzt puffern/warten.
-- [ ] ReplayStartedMessage/ReplayMessage und Mapper um notwendige Informationen ergänzen;
-  Session-/Versuchszuordnung, verspätete Clips und Kompatibilität wie in Schritt 5 absichern.
+- [ ] ReplayStartedMessage/ReplayClipMessage und Mapper um notwendige Informationen ergänzen;
+  Session-/Replay-Zuordnung und gemeinsame ReplayReturnToLiveMessage aus Schritt 5 verwenden.
 - [ ] Bestehende ReplaySession, Replay-Usecases, ViewerReplayCoordinator und
   ReplayPlaybackRequestMapper für Dauer, Geschwindigkeit, Wiederholungszahl und
   Rückkehrregel prüfen und gezielt erweitern. Analyse und Decoder weiterverwenden.
+  Die gemeinsame Rückkehrnachricht und Mindestwiedergabe sind bereits in Schritt 5 umgesetzt;
+  hier deren Trainings-Anschluss verwenden, keine neue Viewer-Rückkehrregel einführen.
 - [ ] Trainings-Replay wiederholen, bis der Recorder eine neue Vorbereitung bestätigt.
   Laufendes Live-Tracking erkennt diese auch während Wiedergabe/Analyse. Recorder spricht
-  Ready lokal und meldet die neue Vorbereitung. Viewer beendet daraufhin Replay und
-  wechselt zu Live. Recorder wartet weder auf das Wiedergabeende noch eine Viewer-Bestätigung;
+  Ready lokal und fordert mit der gemeinsamen ReplayReturnToLiveMessage die Rückkehr an.
+  Viewer beendet Replay, sobald mindestens ein vollständiger Durchlauf abgeschlossen ist.
+  Recorder wartet weder auf das Wiedergabeende noch eine Viewer-Bestätigung;
   das neue Setup beendet die Schleife.
 - [ ] Game-Regel zur Beendigung bei wieder aufgenommenem Spiel für Training nicht anwenden:
   Nach einem Pass darf Ball auf der Dreierreihe/im Spiel bleiben und Replay weiterlaufen.
   Abbruchpolicy in Replay-Domain/Usecases ausdrücken, nicht nur im UI unterdrücken.
-- [ ] Ready invalidiert auch vorbereitete/übertragene alte Replays. Stop/Disconnect beendet
-  weiterhin jede Schleife. Nur der Clip wird wiederholt, nicht erneut erfasst/übertragen.
+- [ ] Ready fordert die Rückkehr auch für vorbereitete/übertragene Replays an. Ein noch
+  erwarteter Clip wird einmal vollständig gezeigt; nach Rückkehr zu Live sind Duplikate
+  verworfen. Stop/Disconnect beendet sofort. Nur der Clip wird wiederholt, nicht erneut übertragen.
 
-Tests: Bisherige Game-Replay-Szenarien unverändert; Training-Trigger und Zeitfenster,
+Tests: Game-Replay-Szenarien mit Bewegungsprüfung nach der festen Wartezeit wie in Schritt 5; Training-Trigger und Zeitfenster,
 Puffergrenzen, Wiederholungen bis Ready, weiterlaufender Ball nach Pass, neue Vorbereitung
 während Replay, Ready vor Clip-Eingang, vorzeitiger Abbruch und Session-Wechsel.
 
@@ -599,7 +633,7 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
 3. Strategie-Vertrag, Snake, Zieher, Tick-Tack Pass und Koordination
    implementiert (3). JSON-Konfiguration und Settings-Mapping sind abgeschlossen (4),
    einschließlich Validierung, Provider-Snapshot und Konfigurationsdokumentation.
-4. Protokoll und Recorder-Laufzeit anschließen (5–6).
+4. Protokoll und Transport sind abgeschlossen (5); Recorder-Laufzeit anschließen (6).
 5. Viewer-Bedienung und lokale Recorder-Sprachausgabe zum ersten vollständigen Feature
    ergänzen (7–8); Sprachausgabe kann nach Schritt 6 unabhängig von Schritt 7 entstehen.
 6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).

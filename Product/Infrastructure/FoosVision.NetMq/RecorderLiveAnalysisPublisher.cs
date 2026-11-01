@@ -21,17 +21,20 @@ public class RecorderLiveAnalysisPublisher : IRecorderLiveAnalysisPublisher, IDi
         _Socket.Bind(bindAddress);
     }
 
-    public Task PublishReplayStarted(ReplayStartedMessage replayStarted, CancellationToken ct = default)
-        => Publish(replayStarted, ct);
-
-    public Task PublishReplay(ReplayMessage replay, CancellationToken ct = default)
-        => Publish(replay, ct);
-
     public Task PublishVisionContext(VisionContextMessage visionContext, CancellationToken ct = default)
         => Publish(visionContext, ct);
 
     public Task PublishBallDetectionMask(BallDetectionMaskMessage ballDetectionMask, CancellationToken ct = default)
         => Publish(ballDetectionMask, ct);
+
+    public Task PublishReplayStarted(ReplayStartedMessage replayStarted, CancellationToken ct = default)
+        => Publish(replayStarted, ct);
+
+    public Task PublishReplayClip(ReplayClipMessage replayClip, CancellationToken ct = default)
+        => Publish(replayClip, ct);
+
+    public Task PublishReplayReturnToLive(ReplayReturnToLiveMessage message, CancellationToken ct = default)
+        => Publish(message, ct);
 
     public void Dispose()
     {

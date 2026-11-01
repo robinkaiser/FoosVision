@@ -42,8 +42,10 @@ public record EncodedReplayAccessUnitMessage
 }
 
 [MessagePackObject(true)]
-public record ReplayMessage
+public record ReplayClipMessage
 {
+    public Guid SessionId { get; init; }
+
     public ulong TriggerFrameId { get; init; }
 
     public long TriggerTimestampNs { get; init; }

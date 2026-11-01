@@ -10,7 +10,8 @@ public enum RecorderRuntimeMode
     Idle = 0,
     SetupRunning = 1,
     GameRunning = 2,
-    Faulted = 3,
+    TrainingRunning = 3,
+    Faulted = 4,
 }
 
 public enum RecorderStateChangeReason

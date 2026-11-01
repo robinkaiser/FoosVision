@@ -6,19 +6,11 @@ using FoosVision.Domain.CalibrationCore.Services;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.ValueObjects;
+using FoosVision.Domain.Training.Events;
 using FoosVision.Domain.Training.Services;
 using FoosVision.Domain.Training.ValueObjects;
 
 namespace FoosVision.Domain.Training.Entities;
-
-public record TrainingFrameResult(
-    LiveTrackingSnapshot Tracking,
-    IReadOnlyList<TrainingEvent> Events,
-    bool RequestTableConfigUpdate,
-    bool RequestTableSceneUpdate,
-    TrainingState State,
-    TrainingAttempt? Attempt,
-    TrainingVariant? Variant);
 
 public class TrainingSession
 {
@@ -38,6 +30,9 @@ public class TrainingSession
     private long _ReadyTimestampNs;
     private long _WaitNs;
     private long _VariantTimestampNs;
+    private TrainingAttempt? _ReplayAttempt;
+    private Frame? _ReplayTriggerFrame;
+    private TrainingReturnToLiveRequested? _ReturnToLive;
 
     public TrainingSession(Guid id, LiveTracker liveTracker, TableConfiguration tableConfig, TrainingOptions options, ITrainingRandom random)
     {
@@ -89,6 +84,11 @@ public class TrainingSession
             else
             {
                 AdvanceAttempt(snapshot, events);
+            }
+
+            if (_ReturnToLive is not null)
+            {
+                events.Add(_ReturnToLive);
             }
 
             bool tableUpdate = _TableUpdates.RequestTableUpdate(snapshot.Frame);
@@ -173,6 +173,13 @@ public class TrainingSession
             events.Add(new TrainingAnnouncementsInvalidated(_Attempt, _AnnouncementId));
         }
 
+        if (_ReplayAttempt is not null && _ReplayTriggerFrame is Frame triggerFrame)
+        {
+            _ReturnToLive = new(_ReplayAttempt, triggerFrame);
+            _ReplayAttempt = null;
+            _ReplayTriggerFrame = null;
+        }
+
         _Attempt = new(Id, ++_AttemptId, selected.Options.Kind, preparation.Team, preparation.Bar, preparation.Anchor);
         _ActiveStrategy = selected;
         selected.Begin(preparation);
@@ -209,6 +216,9 @@ public class TrainingSession
             }
 
             events.Add(new TrainingAttemptCompleted(_Attempt!, _Variant, execution.ConfirmationFrame!.Value, snapshot.Frame));
+            _ReplayAttempt = _Attempt;
+            _ReplayTriggerFrame = snapshot.Frame;
+            _ReturnToLive = null;
             Finish(TrainingState.Completed);
             return;
         }

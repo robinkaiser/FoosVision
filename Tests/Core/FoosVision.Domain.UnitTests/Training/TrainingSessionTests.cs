@@ -6,6 +6,7 @@ using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Domain.Training.Entities;
+using FoosVision.Domain.Training.Events;
 using FoosVision.Domain.Training.ValueObjects;
 using static FoosVision.Domain.UnitTests.Training.TrainingTestData;
 
@@ -57,6 +58,11 @@ public class TrainingSessionTests
         Assert.Equal(2, ready.Attempt.AttemptId);
         Assert.Equal(session.Id, ready.Attempt.SessionId);
         Assert.Single(next.Events.OfType<TrainingAnnouncementsInvalidated>());
+        TrainingReturnToLiveRequested returnToLive = Assert.Single(next.Events.OfType<TrainingReturnToLiveRequested>());
+        Assert.Equal(completed.Attempt, returnToLive.Attempt);
+        Assert.Equal(completed.CompletionFrame, returnToLive.ReplayTriggerFrame);
+        Assert.Equal(returnToLive, Assert.Single(session.ApplyTracking(Snapshot(3700, SnakePosition(team), Three(team)))
+            .Events.OfType<TrainingReturnToLiveRequested>()));
     }
 
     [Fact]

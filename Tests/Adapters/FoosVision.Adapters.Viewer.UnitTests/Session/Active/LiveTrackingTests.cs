@@ -163,32 +163,17 @@ public class LiveTrackingTests
     }
 
     [Fact]
-    public async Task Handle_reports_live_ball_to_replay_observer_when_replay_is_active()
+    public void Handle_leaves_replay_overlay_unchanged_while_replay_is_active()
     {
-        List<Point?> liveBallPositions = [];
-        LiveTrackingPresenter sut = CreateSut(
-            out RecordingOverlaySink overlaySink,
-            hasActiveReplay: () => true,
-            observeLiveTracking: position =>
-            {
-                liveBallPositions.Add(position);
-                return Task.CompletedTask;
-            });
-
-        sut.Handle(CreateTrackingFrame(12, 3_000_000_000, isBallFound: true, new PointMessage { X = 100, Y = 200 }));
-        await Task.Yield();
-
+        LiveTrackingPresenter sut = CreateSut(out RecordingOverlaySink overlaySink, hasActiveReplay: () => true);
+        sut.Handle(CreateTrackingFrame(12, 3_000_000_000, isBallFound: true));
         Assert.Empty(overlaySink.TrackingStates);
-        Point position = Assert.IsType<Point>(Assert.Single(liveBallPositions));
-        Assert.Equal(100, position.X);
-        Assert.Equal(200, position.Y);
     }
 
     private static LiveTrackingPresenter CreateSut(
         out RecordingOverlaySink overlaySink,
         Func<bool>? isReplayPending = null,
-        Func<bool>? hasActiveReplay = null,
-        Func<Point?, Task>? observeLiveTracking = null)
+        Func<bool>? hasActiveReplay = null)
     {
         List<string> events = [];
         overlaySink = new RecordingOverlaySink(events);
@@ -197,7 +182,6 @@ public class LiveTrackingTests
             overlaySink,
             new TrackingOverlayProjector(),
             isReplayPending ?? (() => false),
-            hasActiveReplay ?? (() => false),
-            observeLiveTracking ?? (_ => Task.CompletedTask));
+            hasActiveReplay ?? (() => false));
     }
 }

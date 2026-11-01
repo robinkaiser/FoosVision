@@ -9,6 +9,7 @@ using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.Services.Possession;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Domain.Training.Entities;
+using FoosVision.Domain.Training.Services;
 using FoosVision.Domain.Training.ValueObjects;
 using NSubstitute;
 

@@ -10,6 +10,56 @@ namespace FoosVision.Domain.UnitTests.Game.ReplayDecision;
 
 public class ReplayDeciderTests
 {
+    [Theory]
+    [InlineData(1000, false, false)]
+    [InlineData(1000, true, true)]
+    [InlineData(3000, false, true)]
+    [InlineData(3000, true, true)]
+    public void Consecutive_shots_require_fresh_possession_for_the_second_replay(
+        int secondPossessionMs, bool secondBallDisappears, bool expectSecondReplay)
+    {
+        IReplayDecider testee = ReplayDeciderFactory.CreateDefault(TableConfig.Config);
+        Record(0, BarType.A3);
+        Record(1000, BarType.A3);
+        Record(2000, BarType.A3);
+        Record(3000, BarType.A3);
+        Record(3050, BarType.B5, new(4000, 0));
+        ReplayAnchor first = Record(4050, BarType.B2).Value;
+        Assert.Equal(ReplayTriggerKind.SavedShot, first.TriggerKind);
+
+        const long SecondPreparationMs = 4100;
+        for (int elapsedMs = 0; elapsedMs <= secondPossessionMs; elapsedMs += 1000)
+        {
+            Assert.True(Record(SecondPreparationMs + elapsedMs, BarType.A3).IsNone);
+        }
+
+        long secondExitMs = SecondPreparationMs + secondPossessionMs + 50;
+        Assert.True(Record(secondExitMs, BarType.B5, new(4000, 0)).IsNone);
+        Option<ReplayAnchor> second = secondBallDisappears
+            ? testee.Decide(new Frame((ulong)(secondExitMs + 1000), (secondExitMs + 1000) * 1_000_000L), false, null)
+            : Record(secondExitMs + 1000, BarType.B2);
+
+        Assert.Equal(expectSecondReplay, second.IsSome);
+        if (second.TryGetValue(out ReplayAnchor anchor))
+        {
+            Assert.True(anchor.Frame.TimestampNs > first.Frame.TimestampNs);
+            Assert.Equal(secondBallDisappears ? ReplayTriggerKind.BallDisappeared : ReplayTriggerKind.SavedShot, anchor.TriggerKind);
+        }
+
+        Option<ReplayAnchor> Record(long timeMs, BarType bar, Vector2 velocity = default)
+        {
+            Frame frame = new((ulong)timeMs, timeMs * 1_000_000L);
+            BallPossession possession = bar switch
+            {
+                BarType.A3 => new(Team.A, PossessionArea.ThreeBar),
+                BarType.B2 => new(Team.B, PossessionArea.Defense),
+                _ => new(Team.B, PossessionArea.FiveBar),
+            };
+            return testee.Decide(frame, true,
+                new ReplayCandidate(frame, new(100, 200), possession, 0, velocity, TrackingConfidence.High, bar));
+        }
+    }
+
     [Fact]
     public void Decide_returns_first_strategy_anchor_and_still_updates_all_strategies()
     {

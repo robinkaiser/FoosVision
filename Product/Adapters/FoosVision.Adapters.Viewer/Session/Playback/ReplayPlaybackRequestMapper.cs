@@ -9,7 +9,7 @@ internal static class ReplayPlaybackRequestMapper
 {
     private const double _ReplaySpeed = 0.25D;
 
-    public static bool TryMap(ReplayMessage message, out PlaybackRequest playbackRequest, out string rejectionReason)
+    public static bool TryMap(ReplayClipMessage message, out PlaybackRequest playbackRequest, out string rejectionReason)
     {
         ArgumentNullException.ThrowIfNull(message);
 

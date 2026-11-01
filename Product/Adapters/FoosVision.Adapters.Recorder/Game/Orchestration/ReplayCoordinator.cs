@@ -26,7 +26,8 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
     private readonly Channel<ReplayRequest> _Requests;
     private readonly CancellationTokenSource _Cts = new();
     private readonly Task _Worker;
-    private int _ReplaySendPendingOrRunning;
+    private readonly Lock _RequestGate = new();
+    private ReplayRequest? _AcceptedReplay;
 
     public ReplayCoordinator(
         IEncodedReplayBuffer replayBuffer,
@@ -41,7 +42,7 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
         {
             SingleReader = true,
             SingleWriter = false,
-            FullMode = BoundedChannelFullMode.DropWrite,
+            FullMode = BoundedChannelFullMode.DropOldest,
         });
         _Worker = Task.Factory.StartNew(
             () => ProcessRequests(_Cts.Token),
@@ -51,6 +52,7 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
     }
 
     public Task RequestReplay(
+        Guid sessionId,
         Frame triggerFrame,
         Frame anchorFrame,
         Point anchorPosition,
@@ -58,13 +60,8 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
         int anchorPossessionTimeMs,
         ReplayTriggerKind triggerKind)
     {
-        if (!TryBeginReplaySend())
-        {
-            _Log.Warning("Request skipped, another request is being prepared or sent. TriggerFrameId={FrameId}", triggerFrame.Id);
-            return Task.CompletedTask;
-        }
-
         ReplayRequest request = new(
+            sessionId,
             triggerFrame,
             anchorFrame,
             anchorPosition,
@@ -74,9 +71,13 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
 
         if (!_Requests.Writer.TryWrite(request))
         {
-            EndReplaySend();
-            _Log.Warning("Request skipped, the worker send queue is full. TriggerFrameId={FrameId}", triggerFrame.Id);
+            _Log.Warning("Request skipped, the worker send queue is closed. TriggerFrameId={FrameId}", triggerFrame.Id);
             return Task.CompletedTask;
+        }
+
+        lock (_RequestGate)
+        {
+            _AcceptedReplay = request;
         }
 
         _Log.Information(
@@ -89,6 +90,25 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
             anchorFrame.TimestampNs,
             anchorFrame.TimestampNs + GetReplayDurationNs(triggerKind));
         return Task.CompletedTask;
+    }
+
+    public Task RequestReturnToLive(Guid sessionId, Frame triggerFrame)
+    {
+        lock (_RequestGate)
+        {
+            if (_AcceptedReplay is not ReplayRequest accepted || accepted.SessionId != sessionId ||
+                triggerFrame != accepted.TriggerFrame)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        return _LiveAnalysisPublisher.PublishReplayReturnToLive(new ReplayReturnToLiveMessage
+        {
+            SessionId = sessionId,
+            TriggerFrameId = triggerFrame.Id,
+            TriggerTimestampNs = triggerFrame.TimestampNs,
+        }, _Cts.Token);
     }
 
     public void Dispose()
@@ -127,10 +147,6 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
                 {
                     _Log.Error("Request failed. TriggerFrameId={FrameId} Ex={Exception}", request.TriggerFrame.Id, ex.ToString());
                 }
-                finally
-                {
-                    EndReplaySend();
-                }
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -156,6 +172,7 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
 
         ReplayStartedMessage startedMessage = new()
         {
+            SessionId = request.SessionId,
             TriggerFrameId = request.TriggerFrame.Id,
             TriggerTimestampNs = request.TriggerFrame.TimestampNs,
             AnchorFrameId = request.AnchorFrame.Id,
@@ -173,8 +190,9 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
 
         await _LiveAnalysisPublisher.PublishReplayStarted(startedMessage, ct);
 
-        ReplayMessage message = new()
+        ReplayClipMessage message = new()
         {
+            SessionId = request.SessionId,
             TriggerFrameId = request.TriggerFrame.Id,
             TriggerTimestampNs = request.TriggerFrame.TimestampNs,
             AnchorFrameId = request.AnchorFrame.Id,
@@ -195,19 +213,13 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
 
         try
         {
-            await _LiveAnalysisPublisher.PublishReplay(message, ct);
+            await _LiveAnalysisPublisher.PublishReplayClip(message, ct);
         }
         finally
         {
             _LiveVideoStreamController.ResumeLiveVideoStream();
         }
     }
-
-    private bool TryBeginReplaySend()
-        => Interlocked.CompareExchange(ref _ReplaySendPendingOrRunning, 1, 0) == 0;
-
-    private void EndReplaySend()
-        => Interlocked.Exchange(ref _ReplaySendPendingOrRunning, 0);
 
     private static long GetReplayDurationNs(ReplayTriggerKind triggerKind)
     {
@@ -273,6 +285,7 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
         };
 
     private readonly record struct ReplayRequest(
+        Guid SessionId,
         Frame TriggerFrame,
         Frame AnchorFrame,
         Point AnchorPosition,

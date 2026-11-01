@@ -21,7 +21,7 @@ internal class ViewerPlaybackCoordinator : IDisposable
         _PlaybackController = playbackController;
     }
 
-    public event Func<Task>? ReplayLoopCompleted
+    public event Func<EncodedReplayPlayback, Task>? ReplayLoopCompleted
     {
         add => _PlaybackController.ReplayLoopCompleted += value;
         remove => _PlaybackController.ReplayLoopCompleted -= value;

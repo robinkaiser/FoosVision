@@ -2,53 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
-using FoosVision.Domain.Table.ValueObjects;
-using FoosVision.Domain.TrackingCore.ValueObjects;
+using FoosVision.Domain.Training.ValueObjects;
 
-namespace FoosVision.Domain.Training.ValueObjects;
-
-public enum TrainingState
-{
-    Searching,
-    Waiting,
-    AwaitingExecution,
-    Evaluating,
-    Completed,
-    Aborted,
-    Stopped,
-}
-
-public enum TrainingAbortReason
-{
-    PrematureExecution,
-    PreparationLost,
-    ExecutionTimeout,
-    BallLost,
-}
-
-public enum TrainingAnnouncementKind
-{
-    Ready,
-    Variant,
-    Aborted,
-}
-
-public record TrainingVariant(string Id, string Text);
-
-public record TrainingAnchor(Frame Frame, Point Position, BallPossession Possession);
-
-public record TrainingAttempt(
-    Guid SessionId,
-    long AttemptId,
-    TrainingStrategyKind Strategy,
-    Team Team,
-    BarType Bar,
-    TrainingAnchor Anchor);
+namespace FoosVision.Domain.Training.Events;
 
 public abstract record TrainingEvent(TrainingAttempt Attempt);
 
-/// <summary>Invalidates older announcements and replay requests when a new preparation is confirmed.</summary>
+/// <summary>Invalidates older announcements when a new preparation is confirmed.</summary>
 public record TrainingPreparationConfirmed(TrainingAttempt Attempt) : TrainingEvent(Attempt);
+
+public record TrainingReturnToLiveRequested(TrainingAttempt Attempt, Frame ReplayTriggerFrame) : TrainingEvent(Attempt);
 
 public record TrainingAnnouncementRequested(
     TrainingAttempt Attempt,

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using FoosVision.Common.Types;
 using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.Training.Entities;
+using FoosVision.Domain.Training.Events;
 using FoosVision.Domain.Training.ValueObjects;
 using FoosVision.UseCases.Training.Ports;
 
@@ -38,11 +40,16 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
         TrainingAnnouncementRequest? announcementRequest = null;
         TrainingAttemptAbort? abortedAttempt = null;
         TrainingAttemptCompletion? completedAttempt = null;
+        Frame? returnToLiveReplayFrame = null;
 
         foreach (TrainingEvent change in result.Events)
         {
             switch (change)
             {
+                case TrainingReturnToLiveRequested returnToLive:
+                    returnToLiveReplayFrame = returnToLive.ReplayTriggerFrame;
+                    break;
+
                 case TrainingPreparationConfirmed confirmed:
                     preparationConfirmed = confirmed.Attempt;
                     break;
@@ -83,7 +90,7 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
             result.RequestTableSceneUpdate);
         TrainingStatusResponse status = new(result.State, result.Attempt, result.Variant);
         ProcessFrameResponse response = new(session.Id, trackingResponse, status,
-            preparationConfirmed, announcementRequest, invalidation, completedAttempt, abortedAttempt);
+            preparationConfirmed, announcementRequest, invalidation, completedAttempt, abortedAttempt, returnToLiveReplayFrame);
 
         await output.ReportProcessed(response);
     }

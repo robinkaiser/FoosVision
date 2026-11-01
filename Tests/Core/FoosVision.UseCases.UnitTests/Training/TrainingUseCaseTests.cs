@@ -8,6 +8,7 @@ using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.Services.Possession;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Domain.Training.Entities;
+using FoosVision.Domain.Training.Events;
 using FoosVision.Domain.Training.ValueObjects;
 using FoosVision.Domain.UnitTests;
 using FoosVision.Domain.UnitTests.Training;

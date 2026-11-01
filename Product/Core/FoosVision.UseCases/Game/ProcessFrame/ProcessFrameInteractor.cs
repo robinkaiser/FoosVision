@@ -39,6 +39,7 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
         bool requestTableConfigUpdate = false;
         bool requestTableSceneUpdate = false;
         bool requestReplay = false;
+        Frame? returnToLiveReplayFrame = null;
         Frame replayAnchorFrame = new();
         Point replayAnchorPosition = new();
         BallPossession replayAnchorPossession = BallPossession.None;
@@ -49,6 +50,10 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
         {
             switch (change)
             {
+                case ReturnToLiveRequest returnToLive:
+                    returnToLiveReplayFrame = returnToLive.ReplayTriggerFrame;
+                    break;
+
                 case TrackedBallInfo(bool found, BallPossession bp, int pt, bool tf, Point p, Vector2 v, IReadOnlyList<TrackedBall> c):
                     isFound = found;
                     position = p;
@@ -95,7 +100,9 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
             replayAnchorPosition,
             replayAnchorPossession,
             replayAnchorPossessionTimeMs,
-            replayTriggerKind);
+            replayTriggerKind,
+            session.Id,
+            returnToLiveReplayFrame);
 
         await output.ReportProcessed(response);
     }

@@ -9,4 +9,6 @@ public enum CommandMessageType : byte
     StopSetup = 2,
     StartGame = 10,
     StopGame = 11,
+    StartTraining = 20,
+    StopTraining = 21,
 }

@@ -39,6 +39,30 @@ public class ProcessFrameInteractorTests
         _Testee = new ProcessFrameInteractor(_FakeStore);
     }
 
+    [Theory]
+    [InlineData(5, false)]
+    [InlineData(6, true)]
+    public async Task Reports_return_only_after_recorder_wait(int delaySeconds, bool shouldReturn)
+    {
+        Frame trigger = new(1, _1s);
+        Frame reference = new(2, (1 + delaySeconds) * _1s);
+        Frame movement = new(3, reference.TimestampNs + 33_000_000);
+        ReplayAnchor anchor = new(trigger, new(100, 200), BallPossession.None, 0, ReplayTriggerKind.BallDisappeared);
+        _FakeStore.GameTracker.ApplyObservations(Arg.Any<Frame>(), Arg.Any<IEnumerable<ObservedBall>>()).Returns(
+            CreateReplaySuggestedSnapshot(trigger, anchor),
+            CreateSnapshot(reference, new(1, reference, new(100, 200), TrackingConfidence.High, TrackingStatus.Observed, Vector2.Zero)),
+            CreateSnapshot(movement, new(1, movement, new(110, 200), TrackingConfidence.High, TrackingStatus.Observed, Vector2.Zero)));
+
+        await _Testee.Handle(new(trigger, _Vision), _Output, CancellationToken.None);
+        await _Testee.Handle(new(reference, _Vision), _Output, CancellationToken.None);
+        await _Testee.Handle(new(movement, _Vision), _Output, CancellationToken.None);
+
+        Assert.All(_Responses, response => Assert.Equal(_FakeStore.LoadActive().Value.Id, response.SessionId));
+        Assert.Null(_Responses[0].ReturnToLiveReplayFrame);
+        Assert.Null(_Responses[1].ReturnToLiveReplayFrame);
+        Assert.Equal(shouldReturn ? trigger : (Frame?)null, _Responses[2].ReturnToLiveReplayFrame);
+    }
+
     [Fact]
     public async Task Skips_when_no_active_game_session()
     {

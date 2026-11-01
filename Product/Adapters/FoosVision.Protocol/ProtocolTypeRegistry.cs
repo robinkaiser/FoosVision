@@ -21,8 +21,22 @@ public static class ProtocolTypeRegistry
         if (t == typeof(StartGameCommand)) return CommandMessageType.StartGame;
         if (t == typeof(StopGameCommand)) return CommandMessageType.StopGame;
 
+        if (t == typeof(StartTrainingCommand)) return CommandMessageType.StartTraining;
+        if (t == typeof(StopTrainingCommand)) return CommandMessageType.StopTraining;
+
         throw new NotSupportedException($"Unsupported command type: {t.FullName}");
     }
+
+    public static Type GetCommandClrType(CommandMessageType type) => type switch
+    {
+        CommandMessageType.StartSetup => typeof(StartSetupCommand),
+        CommandMessageType.StopSetup => typeof(StopSetupCommand),
+        CommandMessageType.StartGame => typeof(StartGameCommand),
+        CommandMessageType.StopGame => typeof(StopGameCommand),
+        CommandMessageType.StartTraining => typeof(StartTrainingCommand),
+        CommandMessageType.StopTraining => typeof(StopTrainingCommand),
+        _ => throw new NotSupportedException($"Unsupported command type: {type}")
+    };
 
     public static EventMessageType GetEventType<TEvent>()
     {
@@ -64,20 +78,22 @@ public static class ProtocolTypeRegistry
     {
         var t = typeof(TMessage);
 
-        if (t == typeof(ReplayStartedMessage)) return LiveAnalysisMessageType.ReplayStarted;
-        if (t == typeof(ReplayMessage)) return LiveAnalysisMessageType.Replay;
         if (t == typeof(VisionContextMessage)) return LiveAnalysisMessageType.VisionContext;
         if (t == typeof(BallDetectionMaskMessage)) return LiveAnalysisMessageType.BallDetectionMask;
+        if (t == typeof(ReplayStartedMessage)) return LiveAnalysisMessageType.ReplayStarted;
+        if (t == typeof(ReplayClipMessage)) return LiveAnalysisMessageType.ReplayClip;
+        if (t == typeof(ReplayReturnToLiveMessage)) return LiveAnalysisMessageType.ReplayReturnToLive;
 
         throw new NotSupportedException($"Unsupported live analysis message type: {t.FullName}");
     }
 
     public static Type GetLiveAnalysisMessageClrType(LiveAnalysisMessageType type) => type switch
     {
-        LiveAnalysisMessageType.ReplayStarted => typeof(ReplayStartedMessage),
-        LiveAnalysisMessageType.Replay => typeof(ReplayMessage),
         LiveAnalysisMessageType.VisionContext => typeof(VisionContextMessage),
         LiveAnalysisMessageType.BallDetectionMask => typeof(BallDetectionMaskMessage),
+        LiveAnalysisMessageType.ReplayStarted => typeof(ReplayStartedMessage),
+        LiveAnalysisMessageType.ReplayClip => typeof(ReplayClipMessage),
+        LiveAnalysisMessageType.ReplayReturnToLive => typeof(ReplayReturnToLiveMessage),
 
         _ => throw new NotSupportedException($"Unsupported live analysis message type: {type}"),
     };

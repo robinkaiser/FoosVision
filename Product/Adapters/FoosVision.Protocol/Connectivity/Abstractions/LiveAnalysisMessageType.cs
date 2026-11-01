@@ -9,8 +9,9 @@ namespace FoosVision.Protocol.Connectivity.Abstractions;
 /// </summary>
 public enum LiveAnalysisMessageType : byte
 {
-    ReplayStarted = 1,
-    Replay = 2,
-    VisionContext = 3,
-    BallDetectionMask = 4,
+    VisionContext = 1,
+    BallDetectionMask = 2,
+    ReplayStarted = 3,
+    ReplayClip = 4,
+    ReplayReturnToLive = 5,
 }

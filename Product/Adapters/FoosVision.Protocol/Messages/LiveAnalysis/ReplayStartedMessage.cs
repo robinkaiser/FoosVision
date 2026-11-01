@@ -17,6 +17,8 @@ public record BallPositionMessage
 [MessagePackObject(true)]
 public record ReplayStartedMessage
 {
+    public Guid SessionId { get; init; }
+
     public ulong TriggerFrameId { get; init; }
 
     public long TriggerTimestampNs { get; init; }

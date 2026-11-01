@@ -8,24 +8,33 @@ namespace FoosVision.Adapters.Viewer.UnitTests.Session.Active.Fakes;
 internal sealed class RecordingPlaybackController : IPlaybackController
 {
     private readonly List<string> _Events;
+    private readonly TaskCompletionSource _ReplayStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _LiveStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Task ReplayStarted => _ReplayStarted.Task;
+    public Task LiveStarted => _LiveStarted.Task;
 
     public RecordingPlaybackController(List<string> events)
     {
         _Events = events;
     }
 
-    public event Func<Task>? ReplayLoopCompleted;
+    public event Func<EncodedReplayPlayback, Task>? ReplayLoopCompleted;
 
     public event Func<long, Task>? ReplayPositionChanged;
 
-    public List<long> ReplayStartTimestampNs { get; } = [];
+    public List<EncodedReplayPlayback> ReplayPlaybacks { get; } = [];
 
-    public async Task CompleteReplayLoopAsync()
+    public List<long> ReplayStartTimestampNs { get; } = [];
+    public Action<EncodedReplayPlayback>? OnReplayStarting { get; set; }
+    public Task? StopCompletion { get; set; }
+
+    public async Task CompleteReplayLoopAsync(EncodedReplayPlayback? replay = null)
     {
-        Func<Task>? replayLoopCompleted = ReplayLoopCompleted;
+        Func<EncodedReplayPlayback, Task>? replayLoopCompleted = ReplayLoopCompleted;
         if (replayLoopCompleted != null)
         {
-            await replayLoopCompleted();
+            await replayLoopCompleted(replay ?? ReplayPlaybacks[^1]);
         }
     }
 
@@ -34,6 +43,7 @@ internal sealed class RecordingPlaybackController : IPlaybackController
         if (playbackRequest.Kind == PlaybackKind.LiveStream)
         {
             _Events.Add("start-playback");
+            _LiveStarted.TrySetResult();
             Assert.Equal("cache://stream.sdp", playbackRequest.MediaSource);
             return Task.CompletedTask;
         }
@@ -45,6 +55,9 @@ internal sealed class RecordingPlaybackController : IPlaybackController
         Assert.Equal(0.25D, playbackRequest.EncodedReplay.Speed);
         Assert.Equal(2, playbackRequest.EncodedReplay.AccessUnits.Count);
         ReplayStartTimestampNs.Add(playbackRequest.EncodedReplay.ReplayStartTimestampNs);
+        ReplayPlaybacks.Add(playbackRequest.EncodedReplay);
+        OnReplayStarting?.Invoke(playbackRequest.EncodedReplay);
+        _ReplayStarted.TrySetResult();
 
         Func<long, Task>? replayPositionChanged = ReplayPositionChanged;
         if (replayPositionChanged != null)
@@ -58,6 +71,6 @@ internal sealed class RecordingPlaybackController : IPlaybackController
     public Task StopAsync()
     {
         _Events.Add("stop-playback");
-        return Task.CompletedTask;
+        return StopCompletion ?? Task.CompletedTask;
     }
 }

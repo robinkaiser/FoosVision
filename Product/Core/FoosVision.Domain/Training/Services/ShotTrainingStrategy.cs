@@ -157,7 +157,8 @@ public abstract class ShotTrainingStrategy : ITrainingStrategy
         if (snapshot.IsBallFound)
         {
             _HasHighSpeed |= IsHighSpeed(snapshot);
-            _HasTargetDetection |= snapshot.ClosestBar == TrainingGeometry.TargetTwoBar(preparation.Team);
+            _HasTargetDetection |= snapshot.Possession == new BallPossession(
+                TrainingGeometry.Opponent(preparation.Team), PossessionArea.Defense);
         }
 
         if (!_ConfirmationFrame.HasValue && _HasHighSpeed && _HasTargetDetection)

@@ -56,12 +56,18 @@ public class FramePresenter : IProcessFrameOutputPort
         if (r.RequestReplay)
         {
             await _Replay.RequestReplay(
+                r.SessionId,
                 r.Frame,
                 r.ReplayAnchorFrame,
                 r.ReplayAnchorPosition,
                 r.ReplayAnchorPossession,
                 r.ReplayAnchorPossessionTimeMs,
                 r.ReplayTriggerKind);
+        }
+
+        if (r.ReturnToLiveReplayFrame is Frame triggerFrame)
+        {
+            await _Replay.RequestReturnToLive(r.SessionId, triggerFrame);
         }
 
         if (_PublishBallDetectionMask)

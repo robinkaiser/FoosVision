@@ -17,6 +17,7 @@ public enum ChangeKind
     UpdateTableConfigRequest,
     UpdateTableSceneRequest,
     ReplayRequest,
+    ReturnToLiveRequest,
 }
 
 public abstract record Change(ChangeKind Kind);
@@ -34,6 +35,8 @@ public record UpdateTableConfigRequest() : Change(ChangeKind.UpdateTableConfigRe
 
 public record UpdateTableSceneRequest() : Change(ChangeKind.UpdateTableSceneRequest);
 
+public record ReturnToLiveRequest(Frame ReplayTriggerFrame) : Change(ChangeKind.ReturnToLiveRequest);
+
 public record ReplayRequest(
     Frame AnchorFrame,
     Point AnchorPosition,
@@ -43,9 +46,17 @@ public record ReplayRequest(
 
 public class GameSession
 {
+    private const double _ReturnToLiveMovementThresholdPx = 10;
+    // (1 s clip + about 0.25 s keyframe preroll) / 0.25 playback speed is about 5 s.
+    // Round up for frame boundaries; this is a recorder-side delay, not a playback acknowledgement.
+    private const long _ReturnToLiveMovementDelayNs = 6_000L * 1_000_000L;
+
     private readonly Lock _Gate = new();
     private readonly IGameTracker _GameTracker;
     private readonly TableUpdateSchedule _TableUpdates = new();
+    private Frame? _ReplayTriggerFrame;
+    private Point? _ReturnToLiveReferencePosition;
+    private bool _ReturnToLiveRequested;
 
     public GameSession(
         Guid id,
@@ -105,6 +116,32 @@ public class GameSession
                     snapshot.ReplayAnchor.PossessionTimeMs,
                     snapshot.ReplayAnchor.TriggerKind);
                 changes.Add(check);
+                _ReplayTriggerFrame = frame;
+                _ReturnToLiveReferencePosition = null;
+                _ReturnToLiveRequested = false;
+            }
+            else if (_ReplayTriggerFrame is Frame triggerFrame &&
+                frame.TimestampNs - triggerFrame.TimestampNs >= _ReturnToLiveMovementDelayNs)
+            {
+                if (snapshot.IsBallFound && !_ReturnToLiveRequested)
+                {
+                    if (_ReturnToLiveReferencePosition is Point reference)
+                    {
+                        double dx = snapshot.BallPosition.X - reference.X;
+                        double dy = snapshot.BallPosition.Y - reference.Y;
+                        _ReturnToLiveRequested = (dx * dx) + (dy * dy) >= _ReturnToLiveMovementThresholdPx * _ReturnToLiveMovementThresholdPx;
+                    }
+                    else
+                    {
+                        _ReturnToLiveReferencePosition = snapshot.BallPosition;
+                    }
+                }
+
+                if (_ReturnToLiveRequested)
+                {
+                    // Keep the decision available until superseded by another replay.
+                    changes.Add(new ReturnToLiveRequest(triggerFrame));
+                }
             }
 
             return changes;

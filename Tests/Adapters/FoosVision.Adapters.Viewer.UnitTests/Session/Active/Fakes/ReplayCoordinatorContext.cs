@@ -34,6 +34,7 @@ internal sealed class ReplayCoordinatorContext : IDisposable
             ResetTrackingOverlay,
             StartLivePlaybackAsync,
             () => { });
+        Sut.SetRecorderSession(TestMessages.SessionId);
     }
 
     public RecorderConnection Connection { get; } = new(

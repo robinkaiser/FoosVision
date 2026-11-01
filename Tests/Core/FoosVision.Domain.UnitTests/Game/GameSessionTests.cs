@@ -50,6 +50,89 @@ public class GameSessionTests
     }
 
     [Fact]
+    public void Recorder_waits_six_seconds_then_requests_return_after_ten_pixels_of_new_movement()
+    {
+        Frame trigger = CreateFrame(1, 1);
+        Frame reference = CreateFrame(3, 7);
+        Frame near = CreateFrame(4, 8);
+        Frame movement = CreateFrame(5, 9);
+        Frame lost = CreateFrame(6, 10);
+        ReplayAnchor anchor = new(trigger, new(100, 200), _AnyPossession, 1234, ReplayTriggerKind.BallDisappeared);
+        ArrangeSnapshots(
+            CreateReplaySuggestedSnapshot(trigger, anchor),
+            CreateSnapshot(CreateFrame(2, 2), null),
+            CreateObservedSnapshot(reference, 100),
+            CreateObservedSnapshot(near, 109),
+            CreateObservedSnapshot(movement, 110),
+            CreateSnapshot(lost, null));
+
+        Assert.Contains(_Testee.ApplyObservations(trigger, []), c => c is ReplayRequest);
+        Assert.Empty(_Testee.ApplyObservations(CreateFrame(2, 2), []).OfType<ReturnToLiveRequest>());
+        Assert.Empty(_Testee.ApplyObservations(reference, []).OfType<ReturnToLiveRequest>());
+        Assert.Empty(_Testee.ApplyObservations(near, []).OfType<ReturnToLiveRequest>());
+        Assert.Equal(trigger, Assert.Single(_Testee.ApplyObservations(movement, []).OfType<ReturnToLiveRequest>()).ReplayTriggerFrame);
+        Assert.Equal(trigger, Assert.Single(_Testee.ApplyObservations(lost, []).OfType<ReturnToLiveRequest>()).ReplayTriggerFrame);
+    }
+
+    [Fact]
+    public void New_replay_restarts_wait_and_resets_previous_reference_and_return_decision()
+    {
+        Frame first = CreateFrame(1, 1);
+        Frame second = CreateFrame(4, 9);
+        ReplayAnchor anchor = new(first, new(100, 200), _AnyPossession, 0, ReplayTriggerKind.SavedShot);
+        ArrangeSnapshots(
+            CreateReplaySuggestedSnapshot(first, anchor),
+            CreateObservedSnapshot(CreateFrame(2, 7), 100),
+            CreateObservedSnapshot(CreateFrame(3, 8), 110),
+            CreateReplaySuggestedSnapshot(second, anchor),
+            CreateObservedSnapshot(CreateFrame(5, 10), 500),
+            CreateObservedSnapshot(CreateFrame(6, 15), 500),
+            CreateObservedSnapshot(CreateFrame(7, 16), 510));
+        _Testee.ApplyObservations(first, []);
+        _Testee.ApplyObservations(CreateFrame(2, 7), []);
+        Assert.Single(_Testee.ApplyObservations(CreateFrame(3, 8), []).OfType<ReturnToLiveRequest>());
+        Assert.Empty(_Testee.ApplyObservations(second, []).OfType<ReturnToLiveRequest>());
+        Assert.Empty(_Testee.ApplyObservations(CreateFrame(5, 10), []).OfType<ReturnToLiveRequest>());
+        Assert.Empty(_Testee.ApplyObservations(CreateFrame(6, 15), []).OfType<ReturnToLiveRequest>());
+        Assert.Equal(second, Assert.Single(_Testee.ApplyObservations(CreateFrame(7, 16), []).OfType<ReturnToLiveRequest>()).ReplayTriggerFrame);
+    }
+
+    [Fact]
+    public void Shot_followthrough_is_ignored_and_stationary_ball_waits_for_new_movement_after_delay()
+    {
+        Frame trigger = CreateFrame(1, 1);
+        ReplayAnchor anchor = new(trigger, new(100, 200), _AnyPossession, 0, ReplayTriggerKind.SavedShot);
+        Frame[] frames = [trigger, CreateFrame(2, 2), CreateFrame(3, 3), CreateFrame(4, 6),
+            CreateFrame(5, 7), CreateFrame(6, 8), CreateFrame(7, 9), CreateFrame(8, 10)];
+        double[] positions = [100, 140, 160, 160, 160, 169, 170];
+        ArrangeSnapshots([
+            CreateReplaySuggestedSnapshot(trigger, anchor),
+            .. positions.Select((x, index) => CreateObservedSnapshot(frames[index + 1], x)),
+        ]);
+        foreach (Frame frame in frames[..^1])
+        {
+            Assert.Empty(_Testee.ApplyObservations(frame, []).OfType<ReturnToLiveRequest>());
+        }
+
+        Assert.Equal(trigger, Assert.Single(_Testee.ApplyObservations(frames[^1], []).OfType<ReturnToLiveRequest>()).ReplayTriggerFrame);
+    }
+
+    [Theory]
+    [InlineData(5_999_999_999, false)]
+    [InlineData(6_000_000_000, true)]
+    public void Movement_reference_starts_at_exact_recorder_frame_deadline(long elapsedNs, bool shouldReturn)
+    {
+        Frame trigger = CreateFrame(1, 1);
+        Frame reference = new(2, trigger.TimestampNs + elapsedNs);
+        Frame movement = new(3, reference.TimestampNs + 1);
+        ReplayAnchor anchor = new(trigger, new(100, 200), _AnyPossession, 0, ReplayTriggerKind.SavedShot);
+        ArrangeSnapshots(CreateReplaySuggestedSnapshot(trigger, anchor), CreateObservedSnapshot(reference, 100), CreateObservedSnapshot(movement, 110));
+        _Testee.ApplyObservations(trigger, []);
+        Assert.Empty(_Testee.ApplyObservations(reference, []).OfType<ReturnToLiveRequest>());
+        Assert.Equal(shouldReturn, _Testee.ApplyObservations(movement, []).OfType<ReturnToLiveRequest>().Any());
+    }
+
+    [Fact]
     public void Ball_is_tracked_and_table_config_update_requested()
     {
         Frame frame10 = CreateFrame(1, 10);
@@ -296,6 +379,9 @@ public class GameSessionTests
         Assert.Equal(11000, info.PossessionTimeMs);
         Assert.True(info.IsTimeFoul);
     }
+
+    private static GameTrackingSnapshot CreateObservedSnapshot(Frame frame, double x)
+        => CreateSnapshot(frame, CreateTrackedBall(frame, 1, x, 200, TrackingConfidence.High));
 
     private void ArrangeSnapshots(params GameTrackingSnapshot[] snapshots)
     {

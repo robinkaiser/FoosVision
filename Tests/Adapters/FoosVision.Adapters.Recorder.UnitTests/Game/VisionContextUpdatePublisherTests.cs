@@ -78,7 +78,7 @@ public class VisionContextUpdatePublisherTests
             return Task.CompletedTask;
         }
 
-        public Task PublishReplay(ReplayMessage replay, CancellationToken ct = default)
+        public Task PublishReplayClip(ReplayClipMessage replay, CancellationToken ct = default)
         {
             return Task.CompletedTask;
         }
@@ -89,6 +89,9 @@ public class VisionContextUpdatePublisherTests
             _VisionContextPublished.TrySetResult(visionContext);
             return Task.CompletedTask;
         }
+
+        public Task PublishReplayReturnToLive(ReplayReturnToLiveMessage status, CancellationToken ct = default)
+            => Task.CompletedTask;
 
         public Task PublishBallDetectionMask(BallDetectionMaskMessage ballDetectionMask, CancellationToken ct = default)
         {

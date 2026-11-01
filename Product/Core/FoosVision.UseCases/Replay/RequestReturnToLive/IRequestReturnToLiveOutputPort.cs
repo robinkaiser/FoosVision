@@ -3,11 +3,11 @@
 
 using FoosVision.Domain.Replay.Entities;
 
-namespace FoosVision.UseCases.Replay.ObserveLiveTracking;
+namespace FoosVision.UseCases.Replay.RequestReturnToLive;
 
 public record ReturnToLiveResponse(ReplayId ReplayId);
 
-public interface IObserveLiveTrackingOutputPort
+public interface IRequestReturnToLiveOutputPort
 {
     Task ReportReturnToLive(ReturnToLiveResponse response);
 }

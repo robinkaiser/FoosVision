@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Viewer.Session.Overlays;
-using FoosVision.Common.Types;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Protocol.Messages.Live;
 
@@ -14,20 +13,17 @@ internal class LiveTrackingPresenter
     private readonly TrackingOverlayProjector _Projector;
     private readonly Func<bool> _IsReplayPending;
     private readonly Func<bool> _HasActiveReplay;
-    private readonly Func<Point?, Task> _ObserveLiveTracking;
 
     public LiveTrackingPresenter(
         IOverlaySink overlaySink,
         TrackingOverlayProjector projector,
         Func<bool> isReplayPending,
-        Func<bool> hasActiveReplay,
-        Func<Point?, Task> observeLiveTracking)
+        Func<bool> hasActiveReplay)
     {
         _OverlaySink = overlaySink;
         _Projector = projector;
         _IsReplayPending = isReplayPending;
         _HasActiveReplay = hasActiveReplay;
-        _ObserveLiveTracking = observeLiveTracking;
     }
 
     public void Handle(TrackingFrameMessage message)
@@ -39,7 +35,6 @@ internal class LiveTrackingPresenter
 
         if (_HasActiveReplay())
         {
-            _ = _ObserveLiveTracking(GetLiveBallPosition(message));
             return;
         }
 
@@ -62,14 +57,4 @@ internal class LiveTrackingPresenter
         ResetProjection();
     }
 
-    private static Point? GetLiveBallPosition(TrackingFrameMessage message)
-    {
-        if (!message.IsBallFound ||
-            message.BallPosition == null)
-        {
-            return null;
-        }
-
-        return new Point(message.BallPosition.X, message.BallPosition.Y);
-    }
 }

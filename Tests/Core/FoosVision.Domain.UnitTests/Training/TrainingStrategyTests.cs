@@ -155,7 +155,7 @@ public class TrainingStrategyTests
     [InlineData(Team.A, false)]
     [InlineData(Team.B, true)]
     [InlineData(Team.B, false)]
-    public void Shot_requires_high_speed_and_target_two_bar_then_exact_tail(Team team, bool sideSpeed)
+    public void Shot_requires_high_speed_and_opponent_defense_then_exact_tail(Team team, bool sideSpeed)
     {
         SnakeShotTrainingStrategy strategy = Snake();
         BeginShot(strategy, team);
@@ -167,6 +167,67 @@ public class TrainingStrategyTests
         Assert.Equal(At(1200), confirmed.ConfirmationFrame);
         Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(1449, default, phase: LiveTrackingPhase.BallTemporarilyLost)).State);
         Assert.Equal(TrainingExecutionState.Completed, strategy.Evaluate(Snapshot(1450, default, phase: LiveTrackingPhase.BallTemporarilyLost)).State);
+    }
+
+    [Theory]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.A, BarType.B1)]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.A, BarType.B2)]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.B, BarType.A1)]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.B, BarType.A2)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.A, BarType.B1)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.A, BarType.B2)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.B, BarType.A1)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.B, BarType.A2)]
+    public void Both_shots_accept_either_opponent_defense_bar_in_either_order(
+        TrainingStrategyKind kind, Team team, BarType defenseBar)
+    {
+        foreach (bool speedFirst in new[] { false, true })
+        {
+            ITrainingStrategy strategy = kind == TrainingStrategyKind.SnakeShot ? Snake() : PullStrategy();
+            Point setup = kind == TrainingStrategyKind.SnakeShot ? SnakePosition(team) : Pull(team);
+            strategy.FindPreparation(Snapshot(0, setup, Three(team)));
+            strategy.Begin(strategy.FindPreparation(Snapshot(1000, setup, Three(team)))!);
+            Bar bar = TableConfig.Config.Field.Bars[defenseBar];
+            Point target = new((bar.Center.P0.X + bar.Center.P1.X) / 2, 450);
+            LiveTrackingSnapshot speed = Snapshot(speedFirst ? 1100 : 1200, setup with { Y = setup.Y + 100 }, Three(team), new(2000, 0));
+            LiveTrackingSnapshot detection = Snapshot(speedFirst ? 1200 : 1100, target, defenseBar);
+
+            Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(speedFirst ? speed : detection).State);
+            TrainingExecution confirmed = strategy.Evaluate(speedFirst ? detection : speed);
+
+            Assert.Equal(At(1200), confirmed.ConfirmationFrame);
+            Assert.Equal(TrainingExecutionState.Pending, confirmed.State);
+            Assert.Equal(TrainingExecutionState.Pending,
+                strategy.Evaluate(Snapshot(1449, default, phase: LiveTrackingPhase.BallTemporarilyLost)).State);
+            Assert.Equal(TrainingExecutionState.Completed,
+                strategy.Evaluate(Snapshot(1450, default, phase: LiveTrackingPhase.BallTemporarilyLost)).State);
+        }
+    }
+
+    [Theory]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.A, BarType.A1)]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.A, BarType.A2)]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.B, BarType.B1)]
+    [InlineData(TrainingStrategyKind.SnakeShot, Team.B, BarType.B2)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.A, BarType.A1)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.A, BarType.A2)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.B, BarType.B1)]
+    [InlineData(TrainingStrategyKind.PullShot, Team.B, BarType.B2)]
+    public void Own_defense_does_not_confirm_a_shot(TrainingStrategyKind kind, Team team, BarType ownDefense)
+    {
+        ITrainingStrategy strategy = kind == TrainingStrategyKind.SnakeShot ? Snake() : PullStrategy();
+        Point setup = kind == TrainingStrategyKind.SnakeShot ? SnakePosition(team) : Pull(team);
+        strategy.FindPreparation(Snapshot(0, setup, Three(team)));
+        strategy.Begin(strategy.FindPreparation(Snapshot(1000, setup, Three(team)))!);
+        Bar bar = TableConfig.Config.Field.Bars[ownDefense];
+        Point defensePosition = new((bar.Center.P0.X + bar.Center.P1.X) / 2, 450);
+        strategy.Evaluate(Snapshot(1100, setup with { Y = setup.Y + 100 }, Three(team), new(2000, 0)));
+        strategy.Evaluate(Snapshot(1200, defensePosition, ownDefense));
+
+        TrainingExecution result = strategy.Evaluate(Snapshot(1850, defensePosition, ownDefense));
+
+        Assert.Equal(TrainingExecutionState.Lost, result.State);
+        Assert.Null(result.ConfirmationFrame);
     }
 
     [Theory]
@@ -239,15 +300,17 @@ public class TrainingStrategyTests
     }
 
     [Theory]
-    [InlineData(Team.A, true)]
-    [InlineData(Team.A, false)]
-    [InlineData(Team.B, true)]
-    [InlineData(Team.B, false)]
-    public void Pass_completes_on_own_three_or_opponent_defense(Team team, bool ownThree)
+    [InlineData(Team.A, BarType.A3)]
+    [InlineData(Team.A, BarType.B1)]
+    [InlineData(Team.A, BarType.B2)]
+    [InlineData(Team.B, BarType.B3)]
+    [InlineData(Team.B, BarType.A1)]
+    [InlineData(Team.B, BarType.A2)]
+    public void Pass_completes_on_own_three_or_opponent_defense(Team team, BarType target)
     {
         TickTackPassTrainingStrategy strategy = BeginPass(team);
-        BarType target = ownThree ? Three(team) : Target(team);
-        Point targetPosition = new(team == Team.A ? 1100 : 500, 200);
+        Bar bar = TableConfig.Config.Field.Bars[target];
+        Point targetPosition = new((bar.Center.P0.X + bar.Center.P1.X) / 2, 200);
         Assert.Equal(TrainingExecutionState.Completed, strategy.Evaluate(Snapshot(400, targetPosition, target)).State);
     }
 

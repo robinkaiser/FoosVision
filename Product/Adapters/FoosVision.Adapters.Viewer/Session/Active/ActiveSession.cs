@@ -41,7 +41,8 @@ public class ActiveSession :
     private readonly IDisposable _VisionContextSubscription;
     private readonly IDisposable _BallDetectionMaskSubscription;
     private readonly IDisposable _ReplayStartedSubscription;
-    private readonly IDisposable _ReplaySubscription;
+    private readonly IDisposable _ReplayClipSubscription;
+    private readonly IDisposable _ReplayReturnToLiveSubscription;
     private RecorderRuntimeStateChanged _LastKnownRuntimeState = new()
     {
         Sequence = 0,
@@ -90,8 +91,7 @@ public class ActiveSession :
             _OverlaySink,
             trackingProjector,
             () => _ReplayCoordinator.IsReplayPending,
-            () => _ReplaySessionStore.HasActive,
-            _ReplayCoordinator.ObserveLiveTrackingAsync);
+            () => _ReplaySessionStore.HasActive);
         _TableUpdatePresenter = new(
             _OverlaySink,
             _LiveTrackingPresenter.UpdateTableConfiguration,
@@ -117,8 +117,9 @@ public class ActiveSession :
         _ProcessFrameRateSubscription = _Session.LiveDataSubscriber.Subscribe<ProcessFrameRateMessage>(OnProcessFrameRateReceived);
         _VisionContextSubscription = _Session.LiveAnalysisSubscriber.Subscribe<VisionContextMessage>(OnVisionContextReceived);
         _BallDetectionMaskSubscription = _Session.LiveAnalysisSubscriber.Subscribe<BallDetectionMaskMessage>(_BallDetectionMaskOverlayPresenter.Handle);
+        _ReplayReturnToLiveSubscription = _Session.LiveAnalysisSubscriber.Subscribe<ReplayReturnToLiveMessage>(_ReplayCoordinator.HandleReplayReturnToLive);
         _ReplayStartedSubscription = _Session.LiveAnalysisSubscriber.Subscribe<ReplayStartedMessage>(_ReplayCoordinator.HandleReplayStarted);
-        _ReplaySubscription = _Session.LiveAnalysisSubscriber.Subscribe<ReplayMessage>(_ReplayCoordinator.HandleReplay);
+        _ReplayClipSubscription = _Session.LiveAnalysisSubscriber.Subscribe<ReplayClipMessage>(_ReplayCoordinator.HandleReplayClip);
 
         PublishUiState();
     }
@@ -207,6 +208,8 @@ public class ActiveSession :
     public void OnRecorderRuntimeStateChanged(RecorderRuntimeStateChanged state)
     {
         RecorderRuntimeMode previousMode = _LastKnownRuntimeState.Mode;
+        bool supportsReplay = state.Mode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.TrainingRunning;
+        _ReplayCoordinator.SetRecorderSession(supportsReplay ? state.ActiveSessionId : null);
         _LastKnownRuntimeState = state;
         _PendingIntent = ActiveSessionPendingIntent.None;
         _Log.Information(
@@ -257,7 +260,8 @@ public class ActiveSession :
         _VisionContextSubscription.Dispose();
         _BallDetectionMaskSubscription.Dispose();
         _ReplayStartedSubscription.Dispose();
-        _ReplaySubscription.Dispose();
+        _ReplayClipSubscription.Dispose();
+        _ReplayReturnToLiveSubscription.Dispose();
         _ReplayCoordinator.Dispose();
         _PlaybackCoordinator.TryStopIgnoringErrors();
         _PlaybackCoordinator.Dispose();

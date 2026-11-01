@@ -4,25 +4,26 @@
 using FoosVision.Domain.Replay.Entities;
 using FoosVision.UseCases.Replay.Ports;
 
-namespace FoosVision.UseCases.Replay.ObserveLiveTracking;
+namespace FoosVision.UseCases.Replay.RequestReturnToLive;
 
-public class ObserveLiveTrackingInteractor : IObserveLiveTrackingInputPort
+public class RequestReturnToLiveInteractor : IRequestReturnToLiveInputPort
 {
     private readonly IReplaySessionStore _SessionStore;
 
-    public ObserveLiveTrackingInteractor(IReplaySessionStore sessionStore)
+    public RequestReturnToLiveInteractor(IReplaySessionStore sessionStore)
     {
         _SessionStore = sessionStore;
     }
 
-    public async Task Handle(ObserveLiveTrackingRequest request, IObserveLiveTrackingOutputPort output, CancellationToken ct)
+    public async Task Handle(RequestReturnToLiveRequest request, IRequestReturnToLiveOutputPort output, CancellationToken ct)
     {
         if (!_SessionStore.LoadActive().TryGetValue(out ReplaySession session))
         {
             return;
         }
 
-        if (!session.CanReturnToLive(request.BallPosition))
+        session.RequestReturnToLive(request.ReplayId);
+        if (!session.CanReturnToLive)
         {
             return;
         }
