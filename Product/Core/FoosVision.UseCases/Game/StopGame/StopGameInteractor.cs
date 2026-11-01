@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Domain.Game.Entities;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Game.Ports;
 
@@ -11,13 +12,16 @@ public class StopGameInteractor : IStopGameInputPort
 {
     private readonly IGameSessionStore _SessionStore;
     private readonly IFrameSource _FrameSource;
+    private readonly SessionGate _SessionGate;
 
     public StopGameInteractor(
         IGameSessionStore sessionStore,
-        IFrameSource frameSource)
+        IFrameSource frameSource,
+        SessionGate sessionGate)
     {
         _SessionStore = sessionStore;
         _FrameSource = frameSource;
+        _SessionGate = sessionGate;
     }
 
     public async Task Handle(StopGameRequest request, IStopGameOutputPort output, CancellationToken ct)
@@ -30,10 +34,22 @@ public class StopGameInteractor : IStopGameInputPort
 
         var sessionId = session.Id;
 
-        await _FrameSource.Stop(ct);
+        try
+        {
+            await _FrameSource.Stop(ct);
+        }
+        finally
+        {
+            _SessionStore.Clear();
 
-        _SessionStore.Clear();
-
-        await output.ReportStopped(new StopGameResponse(sessionId));
+            try
+            {
+                await output.ReportStopped(new StopGameResponse(sessionId));
+            }
+            finally
+            {
+                _SessionGate.Release(sessionId);
+            }
+        }
     }
 }

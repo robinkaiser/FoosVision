@@ -3,6 +3,7 @@
 
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
+using FoosVision.Adapters.Recorder.Training;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Core.Capture;
 using FoosVision.Protocol.Messages.Events;
@@ -21,11 +22,12 @@ public class RecorderHost : IDisposable
         IRecorderVersionProvider versionProvider,
         IHandshakeDiagnosticsProvider diagnosticsProvider,
         IHandshakeViewerSettingsProvider viewerSettingsProvider,
-        ITrainingOptionsProvider? trainingOptionsProvider,
+        ITrainingOptionsProvider trainingOptionsProvider,
         IVideoDumpWriter videoDumpWriter,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
-        RuntimeMetricsOptions? runtimeMetricsOptions = null)
+        RuntimeMetricsOptions? runtimeMetricsOptions = null,
+        ITrainingAnnouncements? trainingAnnouncements = null)
     {
         _Root = RecorderCompositionRoot.Compose(
             cameraFeed,
@@ -36,7 +38,8 @@ public class RecorderHost : IDisposable
             videoDumpWriter,
             publishObservations,
             publishBallDetectionMask,
-            runtimeMetricsOptions);
+            runtimeMetricsOptions,
+            trainingAnnouncements);
     }
 
     public event Action? ViewerConnected
@@ -59,9 +62,9 @@ public class RecorderHost : IDisposable
         _Started = true;
     }
 
-    public Task StopActiveSessions(CancellationToken ct)
+    public Task StopActiveSessions(CancellationToken ct, RecorderStateChangeReason reason = RecorderStateChangeReason.EndOfInput)
     {
-        return _Root.StopActiveSessions(ct);
+        return _Root.StopActiveSessions(ct, reason);
     }
 
     public void Dispose()

@@ -22,8 +22,11 @@ public class VideoDumpOrchestratorTests
         Assert.Empty(queue.Work);
     }
 
-    [Fact]
-    public async Task TryScheduleDump_enqueues_writer_with_expected_request()
+    [Theory]
+    [InlineData(VideoDumpSessionKind.Game, "game")]
+    [InlineData(VideoDumpSessionKind.Setup, "setup")]
+    [InlineData(VideoDumpSessionKind.Training, "training")]
+    public async Task TryScheduleDump_enqueues_writer_with_expected_request(VideoDumpSessionKind kind, string label)
     {
         FakeSnapshotSource snapshotSource = new()
         {
@@ -37,14 +40,14 @@ public class VideoDumpOrchestratorTests
             queue,
             () => new DateTimeOffset(2026, 6, 10, 15, 30, 12, TimeSpan.Zero));
 
-        bool scheduled = testee.TryScheduleDump(VideoDumpSessionKind.Game);
+        bool scheduled = testee.TryScheduleDump(kind);
         await queue.RunNext(CancellationToken.None);
 
         Assert.True(scheduled);
         Assert.Single(writer.Requests);
         VideoDumpRequest request = writer.Requests[0];
-        Assert.Equal(VideoDumpSessionKind.Game, request.SessionKind);
-        Assert.Equal("recorder-game-20260610-153012-buffer-60s.mp4", request.FileName);
+        Assert.Equal(kind, request.SessionKind);
+        Assert.Equal($"recorder-{label}-20260610-153012-buffer-60s.mp4", request.FileName);
         Assert.Same(snapshotSource.Snapshot, request.Segment);
     }
 

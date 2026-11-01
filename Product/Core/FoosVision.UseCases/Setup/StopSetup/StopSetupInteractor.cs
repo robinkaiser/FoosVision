@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Domain.Setup.Entities;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Setup.Ports;
 
@@ -11,13 +12,16 @@ public class StopSetupInteractor : IStopSetupInputPort
 {
     private readonly ISetupSessionStore _SessionStore;
     private readonly IFrameSource _FrameSource;
+    private readonly SessionGate _SessionGate;
 
     public StopSetupInteractor(
         ISetupSessionStore sessionStore,
-        IFrameSource frameSource)
+        IFrameSource frameSource,
+        SessionGate sessionGate)
     {
         _SessionStore = sessionStore;
         _FrameSource = frameSource;
+        _SessionGate = sessionGate;
     }
 
     public async Task Handle(StopSetupRequest request, IStopSetupOutputPort output, CancellationToken ct)
@@ -30,10 +34,22 @@ public class StopSetupInteractor : IStopSetupInputPort
 
         var sessionId = session.Id;
 
-        await _FrameSource.Stop(ct);
+        try
+        {
+            await _FrameSource.Stop(ct);
+        }
+        finally
+        {
+            _SessionStore.Clear();
 
-        _SessionStore.Clear();
-
-        await output.ReportStopped(new StopSetupResponse(sessionId));
+            try
+            {
+                await output.ReportStopped(new StopSetupResponse(sessionId));
+            }
+            finally
+            {
+                _SessionGate.Release(sessionId);
+            }
+        }
     }
 }

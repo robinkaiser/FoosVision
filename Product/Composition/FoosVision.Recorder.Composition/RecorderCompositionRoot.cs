@@ -3,6 +3,7 @@
 
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
+using FoosVision.Adapters.Recorder.Training;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Core.Capture;
 using FoosVision.Media.Core.EncodedVideoStreaming;
@@ -11,6 +12,7 @@ using FoosVision.Protocol.Messages.Events;
 using FoosVision.Recorder.Composition.Diagnostics;
 using FoosVision.Recorder.Composition.InMemoryStores;
 using FoosVision.Recorder.Composition.Modules;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Training.Ports;
 using FoosVision.Vision;
 
@@ -23,6 +25,8 @@ internal class RecorderCompositionRoot : IDisposable
     private readonly VisionSession _Vision;
     private readonly SetupModule _Setup;
     private readonly GameModule _Game;
+    private readonly TrainingModule _Training;
+    private readonly RecorderCommandRouter _Router;
 
     public NetworkModule Network { get; }
 
@@ -35,13 +39,17 @@ internal class RecorderCompositionRoot : IDisposable
         VisionSession vision,
         NetworkModule network,
         SetupModule setup,
-        GameModule game)
+        GameModule game,
+        TrainingModule training,
+        RecorderCommandRouter router)
     {
         _Settings = settings;
         _CameraControl = cameraControl;
         _Vision = vision;
         _Setup = setup;
         _Game = game;
+        _Training = training;
+        _Router = router;
         Network = network;
     }
 
@@ -50,13 +58,15 @@ internal class RecorderCompositionRoot : IDisposable
         IRecorderVersionProvider versionProvider,
         IHandshakeDiagnosticsProvider diagnosticsProvider,
         IHandshakeViewerSettingsProvider viewerSettingsProvider,
-        ITrainingOptionsProvider? trainingOptionsProvider,
+        ITrainingOptionsProvider trainingOptionsProvider,
         IVideoDumpWriter videoDumpWriter,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
-        RuntimeMetricsOptions? runtimeMetricsOptions = null)
+        RuntimeMetricsOptions? runtimeMetricsOptions = null,
+        ITrainingAnnouncements? trainingAnnouncements = null)
     {
         var settings = new SettingsStore();
+        var sessionGate = new SessionGate();
 
         var nullUpdateTableScenePresenter = new NullUpdateTableScenePresenter();
 
@@ -99,6 +109,7 @@ internal class RecorderCompositionRoot : IDisposable
             runtimeState: runtimeState,
             liveDataPublisher: network.LiveDataPublisher,
             videoDumpOrchestrator: videoDumpOrchestrator,
+            sessionGate: sessionGate,
             runtimeMetricsOptions: runtimeMetricsOptions);
 
         var game = new GameModule(
@@ -119,31 +130,72 @@ internal class RecorderCompositionRoot : IDisposable
             liveAnalysisPublisher: network.LiveAnalysisPublisher,
             updateTableScenePresenter: nullUpdateTableScenePresenter,
             videoDumpOrchestrator: videoDumpOrchestrator,
+            sessionGate: sessionGate,
             publishObservations: publishObservations,
             publishBallDetectionMask: publishBallDetectionMask,
             runtimeMetricsOptions: runtimeMetricsOptions);
 
-        var router = new RecorderCommandRouter(setup.CommandHandler, game.CommandHandler);
+        var training = new TrainingModule(
+            frameSource: cameraControl,
+            frameFeed: cameraControl,
+            ballFinder: vision,
+            ballDetectionMaskProvider: vision,
+            tableConfigFinder: vision,
+            tableSceneUpdater: vision,
+            visionContextProvider: vision,
+            settingsStore: settings,
+            tableConfigStore: settings,
+            runtimeState: runtimeState,
+            liveDataPublisher: network.LiveDataPublisher,
+            liveAnalysisPublisher: network.LiveAnalysisPublisher,
+            updateTableScenePresenter: nullUpdateTableScenePresenter,
+            videoDumpOrchestrator: videoDumpOrchestrator,
+            sessionGate: sessionGate,
+            optionsProvider: trainingOptionsProvider,
+            announcements: trainingAnnouncements,
+            publishObservations: publishObservations,
+            publishBallDetectionMask: publishBallDetectionMask,
+            runtimeMetricsOptions: runtimeMetricsOptions);
+
+        var router = new RecorderCommandRouter(setup.CommandHandler, game.CommandHandler, training.CommandHandler);
         network.SetCommandRouter(router);
 
-        root = new RecorderCompositionRoot(settings, cameraControl, vision, network, setup, game);
+        root = new RecorderCompositionRoot(settings, cameraControl, vision, network, setup, game, training, router);
         return root;
     }
 
-    public async Task StopActiveSessions(CancellationToken ct)
+    public async Task StopActiveSessions(CancellationToken ct, RecorderStateChangeReason reason = RecorderStateChangeReason.EndOfInput)
     {
-        await _Setup.StopIfActive(ct);
-        await _Game.StopIfActive(ct);
-        Network.ReleaseViewerConnection();
+        await _Router.RunExclusive(async () =>
+        {
+            try
+            {
+                await _Setup.StopIfActive(ct, reason);
+                await _Game.StopIfActive(ct, reason);
+                await _Training.StopIfActive(ct, reason);
+            }
+            finally { Network.ReleaseViewerConnection(); }
+        });
     }
 
     public void Dispose()
     {
         GC.SuppressFinalize(this);
 
-        // Stop network first (prevents late incoming commands triggering use-cases during teardown)
-        Network.Dispose();
-        _Game.Dispose();
-        _Setup.Dispose();
+        // Stop receiving commands first; keep publishers alive for session-stop notifications.
+        Network.StopCommandReception();
+
+        try
+        {
+            StopActiveSessions(CancellationToken.None).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Network.Dispose();
+            _Training.Dispose();
+            _Game.Dispose();
+            _Setup.Dispose();
+            _CameraControl.Dispose();
+        }
     }
 }

@@ -349,7 +349,7 @@ Do not start multiple `dotnet` commands in parallel.
 Before changing code:
 
 1. identify the relevant layer and ownership boundary
-2. read the local surrounding module and matching tests
+2. read the local surrounding module, matching tests, and the closest comparable implementation and its tests
 3. preserve existing naming, architecture boundaries, and product vocabulary
 4. check whether a matching test project already exists
 5. keep the diff focused on the requested behavior
@@ -374,6 +374,50 @@ Avoid:
 - duplicate abstractions
 - cross-layer shortcuts
 - broad cleanup unrelated to the task
+
+### Use existing implementations as templates
+
+When comparable code exists, use the closest existing implementation and its tests as the
+structural template for new or changed code. Read that reference before implementing the change.
+Choose by responsibility and behavior, not just by matching names.
+
+Look for comparable code in particular for:
+
+- related subdomains, such as Game and Training
+- similar use cases, such as start, stop, process-frame, and completion interactors
+- similar adapter flows, such as command handlers, presenters, and frame processors
+- similar algorithms or strategies
+- composition modules, runtime wiring, and session lifecycles
+- ports, message contracts, mappers, and settings providers
+- UI flows, view models, and their state handling
+
+Where responsibilities and requirements match, closely follow the reference's:
+
+- vocabulary and naming of classes, methods, fields, parameters, and local variables
+- class and method structure, constructor layout, and dependency injection
+- operation ordering, control flow, and asynchronous execution
+- validation, error reporting, exception handling, cancellation, and resource cleanup
+- logging and diagnostics patterns
+- test naming, organization, setup, test doubles, and assertion style
+
+Introduce differences only when the requested behavior or a concrete correctness requirement
+within the task makes them necessary. Explain meaningful deviations and the requirement that
+justifies them. A new mode or variant is not an invitation to redesign the existing pattern.
+Compare the entire call chain, including interfaces and request/output contracts. Differences
+introduced elsewhere in the same task do not justify further deviations; trace each difference
+back to an actual requirement rather than treating a self-introduced contract as a constraint.
+
+Do not add precautionary guards, state flags, sequence tracking, retries, fallbacks, timeouts,
+or other hardening merely because a hypothetical failure is possible. Additional behavior must
+be explicitly requested or demonstrably necessary for the required behavior. If the reference
+appears to have a defect or needs broader hardening, report the concrete finding separately;
+do not silently change its behavior or implement a stricter variant only in the new code.
+Agree any resulting scope expansion with the user before implementing it.
+
+Do not introduce shared abstractions solely to make similar code look alike. Before finishing,
+compare the implementation and tests with the reference and remove unnecessary differences.
+Align behavior and responsibilities as well as appearance. Remove unnecessary logic instead
+of merely moving it into helper methods or wrappers to make the calling code look similar.
 
 ### Change-specific guides
 

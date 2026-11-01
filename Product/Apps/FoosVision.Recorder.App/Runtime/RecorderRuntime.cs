@@ -79,7 +79,7 @@ public class RecorderRuntime : IRecorderRuntime
             return;
         }
 
-        await _RecorderHost.StopActiveSessions(ct);
+        await _RecorderHost.StopActiveSessions(ct, RecorderStateChangeReason.SourceStopped);
         _Started = false;
     }
 

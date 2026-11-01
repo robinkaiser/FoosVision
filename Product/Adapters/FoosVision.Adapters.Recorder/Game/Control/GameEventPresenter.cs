@@ -50,7 +50,7 @@ public class GameEventPresenter :
             null,
             RecorderStateChangeReason.InternalError,
             reason,
-            CancellationToken.None);
+            CancellationToken.None, onlyWhenInactive: true);
     }
 
     public async Task ReportStopped(StopGameResponse response)
@@ -74,6 +74,6 @@ public class GameEventPresenter :
             null,
             RecorderStateChangeReason.InternalError,
             reason,
-            CancellationToken.None);
+            CancellationToken.None, onlyWhenInactive: true);
     }
 }

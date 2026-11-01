@@ -42,12 +42,15 @@ public class RecorderRuntimeStateController
         Guid? activeSessionId,
         RecorderStateChangeReason reason,
         string detail,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool onlyWhenInactive = false)
     {
         RecorderRuntimeStateChanged nextState;
 
         lock (_Gate)
         {
+            if (onlyWhenInactive && _CurrentState.ActiveSessionId.HasValue) return Task.CompletedTask;
+
             // The recorder is the only source of truth for runtime state. Identical transitions are not republished.
             if (_CurrentState.Mode == mode &&
                 _CurrentState.ActiveSessionId == activeSessionId &&

@@ -92,6 +92,7 @@ public class MainViewModel : INotifyPropertyChanged
             RecorderRuntimeMode.Idle => "Ready",
             RecorderRuntimeMode.SetupRunning => "Setup",
             RecorderRuntimeMode.GameRunning => "Tracking",
+            RecorderRuntimeMode.TrainingRunning => "Training",
             RecorderRuntimeMode.Faulted => "Recorder fault",
             _ => "Unknown mode",
         };

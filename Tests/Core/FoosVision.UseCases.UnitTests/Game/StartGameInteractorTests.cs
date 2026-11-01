@@ -6,6 +6,7 @@ using FoosVision.Domain.Game.Entities;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Domain.UnitTests;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Settings;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Game.StartGame;
@@ -16,6 +17,7 @@ namespace FoosVision.UseCases.UnitTests.Game;
 
 public class StartGameInteractorTests
 {
+    private readonly SessionGate _SessionGate = new();
     private readonly FakeGameSessionStore _FakeStore;
     private readonly IStartGameOutputPort _Output;
     private readonly ISettingsStore _Settings;
@@ -30,7 +32,7 @@ public class StartGameInteractorTests
         _Settings = Substitute.For<ISettingsStore>();
         _FrameSource = Substitute.For<IFrameSource>();
 
-        _Testee = new StartGameInteractor(_FakeStore, _Settings, _FrameSource);
+        _Testee = new StartGameInteractor(_FakeStore, _Settings, _FrameSource, _SessionGate);
 
         _Settings.LoadTableConfig().Returns(Option<TableConfiguration>.Some(TableConfig.Config));
         _FrameSource.Configure(Arg.Any<CancellationToken>()).Returns(FrameSourceResult.Success);
@@ -91,7 +93,7 @@ public class StartGameInteractorTests
         first.ApplyObservations(new Frame(2, 1_500_000_000L), [observation]);
         first.ApplyObservations(new Frame(3, 2_000_000_000L), [observation]);
 
-        StopGameInteractor stop = new(_FakeStore, _FrameSource);
+        StopGameInteractor stop = new(_FakeStore, _FrameSource, _SessionGate);
         await stop.Handle(new(), Substitute.For<IStopGameOutputPort>(), CancellationToken.None);
         await _Testee.Handle(new(), _Output, CancellationToken.None);
         Assert.True(_FakeStore.LoadActive().TryGetValue(out GameSession second));

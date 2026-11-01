@@ -10,18 +10,19 @@ using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Domain.Training.Entities;
 using FoosVision.Domain.Training.Events;
 using FoosVision.Domain.Training.ValueObjects;
-using FoosVision.Domain.UnitTests;
 using FoosVision.Domain.UnitTests.Training;
+using FoosVision.Domain.UnitTests;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Settings;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Live.Ports;
-using FoosVision.UseCases.Training;
 using FoosVision.UseCases.Training.CompleteTableSceneUpdate;
 using FoosVision.UseCases.Training.CompleteTableUpdate;
 using FoosVision.UseCases.Training.Ports;
 using FoosVision.UseCases.Training.ProcessFrame;
 using FoosVision.UseCases.Training.StartTraining;
 using FoosVision.UseCases.Training.StopTraining;
+using FoosVision.UseCases.Training;
 using NSubstitute;
 using static FoosVision.Domain.UnitTests.Training.TrainingTestData;
 
@@ -29,6 +30,7 @@ namespace FoosVision.UseCases.UnitTests.Training;
 
 public class TrainingUseCaseTests
 {
+    private readonly SessionGate _SessionGate = new();
     private readonly FakeTrainingSessionStore _Store = new();
     private readonly ISettingsStore _Settings = Substitute.For<ISettingsStore>();
     private readonly IFrameSource _Frames = Substitute.For<IFrameSource>();
@@ -42,7 +44,7 @@ public class TrainingUseCaseTests
         _Options.LoadTrainingOptions().Returns(TrainingOptions.Default);
         _Frames.Configure(Arg.Any<CancellationToken>()).Returns(FrameSourceResult.Success);
         _Frames.Start(Arg.Any<CancellationToken>()).Returns(FrameSourceResult.Success);
-        _Start = new(_Store, _Settings, _Frames, _Options, new CountingRandom());
+        _Start = new(_Store, _Settings, _Frames, _Options, new CountingRandom(), _SessionGate);
     }
 
     [Fact]
@@ -92,6 +94,60 @@ public class TrainingUseCaseTests
     }
 
     [Fact]
+    public async Task Start_presenter_exception_cleans_source_session_and_reservation()
+    {
+        _StartOutput.ReportStarted(Arg.Any<StartTrainingResponse>()).Returns<Task>(_ => throw new InvalidOperationException("presenter"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _Start.Handle(new(), _StartOutput, CancellationToken.None));
+        Assert.False(_Store.HasActive);
+        await _Frames.Received(1).Stop(CancellationToken.None);
+        using SessionGate.Reservation? next = _SessionGate.TryReserve();
+        Assert.NotNull(next);
+    }
+
+    [Fact]
+    public async Task Stop_ends_domain_session_before_waiting_for_source_and_holds_reservation_until_cleanup()
+    {
+        await _Start.Handle(new(), _StartOutput, TestContext.Current.CancellationToken);
+        TrainingSession session = _Store.LoadActive().Value;
+        TaskCompletionSource sourceStopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _Frames.Stop(Arg.Any<CancellationToken>()).Returns(sourceStopped.Task);
+        IStopTrainingOutputPort output = Substitute.For<IStopTrainingOutputPort>();
+        StopTrainingInteractor stop = new(_Store, _Frames, _SessionGate);
+
+        Task stopping = stop.Handle(new(), output, TestContext.Current.CancellationToken);
+
+        Assert.False(stopping.IsCompleted);
+        Assert.Equal(TrainingState.Stopped, session.State);
+        Assert.True(_Store.HasActive);
+        Assert.Null(_SessionGate.TryReserve());
+        await output.DidNotReceive().ReportStopped(Arg.Any<StopTrainingResponse>());
+
+        sourceStopped.SetResult();
+        await stopping;
+
+        Assert.False(_Store.HasActive);
+        await output.Received(1).ReportStopped(new StopTrainingResponse(session.Id));
+        using SessionGate.Reservation? next = _SessionGate.TryReserve();
+        Assert.NotNull(next);
+    }
+
+    [Fact]
+    public async Task Stop_source_exception_still_invalidates_session_reports_stop_and_releases_reservation()
+    {
+        await _Start.Handle(new(), _StartOutput, CancellationToken.None);
+        TrainingSession session = _Store.LoadActive().Value;
+        IStopTrainingOutputPort output = Substitute.For<IStopTrainingOutputPort>();
+        _Frames.Stop(Arg.Any<CancellationToken>()).Returns<Task>(_ => throw new InvalidOperationException("source"));
+        StopTrainingInteractor stop = new(_Store, _Frames, _SessionGate);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => stop.Handle(new(), output, CancellationToken.None));
+        Assert.False(_Store.HasActive);
+        Assert.Equal(TrainingState.Stopped, session.State);
+        await output.Received(1).ReportStopped(Arg.Is<StopTrainingResponse>(r => r.SessionId == session.Id));
+        using SessionGate.Reservation? next = _SessionGate.TryReserve();
+        Assert.NotNull(next);
+    }
+
+    [Fact]
     public async Task Start_exception_or_cancellation_cleans_up_before_propagating()
     {
         _Frames.Start(Arg.Any<CancellationToken>()).Returns<Task<FrameSourceResult>>(_ => throw new OperationCanceledException());
@@ -101,20 +157,19 @@ public class TrainingUseCaseTests
     }
 
     [Fact]
-    public async Task Stop_invalidates_announcements_and_restart_has_fresh_tracking_and_attempts()
+    public async Task Stop_ends_session_and_restart_has_fresh_tracking_and_attempts()
     {
         await _Start.Handle(new(), _StartOutput, TestContext.Current.CancellationToken);
         TrainingSession first = _Store.LoadActive().Value;
         first.ApplyTracking(Snapshot(0, SnakePosition(Team.A)));
         first.ApplyTracking(Snapshot(1000, SnakePosition(Team.A)));
         IStopTrainingOutputPort output = Substitute.For<IStopTrainingOutputPort>();
-        StopTrainingInteractor stop = new(_Store, _Frames);
+        StopTrainingInteractor stop = new(_Store, _Frames, _SessionGate);
         await stop.Handle(new(), output, TestContext.Current.CancellationToken);
         Assert.False(_Store.HasActive);
         Assert.Equal(TrainingState.Stopped, first.State);
         await output.Received(1).ReportStopped(Arg.Is<StopTrainingResponse>(response =>
-            response.SessionId == first.Id && response.AnnouncementInvalidation != null &&
-            response.AnnouncementInvalidation.ThroughAnnouncementId == 1 && response.AnnouncementInvalidation.Attempt == first.Attempt));
+            response.SessionId == first.Id));
         await stop.Handle(new(), output, TestContext.Current.CancellationToken);
         await output.Received(1).ReportStopFailed(Arg.Any<string>());
 
@@ -131,33 +186,14 @@ public class TrainingUseCaseTests
     }
 
     [Fact]
-    public async Task Frames_from_old_sessions_or_without_session_do_not_run_vision()
+    public async Task Skips_when_no_active_training_session()
     {
         IFrameVisionOps vision = Substitute.For<IFrameVisionOps>();
         IProcessFrameOutputPort output = Substitute.For<IProcessFrameOutputPort>();
         ProcessFrameInteractor process = new(_Store);
-        await process.Handle(new(Guid.NewGuid(), At(0), vision), output, TestContext.Current.CancellationToken);
-        _Store.SaveActive(Session());
-        await process.Handle(new(Guid.NewGuid(), At(1000), vision), output, TestContext.Current.CancellationToken);
+        await process.Handle(new(At(0), vision), output, TestContext.Current.CancellationToken);
         vision.DidNotReceive().DetectBalls(Arg.Any<TableConfiguration>());
-        await output.Received(2).ReportSkipped(Arg.Any<string>());
-    }
-
-    [Fact]
-    public async Task Session_replaced_during_detection_discards_the_result()
-    {
-        TrainingSession first = Session();
-        _Store.SaveActive(first);
-        IFrameVisionOps vision = Substitute.For<IFrameVisionOps>();
-        vision.DetectBalls(Arg.Any<TableConfiguration>()).Returns(_ =>
-        {
-            _Store.SaveActive(Session());
-            return [];
-        });
-        IProcessFrameOutputPort output = Substitute.For<IProcessFrameOutputPort>();
-        await new ProcessFrameInteractor(_Store).Handle(new(first.Id, At(1000), vision), output, TestContext.Current.CancellationToken);
         await output.Received(1).ReportSkipped(Arg.Any<string>());
-        await output.DidNotReceive().ReportProcessed(Arg.Any<ProcessFrameResponse>());
     }
 
     [Fact]
@@ -185,10 +221,11 @@ public class TrainingUseCaseTests
 
         foreach (long ms in new long[] { 0, 1000, 2000, 2100, 2200, 2450, 2500 })
         {
-            await process.Handle(new(session.Id, At(ms), vision), output, TestContext.Current.CancellationToken);
+            await process.Handle(new(At(ms), vision), output, TestContext.Current.CancellationToken);
         }
 
         Assert.Equal(7, responses.Count);
+        Assert.All(responses, response => Assert.Equal(session.Id, response.SessionId));
         Assert.All(responses, response => Assert.Equal(observation, Assert.Single(response.Tracking.Observations)));
         Assert.Single(responses, response => response.PreparationConfirmed is not null);
         Assert.Equal(2, responses.Count(response => response.Announcement is not null));
@@ -250,7 +287,7 @@ public class TrainingUseCaseTests
         output.ReportProcessed(Arg.Do<ProcessFrameResponse>(value => response = value)).Returns(Task.CompletedTask);
         Frame frame = At(scene ? 1000 : 10000);
 
-        await new ProcessFrameInteractor(_Store).Handle(new(session.Id, frame, vision), output, TestContext.Current.CancellationToken);
+        await new ProcessFrameInteractor(_Store).Handle(new(frame, vision), output, TestContext.Current.CancellationToken);
 
         Assert.NotNull(response);
         Assert.Equal(session.Id, response.SessionId);
@@ -302,7 +339,7 @@ public class TrainingUseCaseTests
 
         foreach (long ms in new long[] { 0, 1000, 2000, 2100, 2850, 3000, 3100, 4100 })
         {
-            await process.Handle(new(session.Id, At(ms), vision), output, TestContext.Current.CancellationToken);
+            await process.Handle(new(At(ms), vision), output, TestContext.Current.CancellationToken);
         }
 
         ProcessFrameResponse aborted = responses[4];
@@ -339,16 +376,16 @@ public class TrainingUseCaseTests
     }
 
     [Fact]
-    public async Task Stop_before_preparation_has_no_announcement_to_invalidate()
+    public async Task Stop_before_preparation_reports_the_stopped_session()
     {
         await _Start.Handle(new(), _StartOutput, TestContext.Current.CancellationToken);
         Guid sessionId = _Store.LoadActive().Value.Id;
         IStopTrainingOutputPort output = Substitute.For<IStopTrainingOutputPort>();
 
-        await new StopTrainingInteractor(_Store, _Frames).Handle(new(), output, TestContext.Current.CancellationToken);
+        await new StopTrainingInteractor(_Store, _Frames, _SessionGate).Handle(new(), output, TestContext.Current.CancellationToken);
 
         await output.Received(1).ReportStopped(Arg.Is<StopTrainingResponse>(response =>
-            response.SessionId == sessionId && response.AnnouncementInvalidation == null));
+            response.SessionId == sessionId));
     }
 
     [Theory]

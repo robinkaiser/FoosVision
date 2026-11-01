@@ -97,13 +97,13 @@ public class TrainingSession
         }
     }
 
-    public IReadOnlyList<TrainingEvent> Stop()
+    public void Stop()
     {
         lock (_Gate)
         {
             if (State == TrainingState.Stopped)
             {
-                return [];
+                return;
             }
 
             State = TrainingState.Stopped;
@@ -111,7 +111,6 @@ public class TrainingSession
             _ActiveStrategy = null;
             _TableUpdates.CompleteTableUpdate();
             _TableUpdates.CompleteTableSceneUpdate();
-            return _Attempt is null ? [] : [new TrainingAnnouncementsInvalidated(_Attempt, _AnnouncementId)];
         }
     }
 

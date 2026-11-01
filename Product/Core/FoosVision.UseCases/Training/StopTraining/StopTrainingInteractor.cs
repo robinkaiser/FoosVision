@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Domain.Training.Entities;
-using FoosVision.Domain.Training.Events;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Training.Ports;
 
@@ -10,36 +10,48 @@ namespace FoosVision.UseCases.Training.StopTraining;
 
 public class StopTrainingInteractor : IStopTrainingInputPort
 {
-    private readonly ITrainingSessionStore _Sessions;
+    private readonly ITrainingSessionStore _SessionStore;
     private readonly IFrameSource _FrameSource;
+    private readonly SessionGate _SessionGate;
 
-    public StopTrainingInteractor(ITrainingSessionStore sessions, IFrameSource frameSource)
+    public StopTrainingInteractor(
+        ITrainingSessionStore sessionStore,
+        IFrameSource frameSource,
+        SessionGate sessionGate)
     {
-        _Sessions = sessions;
+        _SessionStore = sessionStore;
         _FrameSource = frameSource;
+        _SessionGate = sessionGate;
     }
 
     public async Task Handle(StopTrainingRequest request, IStopTrainingOutputPort output, CancellationToken ct)
     {
-        if (!_Sessions.LoadActive().TryGetValue(out TrainingSession session))
+        if (!_SessionStore.LoadActive().TryGetValue(out TrainingSession session))
         {
             await output.ReportStopFailed("No active session.");
             return;
         }
 
-        IReadOnlyList<TrainingEvent> events = session.Stop();
-        TrainingAnnouncementInvalidation? invalidation = null;
-        foreach (TrainingEvent change in events)
+        var sessionId = session.Id;
+
+        session.Stop();
+
+        try
         {
-            if (change is TrainingAnnouncementsInvalidated invalidated)
+            await _FrameSource.Stop(ct);
+        }
+        finally
+        {
+            _SessionStore.Clear();
+
+            try
             {
-                invalidation = new(invalidated.Attempt, invalidated.ThroughAnnouncementId);
+                await output.ReportStopped(new StopTrainingResponse(sessionId));
+            }
+            finally
+            {
+                _SessionGate.Release(sessionId);
             }
         }
-
-        _Sessions.Clear();
-        await _FrameSource.Stop(ct);
-        StopTrainingResponse response = new(session.Id, invalidation);
-        await output.ReportStopped(response);
     }
 }

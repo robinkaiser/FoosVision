@@ -3,7 +3,7 @@
 
 namespace FoosVision.UseCases.Training.StopTraining;
 
-public record StopTrainingResponse(Guid SessionId, TrainingAnnouncementInvalidation? AnnouncementInvalidation);
+public record StopTrainingResponse(Guid SessionId);
 
 public interface IStopTrainingOutputPort
 {

@@ -5,7 +5,6 @@ using FoosVision.Adapters.Common.Live;
 using FoosVision.Adapters.Recorder.Calibration;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
-using FoosVision.Adapters.Recorder.Game;
 using FoosVision.Adapters.Recorder.Game.Control;
 using FoosVision.Adapters.Recorder.Game.Live;
 using FoosVision.Adapters.Recorder.Game.Orchestration;
@@ -19,6 +18,7 @@ using FoosVision.Recorder.Composition.InMemoryStores;
 using FoosVision.UseCases.Calibration.Ports;
 using FoosVision.UseCases.Calibration.UpdateTable;
 using FoosVision.UseCases.Calibration.UpdateTableScene;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Settings;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Game.CompleteTableSceneUpdate;
@@ -57,6 +57,7 @@ internal class GameModule : IDisposable
         IRecorderLiveAnalysisPublisher liveAnalysisPublisher,
         IUpdateTableSceneOutputPort updateTableScenePresenter,
         IVideoDumpOrchestrator videoDumpOrchestrator,
+        SessionGate sessionGate,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
         RuntimeMetricsOptions? runtimeMetricsOptions = null)
@@ -66,8 +67,8 @@ internal class GameModule : IDisposable
         _VideoDumpOrchestrator = videoDumpOrchestrator;
         SessionStore = new GameSessionStore();
 
-        StartGame = new StartGameInteractor(SessionStore, settingsStore, frameSource);
-        StopGame = new StopGameInteractor(SessionStore, frameSource);
+        StartGame = new StartGameInteractor(SessionStore, settingsStore, frameSource, sessionGate);
+        StopGame = new StopGameInteractor(SessionStore, frameSource, sessionGate);
         ProcessFrame = new ProcessFrameInteractor(SessionStore);
         CompleteTableUpdate = new CompleteTableUpdateInteractor(SessionStore);
         CompleteTableSceneUpdate = new CompleteTableSceneUpdateInteractor(SessionStore);
@@ -152,11 +153,11 @@ internal class GameModule : IDisposable
 
     public GameCommandHandler CommandHandler { get; }
 
-    public async Task StopIfActive(CancellationToken ct)
+    public async Task StopIfActive(CancellationToken ct, RecorderStateChangeReason reason)
     {
         if (!SessionStore.HasActive) return;
 
-        GameEventPresenter presenter = new(FrameLoop, _RuntimeState, _VideoDumpOrchestrator, RecorderStateChangeReason.EndOfInput);
+        GameEventPresenter presenter = new(FrameLoop, _RuntimeState, _VideoDumpOrchestrator, reason);
         await StopGame.Handle(new StopGameRequest(), presenter, ct);
     }
 }

@@ -1,7 +1,8 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-11-01. Status: Arbeitspakete 1–5 implementiert und geprüft.
-Arbeitspakete 6–11 sind offen; Training ist noch nicht in die App-Laufzeit integriert.
+Stand: 2026-11-01. Status: Arbeitspakete 1–6 implementiert und geprüft.
+Die Recorder-Laufzeit ist angeschlossen. Arbeitspakete 7–11 bleiben offen;
+Viewer-Bedienung, lokale Sprachausgabe und Trainingsclips folgen in 7–9.
 
 ## Ziel und Umfang
 
@@ -292,7 +293,7 @@ Abhängigkeit: Schritte 0–2.
   keine Game-Replay-Strategien ändern und keinen Replay-Transport implementieren.
 - [x] Wartezeitverteilungen und gleichverteilte strategieeigene Varianten über injizierbare
   Zufallsquelle deterministisch auswählen; eine Wait-Ziehung pro Ready.
-- [x] Stop setzt Strategien zurück und invalidiert Ansagen. Neue Session erhält frische
+- [x] Stop setzt Strategien zurück; beim Session-Ende werden alle Ansagen verworfen. Neue Session erhält frische
   Tracking-/Strategieinstanzen. Kleine Geometrieupdates ändern den Versuch nicht.
 - [x] Explizite monotone Frame-Zeit für alle Fristen verwenden; keine Tasks/Wall-Clock-Timer
   in der Domain, keine Audio-Rückmeldung für Zustandsfortschritt.
@@ -317,8 +318,8 @@ Umgesetzt am 2026-10-30:
 - TrainingOptions validiert Aktivierung und Wartegrenzen und hält eine unveränderliche
   Kopie der aktivierten Menge. ITrainingOptionsProvider ist der schmale spätere Mapping-Port;
   JSON-Konfiguration/Settings-Mapping aus Arbeitspaket 4 sind noch nicht implementiert.
-- ProcessFrame und Kalibrierungsabschlüsse prüfen Session-IDs; während Vision gewechselte
-  Sessions werden verworfen. Stop beendet die Domain-Session vor dem Frame-Source-Shutdown.
+- ProcessFrame lädt wie Game die aktive Session selbst; sein Request enthält Frame und Vision.
+  Kalibrierungsabschlüsse prüfen Session-IDs. Stop beendet die Domain-Session vor dem Frame-Source-Shutdown.
 - Keine neuen Projekte/Projektabhängigkeiten, Protokoll-, JSON-, App- oder Audioänderungen.
   Game einschließlich ReplayDecision bleibt fachlich unverändert. Kein Release-Note-Eintrag,
   da dieser Core-Schnitt noch keine sichtbare Trainingsfunktion ausliefert.
@@ -461,32 +462,84 @@ Rückkehrentscheidung liegt am Recorder, die Mindestwiedergabe bleibt beim Viewe
 
 Abhängigkeit: Schritte 2–5.
 
-- [ ] TrainingCommandHandler, TrainingEventPresenter und Training-FramePresenter ergänzen.
+- [x] TrainingCommandHandler, TrainingEventPresenter und Training-FramePresenter ergänzen.
   Sie übersetzen Usecase-Ausgaben in Runtime-State, Live-Daten und gemeinsame Replay-Nachrichten.
   Ansage-Ausgaben werden lokal an die Recorder-Sprachkoordination übergeben, nicht
   als Nachrichten an den Viewer gesendet.
-- [ ] RecorderCommandRouter um Training erweitern. Gegenseitigen Ausschluss von Setup,
+- [x] RecorderCommandRouter um Training erweitern. Gegenseitigen Ausschluss von Setup,
   Game und Training recorderseitig absichern, einschließlich konkurrierender Starts;
   UI-Sperren allein reichen nicht. Regel in Core/Usecases, technische Koordination im Adapter.
-- [ ] TrainingModule und InMemory-TrainingSessionStore in Recorder.Composition ergänzen;
+- [x] TrainingModule und InMemory-TrainingSessionStore in Recorder.Composition ergänzen;
   über RecorderCompositionRoot und RecorderHost verbinden.
-- [ ] Strategieaktivierung zentral beim Session-Start verdrahten: Validierte Konfiguration
+- [x] Strategieaktivierung zentral beim Session-Start verdrahten: Validierte Konfiguration
   über eine Factory in frische Instanzen aller aktivierten Strategien übersetzen. ID-Mapping
   gehört an diesen Erzeugungspunkt, Erkennungs- und Ablaufregeln bleiben in der Domain.
   Änderungen der aktivierten Menge/Optionen folgen dem bestehenden Neustart-Workflow.
   Der Wechsel zwischen bereits aktivierten Strategien erfolgt durch die erkannte
   Vorbereitung innerhalb derselben Session, ohne Neustart.
-- [ ] StopActiveSessions, EndOfInput, SourceStopped, Fehler, Disconnect und Rollenwechsel
+- [x] StopActiveSessions, EndOfInput, SourceStopped, Fehler, Disconnect und Rollenwechsel
   auf Training erweitern. FrameLoop, Kalibrierung, Replay und ausstehende Ansagen beenden.
-- [ ] RecorderRuntimeStateController um Training erweitern. Startfehler räumen teilweise
+- [x] RecorderRuntimeStateController um Training erweitern. Startfehler räumen teilweise
   erzeugte Ressourcen auf; alte Callback-Ergebnisse werden an der Session-ID verworfen.
-- [ ] Diagnostische Videodumps, Session-Bezeichnungen und Metriken für Training mitführen.
+- [x] Diagnostische Videodumps, Session-Bezeichnungen und Metriken für Training mitführen.
   Produktregeln dabei nicht in Logging- oder Dump-Komponenten verlagern.
 
 Tests: Router/Presenter und Runtime-State in Recorder-Adapter-Tests; Usecase-Tests für
 Startbedingungen und Ausschluss. Bestehende Setup-/Game-Lifecycle-Fälle erhalten.
 
 Abnahme: Training ist als eigener Recorder-Modus start-/stoppbar und vollständig aufräumbar.
+
+Umgesetzt und geprüft am 2026-11-01:
+
+- TrainingCommandHandler, TrainingEventPresenter und eigene Frame-/TableUpdate-Presenter
+  sind über TrainingModule, TrainingSessionStore, RecorderCompositionRoot und RecorderHost
+  angeschlossen. LiveFramePublisher, FrameVisionOps, FrameProcessingLoop, Kalibrierung,
+  Vision-Kontext und Process-FPS werden wiederverwendet. Training führt keine Game-Zeitfoul-
+  oder Game-Replay-Regeln aus. Beobachtungen und Masken bleiben diagnostisch zuschaltbar.
+- SessionGate reserviert den Recorder in den Start-Usecases vor der ersten
+  asynchronen Quellenoperation. Alle drei Modi teilen dieselbe Reservierung; sie bleibt
+  bis zum abgeschlossenen Stop einschließlich Presenter-Aufräumen gehalten. Fehlstarts,
+  Cancellation und Presenter-Fehler geben sie wieder frei. Eine alte Session-ID kann die
+  Reservierung einer neuen Session nicht freigeben. Der Router serialisiert die technischen
+  Kommandos und den zentralen Sessionabbau und beobachtet Fehler. Nach normalem Sessionabbau
+  bleiben Starts ohne neuen Handshake möglich. Beim endgültigen Dispose wird zuerst die
+  Kommandoannahme am Netzwerk beendet; Publisher bleiben bis zum Session-Ende verfügbar.
+  Noch wartende Netzwerkkommandos werden über den vorhandenen Server-CancellationToken abgebrochen.
+- Der validierte Startup-Provider wird jetzt tatsächlich beim Trainingsstart gelesen.
+  TrainingSession erzeugt über die vorhandene TrainingStrategyFactory frische Instanzen
+  aller aktivierten Strategien. Es gibt keinen zweiten Settings-Fallback in Composition
+  und keine Strategie-Fallunterscheidung in den Frame-Adaptern.
+- Veraltete, separat laufende Kalibrierungsergebnisse werden anhand der aktiven Session-ID
+  verworfen. Live-Frames werden wie bei Game der im Interactor geladenen aktiven Session
+  zugeordnet; der Request enthält keine zusätzliche Session-ID. Die Frame-Ausgabe wird vom Frame-Worker abgewartet;
+  Presenter besitzen keine zusätzlichen Session- oder Sequenzprüfungen. Runtime-State schützt
+  laufende Sessions vor abgewiesenen Starts/falschen Stops. Start-/Stop-Ausgaben folgen dem
+  serialisierten Kommando-Lifecycle.
+- StopTraining, StopActiveSessions und Dispose beenden Training einschließlich FrameLoop
+  und lokaler Ansage-Lebensdauer. Kalibrierungsaufträge bleiben sessiongebunden; Ergebnisse
+  alter Sessions werden verworfen und ihre Frame-Handles nach Abschluss freigegeben.
+  Der Stop wartet wie bei Game nicht auf laufende Kalibrierungsarbeit. EndOfInput bleibt
+  der VideoPlayer-Pfad; der App-Lifecycle kann SourceStopped übergeben. Frame-Verarbeitungsfehler
+  werden wie bei Game im gemeinsamen FrameProcessingLoop protokolliert; die Verarbeitung
+  wird mit den folgenden Frames fortgesetzt.
+  Expliziter Session-/Verbindungsabbau und Rollenwechsel verwenden den zentralen Stop-Pfad;
+  eine neue Erkennung stiller Netzwerkabbrüche oder ein Heartbeat wurde nicht eingeführt.
+- ITrainingAnnouncements ist der lokale, nicht blockierende Übergabepunkt für Ansagen und
+  Invalidierungen einschließlich Start/Stop einer Session. Die optionale Host-Injektion
+  verwendet bis Arbeitspaket 8 eine Null-Implementierung. Der vollständige Stop übergibt nur
+  die Session-ID an StopSession; gezielte Invalidierungen bleiben der laufenden Session
+  vorbehalten. TTS, Queue, Deduplizierung und
+  Plattform-Audio sind ausdrücklich noch nicht implementiert. Kein Audio geht zum Viewer.
+- Der FramePresenter veröffentlicht die gemeinsame ReplayReturnToLiveMessage mit Session
+  und Trigger. Clip-Erfassung, Wiedergabeparameter und technische Training-Replay-Ausführung
+  bleiben vollständig Arbeitspaket 9 vorbehalten; hier entstehen keine wartenden Trainingsclips.
+- Trainingszustandswechsel werden strukturiert und nur bei Änderungen geloggt. Bestehende
+  aggregierte Frame-/Vision-Metriken werden mitgeführt. Gestopptes Training verwendet
+  VideoDumpSessionKind.Training und recorder-training-Dateinamen mit den vorhandenen
+  Aufbewahrungsregeln. Configuration.md, Diagnostics.md und aktuelle Release Notes sind
+  entsprechend dem tatsächlich implementierten Umfang aktualisiert.
+- Keine neuen Projekte oder Projektabhängigkeiten. Keine Änderung an Protokollnachrichten,
+  Ports, Handshake-Verträgen oder Versionen. Keine Apps, Tools oder Geräteworkflows gestartet.
 
 ## 7. Viewer-Adapter, Composition und minimale Bedienung anschließen
 
@@ -633,7 +686,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
 3. Strategie-Vertrag, Snake, Zieher, Tick-Tack Pass und Koordination
    implementiert (3). JSON-Konfiguration und Settings-Mapping sind abgeschlossen (4),
    einschließlich Validierung, Provider-Snapshot und Konfigurationsdokumentation.
-4. Protokoll und Transport sind abgeschlossen (5); Recorder-Laufzeit anschließen (6).
+4. Protokoll und Transport (5) sowie Recorder-Adapter, Composition und Lifecycle (6)
+   sind abgeschlossen und geprüft. Training ist recorderseitig start-/stoppbar.
 5. Viewer-Bedienung und lokale Recorder-Sprachausgabe zum ersten vollständigen Feature
    ergänzen (7–8); Sprachausgabe kann nach Schritt 6 unabhängig von Schritt 7 entstehen.
 6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).

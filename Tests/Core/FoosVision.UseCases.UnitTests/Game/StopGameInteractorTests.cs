@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Game.StopGame;
 using NSubstitute;
@@ -9,6 +10,7 @@ namespace FoosVision.UseCases.UnitTests.Game;
 
 public class StopGameInteractorTests
 {
+    private readonly SessionGate _SessionGate = new();
     private readonly FakeGameSessionStore _FakeStore;
     private readonly IStopGameOutputPort _Output;
     private readonly IFrameSource _FrameSource;
@@ -21,7 +23,7 @@ public class StopGameInteractorTests
         _Output = Substitute.For<IStopGameOutputPort>();
         _FrameSource = Substitute.For<IFrameSource>();
 
-        _Testee = new StopGameInteractor(_FakeStore, _FrameSource);
+        _Testee = new StopGameInteractor(_FakeStore, _FrameSource, _SessionGate);
     }
 
     [Fact]

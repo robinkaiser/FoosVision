@@ -50,7 +50,7 @@ public class SetupEventPresenter :
             null,
             RecorderStateChangeReason.InternalError,
             reason,
-            CancellationToken.None);
+            CancellationToken.None, onlyWhenInactive: true);
     }
 
     public async Task ReportStopped(StopSetupResponse response)
@@ -74,6 +74,6 @@ public class SetupEventPresenter :
             null,
             RecorderStateChangeReason.InternalError,
             reason,
-            CancellationToken.None);
+            CancellationToken.None, onlyWhenInactive: true);
     }
 }

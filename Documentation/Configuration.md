@@ -199,7 +199,7 @@ The `diagnostics` section controls diagnostics behavior:
 
 - `diagnostics.logging.file`: local compact JSON file logs.
 - `diagnostics.logging.seq`: optional Seq sink and the Seq settings shared with connected viewers.
-- `diagnostics.video`: recorder-side diagnostic video artifacts for both setup and game sessions.
+- `diagnostics.video`: recorder-side diagnostic video artifacts for setup, game, and training sessions.
 - `diagnostics.runtimeMetrics`: periodic runtime metric logging.
 - `diagnostics.vision.debugVisualizations`: vision debug overlays.
 

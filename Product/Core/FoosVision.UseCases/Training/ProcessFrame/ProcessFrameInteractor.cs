@@ -12,28 +12,23 @@ namespace FoosVision.UseCases.Training.ProcessFrame;
 
 public class ProcessFrameInteractor : IProcessFrameInputPort
 {
-    private readonly ITrainingSessionStore _Sessions;
+    private readonly ITrainingSessionStore _SessionStore;
 
-    public ProcessFrameInteractor(ITrainingSessionStore sessions) => _Sessions = sessions;
+    public ProcessFrameInteractor(ITrainingSessionStore sessionStore)
+    {
+        _SessionStore = sessionStore;
+    }
 
     public async Task Handle(ProcessFrameRequest request, IProcessFrameOutputPort output, CancellationToken ct)
     {
-        if (!_Sessions.LoadActive().TryGetValue(out TrainingSession session) || session.Id != request.SessionId)
+        if (!_SessionStore.LoadActive().TryGetValue(out TrainingSession session))
         {
-            await output.ReportSkipped("No matching active training session.");
+            await output.ReportSkipped("No active session.");
             return;
         }
 
-        ct.ThrowIfCancellationRequested();
-        var observations = request.Vision.DetectBalls(session.TableConfig);
-        ct.ThrowIfCancellationRequested();
-        if (!_Sessions.LoadActive().TryGetValue(out TrainingSession current) || !ReferenceEquals(session, current))
-        {
-            await output.ReportSkipped("Training session changed during detection.");
-            return;
-        }
-
-        TrainingFrameResult result = session.ApplyObservations(request.Frame, observations);
+        var observed = request.Vision.DetectBalls(session.TableConfig);
+        TrainingFrameResult result = session.ApplyObservations(request.Frame, observed);
         LiveTrackingSnapshot tracking = result.Tracking;
         TrainingAttempt? preparationConfirmed = null;
         TrainingAnnouncementInvalidation? invalidation = null;
@@ -79,7 +74,7 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
             tracking.BallPosition,
             tracking.BallVelocityPxPerS,
             tracking.BallCandidates,
-            [.. observations],
+            [.. observed],
             tracking.Possession,
             tracking.LastKnownPossession,
             tracking.PossessionTimeMs,

@@ -88,6 +88,7 @@ public class VideoDumpOrchestrator : IVideoDumpOrchestrator
         {
             VideoDumpSessionKind.Setup => "setup",
             VideoDumpSessionKind.Game => "game",
+            VideoDumpSessionKind.Training => "training",
             _ => "unknown",
         };
 

@@ -104,6 +104,12 @@ internal class NetworkModule : IDisposable
         _Started = true;
     }
 
+    public void StopCommandReception()
+    {
+        _CommandHost?.Dispose();
+        _CommandHost = null;
+    }
+
     public void ReleaseViewerConnection()
     {
         if (Interlocked.CompareExchange(ref _ViewerConnected, 0, 1) != 1)
@@ -125,7 +131,7 @@ internal class NetworkModule : IDisposable
             _LiveAnalysisPublisher.Dispose();
             _EventPublisher.Dispose();
 
-            _CommandHost?.Dispose();
+            StopCommandReception();
             _HandshakeHost.Dispose();
 
             _DiscoveryServer.Dispose();

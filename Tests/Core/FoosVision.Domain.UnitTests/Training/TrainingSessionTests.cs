@@ -146,8 +146,7 @@ public class TrainingSessionTests
         TrainingFrameResult lost = session.ApplyTracking(Snapshot(3000, default, phase: LiveTrackingPhase.BallLost));
         Assert.Equal(TrainingAbortReason.BallLost, Assert.Single(lost.Events.OfType<TrainingAttemptAborted>()).Reason);
         Assert.Empty(session.ApplyTracking(Snapshot(3000, SnakePosition(Team.A))).Events);
-        Assert.Single(session.Stop().OfType<TrainingAnnouncementsInvalidated>());
-        Assert.Empty(session.Stop());
+        session.Stop();
         Assert.Empty(session.ApplyTracking(Snapshot(10000, SnakePosition(Team.A))).Events);
         Assert.Equal(TrainingState.Stopped, session.State);
     }

@@ -9,6 +9,7 @@ public enum VideoDumpSessionKind
 {
     Setup,
     Game,
+    Training,
 }
 
 public record VideoDumpRequest(

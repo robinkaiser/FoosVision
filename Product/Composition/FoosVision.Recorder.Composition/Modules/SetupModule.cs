@@ -15,6 +15,7 @@ using FoosVision.Protocol.Messages.Events;
 using FoosVision.Recorder.Composition.InMemoryStores;
 using FoosVision.UseCases.Calibration.Ports;
 using FoosVision.UseCases.Calibration.UpdateTable;
+using FoosVision.UseCases.Common;
 using FoosVision.UseCases.Dependencies.Video;
 using FoosVision.UseCases.Setup.CompleteTableUpdate;
 using FoosVision.UseCases.Setup.Ports;
@@ -40,6 +41,7 @@ internal class SetupModule : IDisposable
         RecorderRuntimeStateController runtimeState,
         IRecorderLiveDataPublisher liveDataPublisher,
         IVideoDumpOrchestrator videoDumpOrchestrator,
+        SessionGate sessionGate,
         RuntimeMetricsOptions? runtimeMetricsOptions = null)
     {
         _EventPublisher = eventPublisher;
@@ -47,8 +49,8 @@ internal class SetupModule : IDisposable
         _VideoDumpOrchestrator = videoDumpOrchestrator;
         SessionStore = new SetupSessionStore();
 
-        StartSetup = new StartSetupInteractor(SessionStore, frameSource);
-        StopSetup = new StopSetupInteractor(SessionStore, frameSource);
+        StartSetup = new StartSetupInteractor(SessionStore, frameSource, sessionGate);
+        StopSetup = new StopSetupInteractor(SessionStore, frameSource, sessionGate);
         ProcessFrame = new ProcessFrameInteractor(SessionStore);
         CompleteTableUpdate = new CompleteTableUpdateInteractor(SessionStore);
 
@@ -95,11 +97,11 @@ internal class SetupModule : IDisposable
 
     public SetupCommandHandler CommandHandler { get; }
 
-    public async Task StopIfActive(CancellationToken ct)
+    public async Task StopIfActive(CancellationToken ct, RecorderStateChangeReason reason)
     {
         if (!SessionStore.HasActive) return;
 
-        SetupEventPresenter presenter = new(FrameLoop, _RuntimeState, _VideoDumpOrchestrator, RecorderStateChangeReason.EndOfInput);
+        SetupEventPresenter presenter = new(FrameLoop, _RuntimeState, _VideoDumpOrchestrator, reason);
         await StopSetup.Handle(new StopSetupRequest(), presenter, ct);
     }
 }
