@@ -1,6 +1,7 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-11-01. Status: Arbeitspakete 1–7 implementiert und geprüft.
+Stand: 2026-11-03. Status: Arbeitspakete 1–7 implementiert und geprüft.
+Außerplanmäßige Erweiterung 7a ergänzt zwei Ansagemodi vor Arbeitspaket 8.
 Recorder-Laufzeit und Viewer-Bedienung sind angeschlossen. Arbeitspakete 8–11 bleiben offen;
 lokale Sprachausgabe und Trainingsclips folgen in 8–9.
 
@@ -13,8 +14,9 @@ ein Flag innerhalb von Game noch eine abgeleitete GameSession.
 
 Erster nutzbarer Meilenstein: Nach erfolgreichem Tisch-Setup Training starten, eine
 strategiespezifische Vorbereitung auf der Dreier- oder Fünferreihe erkennen, „Ready“
-ansagen und nach einer zufälligen Wartezeit innerhalb konfigurierter Grenzen eine
-passende Schuss- oder Passvariante ansagen. Auslösung und erneute
+ansagen und nach einer zufälligen Wartezeit innerhalb konfigurierter Grenzen die
+Ausführung freigeben. `onReady` (Default): „<Variante> ready“ → Wartezeit → „Shoot!“.
+`onShoot`: bisheriges strategiespezifisches Ready → Wartezeit → Variante. Auslösung und erneute
 Bereitschaft werden ebenfalls strategiespezifisch erkannt. Konfiguration
 erfolgt ausschließlich über die bestehende Recorder-Config.json. Eine minimale
 Start-/Stop-Bedienung erfolgt über einen dritten Button im Viewer. Ansagen erfolgen
@@ -142,10 +144,15 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
 - **Varianten:** Snake: Push/Pull/Middle; Pull: Short/Middle/Long; Tick-Tack: Wall/Lane/Split.
   Gleichverteilte zufällige Auswahl, direkte Wiederholungen erlaubt. Stabile IDs und
   sprechbare Texte im Core; keine Erfolgsprüfung der angesagten Variante.
-- **Timeout:** Nach Variantenansage 3 Sekunden bis Bewegungsbeginn. Rechtzeitig gestartete
+- **Ansagemodus:** Pflichtfeld `training.variantAnnouncement` vor `enabledStrategies`:
+  `onReady` (Default) wählt die Variante bei Ready und sagt „<Variantentext> ready“,
+  danach „Shoot!“. `onShoot` behält Ready und die spätere Variantenansage.
+  Gilt für alle Strategien, auch Pässe. Keine Migration alter JSON-Dateien; fehlende,
+  null oder unbekannte Werte sind ungültig. Bestehende Behandlung ungültiger Config bleibt.
+- **Timeout:** Nach Ausführungsfreigabe (Shoot bzw. Variante) 3 Sekunden bis Bewegungsbeginn. Rechtzeitig gestartete
   Bewegungen dürfen ihr Entscheidungsfenster und gegebenenfalls den Nachlauf abschließen.
 - **Vorzeitige Ausführung/Setup-Verlust:** Einmal Aborted mit intern getrennten Gründen;
-  keine Variantenansage mehr für diesen Versuch. Alte Ansagen invalidieren, dabei die
+  keine Ausführungsfreigabe mehr für diesen Versuch. Alte Ansagen invalidieren, dabei die
   eigene Aborted-Ausgabe gültig lassen. Nächstes Ready invalidiert auch alte Aborted-Ausgaben.
 - **Erneuter Versuch:** Vollständige neue Vorbereitung, frische Erkennungshistorien aller
   Strategien. Unverändert liegender Snake/Pull nach Timeout erzeugt kein weiteres Ready.
@@ -156,7 +163,7 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   zusätzliche Zufallsziehung zur Priorisierung. Während des Versuchs keine Konkurrenz.
 - **Tracking/Zeit:** Vorhandene Glättung und Verlustphasen von BallTracking/LiveTracking
   verwenden. Keine zusätzliche Verdeckungstoleranz oder pauschale Zeitlückenregel.
-  Keine Ansagen ohne neue Frames, keine Variantenansage ohne beobachteten Ball;
+  Keine Ansagen ohne neue Frames, keine Ausführungsfreigabe ohne beobachteten Ball;
   endgültiger Trackingverlust führt zum Abbruch. Doppelte/rückläufige Frame-Zeit ignorieren.
 - **Geometrieänderung:** Kleine laufende Korrekturen normal übernehmen; weder Versuch noch
   Erkennungshistorie deswegen zurücksetzen. Keine zusätzliche Änderungserkennung.
@@ -594,6 +601,22 @@ Umgesetzt und geprüft am 2026-11-01:
   Replay-Stop, Session-Wechsel und Dispose. Android-Viewer-App einschließlich Composition
   und XAML erfolgreich gebaut (0 Warnungen, 0 Fehler). `git diff --check` erfolgreich.
 
+## 7a. Ansagemodus vor den Folgepaketen ergänzen
+
+Außerplanmäßige Nutzerentscheidung vom 2026-11-03, umgesetzt vor Arbeitspaket 8:
+
+- [x] Pflichtfeld `variantAnnouncement` mit `onReady`/`onShoot` vor `enabledStrategies`;
+  neue Standardkonfigurationen verwenden `onReady`. Alte JSON ohne Feld sind ungültig.
+- [x] Unveränderliche Core-Option und Mapping in Recorder und VideoPlayer ergänzen.
+- [x] Variante bei `onReady` einmal bei Vorbereitung wählen und mit Ready ausgeben;
+  nach Wartezeit `Shoot` mit Text „Shoot!“ ausgeben. `onShoot` behält den bisherigen Ablauf.
+- [x] Ausführungsfreigabe von Variantenauswahl trennen: kein vorzeitiger Abschluss,
+  Timeout erst ab Freigabe. Replay-Rückkehr bleibt bei bestätigter Vorbereitung/Ready.
+- [x] Domain-, Usecase-, Settings- und Provider-Tests sowie Konfigurationsdokumentation ergänzen.
+
+Historische Umsetzungsnotizen der Pakete 3–7 beschreiben den damaligen `onShoot`-Ablauf;
+für Folgepakete gelten beide Modi. Keine Protokoll- oder Projektabhängigkeitsänderung.
+
 ## 8. Sprachausgabe implementieren und in den Versuch integrieren
 
 Abhängigkeit: Schritte 0, 3, 4 und 6. Ausgabe ausschließlich am Recorder-Lautsprecher;
@@ -618,6 +641,8 @@ Viewer-Implementierung und Audio-Protokoll sind dafür nicht erforderlich.
   Veraltete Ansagen lediglich verwerfen.
 - [ ] Zusammenspiel mit Replay, App-Hintergrund, Audio-Fokusverlust, Disconnect und
   Rollenwechsel definieren. Bei Fortsetzung keine alte Ansage nachholen.
+- [ ] Beide Modi aus 7a ausführen: Ready mit optionaler Variante sowie Shoot/Variant
+  anhand des vom Core gelieferten Texts sprechen; keine erneute Variantenauswahl im Adapter.
 - [ ] Recorder führt die angeforderte Ansage lokal aus. Ausgabelatenz beeinflusst weder
   Timer noch Trainingszustand; der Viewer erhält keine Audioanforderung.
 
@@ -625,7 +650,8 @@ Tests: In Recorder-Adapter-Tests Fake-Speech-Port mit kontrollierten Abschlüsse
 Verspätung, Fehler, fehlende Sprache und Reconnect. Hardware/TTS nicht in Unit-Tests.
 
 Abnahme Meilenstein 1: Für alle drei per JSON kombinierbaren Strategien funktionieren Vorbereitung
-→ Ready → zufällige Wartezeit → passende Ansage → strategiespezifische Auslösung → neuer Versuch;
+→ Ready (bei `onReady` mit Variante) → zufällige Wartezeit → Shoot/Variante
+→ strategiespezifische Auslösung → neuer Versuch, für beide Ansagemodi;
 vorzeitige Auslösung oder Verlust der Vorbereitung führt zu Aborted und erfordert erneute
 Vorbereitung. Dies funktioniert
 durch beide Rollen. Gerätetest erfolgt manuell durch den Nutzer.
@@ -651,7 +677,7 @@ Abhängigkeit: stabiler Meilenstein 1 und Replay-Entscheidungen aus Schritt 0.
   Rückkehrregel prüfen und gezielt erweitern. Analyse und Decoder weiterverwenden.
   Die gemeinsame Rückkehrnachricht und Mindestwiedergabe sind bereits in Schritt 5 umgesetzt;
   hier deren Trainings-Anschluss verwenden, keine neue Viewer-Rückkehrregel einführen.
-- [ ] Trainings-Replay wiederholen, bis der Recorder eine neue Vorbereitung bestätigt.
+- [ ] Trainings-Replay in beiden Ansagemodi wiederholen, bis der Recorder eine neue Vorbereitung bestätigt.
   Laufendes Live-Tracking erkennt diese auch während Wiedergabe/Analyse. Recorder spricht
   Ready lokal und fordert mit der gemeinsamen ReplayReturnToLiveMessage die Rückkehr an.
   Viewer beendet Replay, sobald mindestens ein vollständiger Durchlauf abgeschlossen ist.
@@ -715,8 +741,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
    einschließlich Validierung, Provider-Snapshot und Konfigurationsdokumentation.
 4. Protokoll und Transport (5) sowie Recorder-Adapter, Composition und Lifecycle (6)
    sind abgeschlossen und geprüft. Training ist recorderseitig start-/stoppbar.
-5. Viewer-Bedienung ist abgeschlossen und geprüft (7). Lokale Recorder-Sprachausgabe
-   zum ersten vollständigen Feature ergänzen (8).
+5. Viewer-Bedienung ist abgeschlossen und geprüft (7). Beide Ansagemodi sind in 7a ergänzt.
+   Lokale Recorder-Sprachausgabe zum ersten vollständigen Feature ergänzen (8).
 6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
 7. Dokumentation und Verifikation pro Schnitt nachführen (10).
 

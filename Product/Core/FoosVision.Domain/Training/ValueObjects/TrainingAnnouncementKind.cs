@@ -7,5 +7,6 @@ public enum TrainingAnnouncementKind
 {
     Ready,
     Variant,
+    Shoot,
     Aborted,
 }

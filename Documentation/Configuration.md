@@ -85,6 +85,7 @@ Alternative PC workflow:
     }
   },
   "training": {
+    "variantAnnouncement": "onReady",
     "enabledStrategies": [
       "snakeShot",
       "pullShot",
@@ -241,11 +242,12 @@ Operational diagnostics workflows are documented in [Diagnostics](Diagnostics.md
 
 ## Training Settings
 
+- `variantAnnouncement` (required): `onReady` (default) announces “<variant text> ready”, waits, then announces “Shoot!”. `onShoot` keeps the strategy-specific Ready announcement, waits, then announces the variant.
 - `enabledStrategies`: active strategies: `snakeShot` (Snake), `pullShot` (Pull), `tickTackPass` (Tick-Tack Pass). An empty list enables all strategies.
 
 Each strategy has these settings:
 
-- `minWaitSeconds` / `maxWaitSeconds`: minimum/maximum delay between Ready and the variant announcement, in seconds. Equal values give a fixed delay.
+- `minWaitSeconds` / `maxWaitSeconds`: minimum/maximum delay between Ready and the execution cue (“Shoot!” for `onReady`, the variant for `onShoot`), in seconds. Equal values give a fixed delay.
 - `waitDistribution`: `uniform` gives all delays equal probability; `preferLong` favors longer delays; `preferShort` favors shorter delays.
 - `variantSelection`: `randomWithRepeats` selects variants randomly with equal probability, allowing immediate repeats.
 - `variants`: variants to choose from. Each entry has a unique `id` and a spoken `text`. Include at least one variant.

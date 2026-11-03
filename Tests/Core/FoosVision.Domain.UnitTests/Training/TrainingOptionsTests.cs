@@ -7,6 +7,14 @@ namespace FoosVision.Domain.UnitTests.Training;
 
 public class TrainingOptionsTests
 {
+    [Fact]
+    public void Variant_announcement_defaults_to_onReady_and_rejects_unknown_modes()
+    {
+        Assert.Equal(TrainingVariantAnnouncement.OnReady, TrainingOptions.Default.VariantAnnouncement);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new TrainingOptions(
+            TrainingOptions.Default.Strategies, (TrainingVariantAnnouncement)99));
+    }
+
     [Theory]
     [InlineData(0, 2, 2, 6)]
     [InlineData(0.25, 3, 4, 4)]

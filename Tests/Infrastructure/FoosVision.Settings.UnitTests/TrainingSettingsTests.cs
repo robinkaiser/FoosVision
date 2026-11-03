@@ -82,6 +82,9 @@ public class TrainingSettingsTests
     [InlineData("enabledStrategies", "[\"snakeShot\",\"snakeShot\"]")]
     [InlineData("enabledStrategies", "null")]
     [InlineData("snakeShot", "null")]
+    [InlineData("variantAnnouncement", "null")]
+    [InlineData("variantAnnouncement", "\"unknown\"")]
+    [InlineData("variantAnnouncement", "\"OnReady\"")]
     public void Invalid_training_config_is_rejected(string property, string value)
     {
         JsonObject json = DefaultJson();
@@ -114,7 +117,7 @@ public class TrainingSettingsTests
         JsonObject json = DefaultJson();
         Assert.Equal("training", json.Last().Key);
         JsonObject training = json["training"]!.AsObject();
-        Assert.Equal(["enabledStrategies", "snakeShot", "pullShot", "tickTackPass"], training.Select(property => property.Key));
+        Assert.Equal(["variantAnnouncement", "enabledStrategies", "snakeShot", "pullShot", "tickTackPass"], training.Select(property => property.Key));
         foreach (string id in new[] { "snakeShot", "pullShot", "tickTackPass" })
         {
             Assert.Equal(["minWaitSeconds", "maxWaitSeconds", "waitDistribution", "variantSelection", "variants"],
@@ -146,6 +149,35 @@ public class TrainingSettingsTests
         JsonObject json = DefaultJson();
         json["training"]!["enabledStrategies"] = new JsonArray();
         Assert.Empty(RecorderSettingsJson.DeserializeAndValidate(json.ToJsonString()).Training.EnabledStrategies);
+    }
+
+    [Fact]
+    public void Missing_variant_announcement_is_rejected_and_initializer_preserves_file()
+    {
+        JsonObject json = DefaultJson();
+        json["training"]!.AsObject().Remove("variantAnnouncement");
+        string text = json.ToJsonString();
+        Assert.Throws<JsonException>(() => RecorderSettingsJson.DeserializeAndValidate(text));
+        FakeSettingsFileStore files = new();
+        string path = Path.Combine("external", "Config.json");
+        files.Files[path] = text;
+        RecorderSettingsContext context = new RecorderSettingsInitializer(files).Initialize("external", "fallback");
+        Assert.Equal(SettingsConfigSource.DefaultsInvalidConfig, context.ConfigSource);
+        Assert.Equal(text, files.Files[path]);
+        Assert.Equal("onReady", context.Settings.Training.VariantAnnouncement);
+    }
+
+    [Theory]
+    [InlineData("onReady")]
+    [InlineData("onShoot")]
+    public void Variant_announcement_roundtrips_with_onReady_as_default(string mode)
+    {
+        JsonObject json = DefaultJson();
+        Assert.Equal("onReady", json["training"]!["variantAnnouncement"]!.GetValue<string>());
+        json["training"]!["variantAnnouncement"] = mode;
+        RecorderSettings settings = RecorderSettingsJson.DeserializeAndValidate(json.ToJsonString());
+        Assert.Equal(mode, settings.Training.VariantAnnouncement);
+        Assert.Equal(mode, RecorderSettingsJson.DeserializeAndValidate(RecorderSettingsJson.Serialize(settings)).Training.VariantAnnouncement);
     }
 
     private static JsonObject DefaultJson() => JsonNode.Parse(RecorderSettingsJson.Serialize(RecorderSettings.CreateDefault()))!.AsObject();

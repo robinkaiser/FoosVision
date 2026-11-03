@@ -196,8 +196,10 @@ public class TrainingUseCaseTests
         await output.Received(1).ReportSkipped(Arg.Any<string>());
     }
 
-    [Fact]
-    public async Task Complete_first_attempt_is_testable_through_frame_usecase_with_no_camera_network_or_audio()
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public async Task Complete_first_attempt_is_testable_through_frame_usecase_with_no_camera_network_or_audio(TrainingVariantAnnouncement mode)
     {
         IBallTracker balls = Substitute.For<IBallTracker>();
         balls.ApplyObservations(Arg.Any<Frame>(), Arg.Any<IEnumerable<ObservedBall>>()).Returns(call =>
@@ -209,7 +211,7 @@ public class TrainingUseCaseTests
             return new TrackingSnapshot(frame, [new(1, frame, position, TrackingConfidence.High, TrackingStatus.Observed, velocity)]);
         });
         LiveTracker tracker = new(LiveTrackerParams.Default, balls, new PossessionCalculator(TableConfig.Config));
-        TrainingSession session = new(Guid.NewGuid(), tracker, TableConfig.Config, new([Option(TrainingStrategyKind.SnakeShot)]), new CountingRandom());
+        TrainingSession session = new(Guid.NewGuid(), tracker, TableConfig.Config, new([Option(TrainingStrategyKind.SnakeShot)], mode), new CountingRandom());
         _Store.SaveActive(session);
         IFrameVisionOps vision = Substitute.For<IFrameVisionOps>();
         ObservedBall observation = new(SnakePosition(Team.A), ObservationQualityThresholds.Default.HighQuality);
@@ -233,18 +235,18 @@ public class TrainingUseCaseTests
         Assert.NotNull(ready.PreparationConfirmed);
         TrainingAnnouncementRequest readyAnnouncement = Assert.IsType<TrainingAnnouncementRequest>(ready.Announcement);
         Assert.Equal(TrainingAnnouncementKind.Ready, readyAnnouncement.Kind);
-        Assert.Equal("Snake ready", readyAnnouncement.Text);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? "Push ready" : "Snake ready", readyAnnouncement.Text);
         Assert.Equal(1, readyAnnouncement.AnnouncementId);
-        Assert.Null(readyAnnouncement.Variant);
-        Assert.Null(ready.Status.Variant);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? new TrainingVariant("push", "Push") : null, readyAnnouncement.Variant);
+        Assert.Equal(readyAnnouncement.Variant, ready.Status.Variant);
         Assert.Equal(TrainingState.Waiting, ready.Status.State);
         Assert.Equal(1, ready.Status.Attempt!.AttemptId);
         Assert.Equal(ready.Status.Attempt, ready.PreparationConfirmed);
         Assert.Equal(ready.PreparationConfirmed, readyAnnouncement.Attempt);
         ProcessFrameResponse variant = responses[2];
         TrainingAnnouncementRequest variantAnnouncement = Assert.IsType<TrainingAnnouncementRequest>(variant.Announcement);
-        Assert.Equal(TrainingAnnouncementKind.Variant, variantAnnouncement.Kind);
-        Assert.Equal("Push", variantAnnouncement.Text);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? TrainingAnnouncementKind.Shoot : TrainingAnnouncementKind.Variant, variantAnnouncement.Kind);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? "Shoot!" : "Push", variantAnnouncement.Text);
         Assert.Equal(2, variantAnnouncement.AnnouncementId);
         Assert.Equal(new TrainingVariant("push", "Push"), variantAnnouncement.Variant);
         Assert.Equal(variantAnnouncement.Variant, variant.Status.Variant);
@@ -328,7 +330,7 @@ public class TrainingUseCaseTests
             return new TrackingSnapshot(frame, [new(1, frame, position, TrackingConfidence.High, TrackingStatus.Observed, default)]);
         });
         LiveTracker tracker = new(LiveTrackerParams.Default, balls, new PossessionCalculator(TableConfig.Config));
-        TrainingSession session = new(Guid.NewGuid(), tracker, TableConfig.Config, new([Option(TrainingStrategyKind.SnakeShot)]), new CountingRandom());
+        TrainingSession session = new(Guid.NewGuid(), tracker, TableConfig.Config, new([Option(TrainingStrategyKind.SnakeShot)], TrainingVariantAnnouncement.OnShoot), new CountingRandom());
         _Store.SaveActive(session);
         IFrameVisionOps vision = Substitute.For<IFrameVisionOps>();
         vision.DetectBalls(TableConfig.Config).Returns([]);

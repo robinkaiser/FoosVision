@@ -18,7 +18,7 @@ public class TrainingSessionTests
     public void Ready_starts_strategy_wait_once_and_variant_needs_no_audio_feedback()
     {
         CountingRandom random = new(0.5, 0.99);
-        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot, 1, 3)]), random);
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot, 1, 3)], TrainingVariantAnnouncement.OnShoot), random);
         Assert.Empty(session.ApplyTracking(Snapshot(0, SnakePosition(Team.A))).Events);
         TrainingFrameResult ready = session.ApplyTracking(Snapshot(1000, SnakePosition(Team.A)));
         TrainingPreparationConfirmed confirmed = Assert.Single(ready.Events.OfType<TrainingPreparationConfirmed>());
@@ -65,10 +65,12 @@ public class TrainingSessionTests
             .Events.OfType<TrainingReturnToLiveRequested>()));
     }
 
-    [Fact]
-    public void Premature_shot_invalidates_old_announcements_and_keeps_its_own_abort_valid()
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public void Premature_shot_invalidates_old_announcements_and_keeps_its_own_abort_valid(TrainingVariantAnnouncement mode)
     {
-        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot, 10, 10)]));
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot, 10, 10)], mode));
         session.ApplyTracking(Snapshot(0, SnakePosition(Team.A)));
         session.ApplyTracking(Snapshot(1000, SnakePosition(Team.A)));
         session.ApplyTracking(Snapshot(1100, new(1200, 450), velocity: new(2000, 0)));
@@ -90,7 +92,7 @@ public class TrainingSessionTests
     [InlineData(TrainingStrategyKind.PullShot, true)]
     public void Slow_setup_loss_aborts_once_before_or_after_variant(TrainingStrategyKind kind, bool afterVariant)
     {
-        TrainingSession session = Session(new([Option(kind)]));
+        TrainingSession session = Session(new([Option(kind)], TrainingVariantAnnouncement.OnShoot));
         Point setup = kind == TrainingStrategyKind.SnakeShot ? SnakePosition(Team.A) : Pull(Team.A);
         session.ApplyTracking(Snapshot(0, setup));
         session.ApplyTracking(Snapshot(1000, setup));
@@ -110,10 +112,12 @@ public class TrainingSessionTests
         Assert.Empty(session.ApplyTracking(Snapshot(moveMs + 751, moved)).Events);
     }
 
-    [Fact]
-    public void Three_second_timeout_does_not_repeat_ready_for_unchanged_setup()
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public void Three_second_timeout_does_not_repeat_ready_for_unchanged_setup(TrainingVariantAnnouncement mode)
     {
-        TrainingSession session = Session();
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot)], mode));
         ReadyAndAnnounce(session, Team.A);
         Assert.Empty(session.ApplyTracking(Snapshot(4999, SnakePosition(Team.A))).Events);
         TrainingFrameResult result = session.ApplyTracking(Snapshot(5000, SnakePosition(Team.A)));
@@ -125,20 +129,24 @@ public class TrainingSessionTests
         Assert.Single(session.ApplyTracking(Snapshot(8200, SnakePosition(Team.A))).Events.OfType<TrainingPreparationConfirmed>());
     }
 
-    [Fact]
-    public void Execution_started_before_timeout_can_complete_after_timeout()
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public void Execution_started_before_timeout_can_complete_after_timeout(TrainingVariantAnnouncement mode)
     {
-        TrainingSession session = Session();
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot)], mode));
         ReadyAndAnnounce(session, Team.A);
         session.ApplyTracking(Snapshot(4999, new(1200, 450), velocity: new(2000, 0)));
         session.ApplyTracking(Snapshot(5100, new(1300, 450), BarType.B2));
         Assert.Single(session.ApplyTracking(Snapshot(5350, new(1300, 450), BarType.B2)).Events.OfType<TrainingAttemptCompleted>());
     }
 
-    [Fact]
-    public void Tracking_loss_duplicate_frames_and_stop_do_not_emit_stale_variants()
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public void Tracking_loss_duplicate_frames_and_stop_do_not_emit_stale_variants(TrainingVariantAnnouncement mode)
     {
-        TrainingSession session = Session();
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot)], mode));
         session.ApplyTracking(Snapshot(0, SnakePosition(Team.A)));
         session.ApplyTracking(Snapshot(1000, SnakePosition(Team.A)));
         Assert.Empty(session.ApplyTracking(Snapshot(2000, default, phase: LiveTrackingPhase.BallTemporarilyLost)).Events);
@@ -157,7 +165,7 @@ public class TrainingSessionTests
     public void Multiple_strategies_switch_after_abort_with_their_own_waits_and_fresh_history(TrainingStrategyKind other)
     {
         CountingRandom random = new();
-        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot, 1, 1), Option(other, 2, 2)]), random);
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot, 1, 1), Option(other, 2, 2)], TrainingVariantAnnouncement.OnShoot), random);
         ReadyAndAnnounce(session, Team.A);
         session.ApplyTracking(Snapshot(5000, SnakePosition(Team.A)));
         long readyMs;
@@ -214,10 +222,12 @@ public class TrainingSessionTests
             Assert.Single(session.ApplyTracking(Snapshot(4000, SnakePosition(Team.A))).Events.OfType<TrainingAnnouncementRequested>()).Kind);
     }
 
-    [Fact]
-    public void Completed_shot_allows_direct_reentry_to_setup_without_extra_outside_frame()
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public void Completed_shot_allows_direct_reentry_to_setup_without_extra_outside_frame(TrainingVariantAnnouncement mode)
     {
-        TrainingSession session = Session();
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.SnakeShot)], mode));
         ReadyAndAnnounce(session, Team.A);
         session.ApplyTracking(Snapshot(2100, new(1200, 450), velocity: new(2000, 0)));
         session.ApplyTracking(Snapshot(2200, new(1300, 450), BarType.B2));
@@ -239,7 +249,7 @@ public class TrainingSessionTests
     public void Each_strategy_selects_its_own_variants_uniformly(TrainingStrategyKind kind, double unit, string expected)
     {
         CountingRandom random = new(0, unit);
-        TrainingSession session = Session(new([Option(kind)]), random);
+        TrainingSession session = Session(new([Option(kind)], TrainingVariantAnnouncement.OnShoot), random);
         Point setup;
         BarType bar;
         long readyMs;
@@ -273,7 +283,7 @@ public class TrainingSessionTests
     [InlineData(true)]
     public void Tick_tack_setup_loss_aborts_once_and_requires_two_fresh_reversals(bool afterVariant)
     {
-        TrainingSession session = Session(new([Option(TrainingStrategyKind.TickTackPass)]));
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.TickTackPass)], TrainingVariantAnnouncement.OnShoot));
         session.ApplyTracking(Snapshot(0, new(700, 200), BarType.A5));
         session.ApplyTracking(Snapshot(100, new(700, 220), BarType.A5));
         session.ApplyTracking(Snapshot(200, new(700, 200), BarType.A5));
@@ -293,6 +303,55 @@ public class TrainingSessionTests
         Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 1000, new(700, 220), BarType.A5)).Events);
         Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 1100, new(700, 200), BarType.A5)).Events);
         Assert.Single(session.ApplyTracking(Snapshot(exitMs + 1200, new(700, 220), BarType.A5)).Events.OfType<TrainingPreparationConfirmed>());
+    }
+
+    [Theory]
+    [InlineData(TrainingStrategyKind.SnakeShot, "pull", "Ziehen")]
+    [InlineData(TrainingStrategyKind.PullShot, "long", "Lang")]
+    [InlineData(TrainingStrategyKind.TickTackPass, "lane", "Spur")]
+    public void OnReady_announces_selected_text_then_shoot_without_selecting_again(TrainingStrategyKind kind, string id, string text)
+    {
+        CountingRandom random = new(0, 0);
+        TrainingOptions options = new([new(kind, new(5, 5, WaitDistribution.Uniform), [new(id, text)])]);
+        TrainingSession session = Session(options, random);
+        Point setup = kind == TrainingStrategyKind.SnakeShot ? SnakePosition(Team.A) : Pull(Team.A);
+        BarType bar = BarType.A3;
+        long readyMs = 1000;
+        if (kind == TrainingStrategyKind.TickTackPass)
+        {
+            bar = BarType.A5;
+            setup = new(700, 220);
+            session.ApplyTracking(Snapshot(0, new(700, 200), bar));
+            session.ApplyTracking(Snapshot(100, setup, bar));
+            session.ApplyTracking(Snapshot(200, new(700, 200), bar));
+            readyMs = 300;
+        }
+        else
+        {
+            session.ApplyTracking(Snapshot(0, setup, bar));
+        }
+
+        TrainingFrameResult ready = session.ApplyTracking(Snapshot(readyMs, setup, bar));
+        TrainingAnnouncementRequested announcement = Assert.Single(ready.Events.OfType<TrainingAnnouncementRequested>());
+        Assert.Equal(TrainingAnnouncementKind.Ready, announcement.Kind);
+        Assert.Equal($"{text} ready", announcement.Text);
+        Assert.Equal(new TrainingVariant(id, text), announcement.Variant);
+        Assert.Equal(announcement.Variant, ready.Variant);
+        Assert.Equal(TrainingState.Waiting, ready.State);
+        Assert.Equal(2, random.Calls);
+        Assert.Empty(session.ApplyTracking(Snapshot(readyMs + 4999, setup, bar)).Events);
+        TrainingFrameResult shoot = session.ApplyTracking(Snapshot(readyMs + 5000, setup, bar));
+        TrainingAnnouncementRequested signal = Assert.Single(shoot.Events.OfType<TrainingAnnouncementRequested>());
+        Assert.Equal(TrainingAnnouncementKind.Shoot, signal.Kind);
+        Assert.Equal("Shoot!", signal.Text);
+        Assert.Equal(announcement.Variant, signal.Variant);
+        Assert.Equal(announcement.Attempt, signal.Attempt);
+        Assert.True(signal.AnnouncementId > announcement.AnnouncementId);
+        Assert.Equal(TrainingState.AwaitingExecution, shoot.State);
+        Assert.Equal(2, random.Calls);
+        Assert.Empty(session.ApplyTracking(Snapshot(readyMs + 7999, setup, bar)).Events);
+        Assert.Equal(TrainingAbortReason.ExecutionTimeout, Assert.Single(session.ApplyTracking(
+            Snapshot(readyMs + 8000, setup, bar)).Events.OfType<TrainingAttemptAborted>()).Reason);
     }
 
     private static void ReadyAndAnnounce(TrainingSession session, Team team)

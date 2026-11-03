@@ -103,10 +103,23 @@ public record TrainingStrategyOptions
     };
 }
 
+public enum TrainingVariantAnnouncement
+{
+    OnReady,
+    OnShoot,
+}
+
 public class TrainingOptions
 {
-    public TrainingOptions(IEnumerable<TrainingStrategyOptions> strategies)
+    public TrainingOptions(IEnumerable<TrainingStrategyOptions> strategies,
+        TrainingVariantAnnouncement variantAnnouncement = TrainingVariantAnnouncement.OnReady)
     {
+        if (!Enum.IsDefined(variantAnnouncement))
+        {
+            throw new ArgumentOutOfRangeException(nameof(variantAnnouncement));
+        }
+
+        VariantAnnouncement = variantAnnouncement;
         TrainingStrategyOptions[] snapshot = [.. strategies];
         if (snapshot.Length == 0 || snapshot.Any(option => option is null || option.Wait is null || !Enum.IsDefined(option.Kind)) ||
             snapshot.Select(option => option.Kind).Distinct().Count() != snapshot.Length)
@@ -122,6 +135,7 @@ public class TrainingOptions
         Strategies = Array.AsReadOnly(snapshot);
     }
 
+    public TrainingVariantAnnouncement VariantAnnouncement { get; }
     public IReadOnlyList<TrainingStrategyOptions> Strategies { get; }
 
     public static TrainingOptions Default => new(

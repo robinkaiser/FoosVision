@@ -112,6 +112,7 @@ public class RecorderSettingsInitializerTests
                 }
               },
               "training": {
+                "variantAnnouncement": "onShoot",
                 "snakeShot": {
                   "maxWaitSeconds": 7
                 }
@@ -137,6 +138,7 @@ public class RecorderSettingsInitializerTests
         Assert.Equal(7, context.Settings.Diagnostics.RuntimeMetrics.ReportIntervalSeconds);
         Assert.True(context.Settings.Diagnostics.Vision.DebugVisualizations.ShowObservations);
         Assert.True(context.Settings.Diagnostics.Vision.DebugVisualizations.ShowBallDetectionMask);
+        Assert.Equal("onShoot", context.Settings.Training.VariantAnnouncement);
         Assert.Equal(7, context.Settings.Training.SnakeShot.MaxWaitSeconds);
     }
 

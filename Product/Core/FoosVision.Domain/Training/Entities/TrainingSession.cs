@@ -29,7 +29,7 @@ public class TrainingSession
     private long? _LastTimestampNs;
     private long _ReadyTimestampNs;
     private long _WaitNs;
-    private long _VariantTimestampNs;
+    private long? _ExecutionTimestampNs;
     private TrainingAttempt? _ReplayAttempt;
     private Frame? _ReplayTriggerFrame;
     private TrainingReturnToLiveRequested? _ReturnToLive;
@@ -183,10 +183,18 @@ public class TrainingSession
         _ActiveStrategy = selected;
         selected.Begin(preparation);
         _Variant = null;
+        _ExecutionTimestampNs = null;
         _ReadyTimestampNs = snapshot.Frame.TimestampNs;
         _WaitNs = (long)selected.Options.Wait.Select(_Random.NextUnit()).TotalNanoseconds;
         State = TrainingState.Waiting;
         events.Add(new TrainingPreparationConfirmed(_Attempt));
+        if (Options.VariantAnnouncement == TrainingVariantAnnouncement.OnReady)
+        {
+            _Variant = SelectVariant(selected);
+            Announce(events, TrainingAnnouncementKind.Ready, $"{_Variant.Text} ready", _Variant);
+            return;
+        }
+
         Announce(events, TrainingAnnouncementKind.Ready, selected.ReadyText);
     }
 
@@ -199,8 +207,8 @@ public class TrainingSession
             _Attempt = _Attempt! with { Anchor = execution.Anchor };
         }
 
-        if (_Variant is not null && execution.MovementFrame.HasValue &&
-            execution.MovementFrame.Value.TimestampNs - _VariantTimestampNs > ExecutionTimeoutMs * 1_000_000L)
+        if (_ExecutionTimestampNs.HasValue && execution.MovementFrame.HasValue &&
+            execution.MovementFrame.Value.TimestampNs - _ExecutionTimestampNs.Value > ExecutionTimeoutMs * 1_000_000L)
         {
             Abort(events, TrainingAbortReason.ExecutionTimeout);
             return;
@@ -208,13 +216,13 @@ public class TrainingSession
 
         if (execution.State == TrainingExecutionState.Completed)
         {
-            if (_Variant is null)
+            if (!_ExecutionTimestampNs.HasValue)
             {
                 Abort(events, TrainingAbortReason.PrematureExecution);
                 return;
             }
 
-            events.Add(new TrainingAttemptCompleted(_Attempt!, _Variant, execution.ConfirmationFrame!.Value, snapshot.Frame));
+            events.Add(new TrainingAttemptCompleted(_Attempt!, _Variant!, execution.ConfirmationFrame!.Value, snapshot.Frame));
             _ReplayAttempt = _Attempt;
             _ReplayTriggerFrame = snapshot.Frame;
             _ReturnToLive = null;
@@ -234,7 +242,7 @@ public class TrainingSession
             return;
         }
 
-        if (_Variant is not null && snapshot.Frame.TimestampNs - _VariantTimestampNs >= ExecutionTimeoutMs * 1_000_000L)
+        if (_ExecutionTimestampNs.HasValue && snapshot.Frame.TimestampNs - _ExecutionTimestampNs.Value >= ExecutionTimeoutMs * 1_000_000L)
         {
             Abort(events, TrainingAbortReason.ExecutionTimeout);
             return;
@@ -243,13 +251,24 @@ public class TrainingSession
         // No observations means no announcement. Tracking already owns temporary ball loss.
         if (State == TrainingState.Waiting && snapshot.IsBallFound && snapshot.Frame.TimestampNs - _ReadyTimestampNs >= _WaitNs)
         {
-            double unit = _Random.NextUnit();
-            TrainingWaitOptions.ValidateUnit(unit);
-            _Variant = strategy.Variants[(int)(unit * strategy.Variants.Count)];
-            _VariantTimestampNs = snapshot.Frame.TimestampNs;
+            _ExecutionTimestampNs = snapshot.Frame.TimestampNs;
             State = TrainingState.AwaitingExecution;
+            if (Options.VariantAnnouncement == TrainingVariantAnnouncement.OnReady)
+            {
+                Announce(events, TrainingAnnouncementKind.Shoot, "Shoot!", _Variant);
+                return;
+            }
+
+            _Variant = SelectVariant(strategy);
             Announce(events, TrainingAnnouncementKind.Variant, _Variant.Text, _Variant);
         }
+    }
+
+    private TrainingVariant SelectVariant(ITrainingStrategy strategy)
+    {
+        double unit = _Random.NextUnit();
+        TrainingWaitOptions.ValidateUnit(unit);
+        return strategy.Variants[(int)(unit * strategy.Variants.Count)];
     }
 
     private void Abort(List<TrainingEvent> events, TrainingAbortReason reason)

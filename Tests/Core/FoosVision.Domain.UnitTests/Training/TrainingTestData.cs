@@ -43,7 +43,7 @@ public static class TrainingTestData
     {
         LiveTracker tracker = new(LiveTrackerParams.Default, Substitute.For<IBallTracker>(), Substitute.For<IPossessionCalculator>());
         return new(Guid.NewGuid(), tracker, TableConfig.Config,
-            options ?? new([Option(TrainingStrategyKind.SnakeShot)]), random ?? new());
+            options ?? new([Option(TrainingStrategyKind.SnakeShot)], TrainingVariantAnnouncement.OnShoot), random ?? new());
     }
 }
 

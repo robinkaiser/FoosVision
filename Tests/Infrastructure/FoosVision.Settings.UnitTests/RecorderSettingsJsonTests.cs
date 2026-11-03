@@ -27,7 +27,7 @@ public class RecorderSettingsJsonTests
                   "reportIntervalSeconds": 5
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -66,7 +66,7 @@ public class RecorderSettingsJsonTests
               },
               "diagnostics": {
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -84,7 +84,7 @@ public class RecorderSettingsJsonTests
               "version": 1,
               "diagnostics": {
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -101,7 +101,7 @@ public class RecorderSettingsJsonTests
               },
               "diagnostics": {
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -123,7 +123,7 @@ public class RecorderSettingsJsonTests
               },
               "diagnostics": {
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -144,7 +144,7 @@ public class RecorderSettingsJsonTests
                   "udpReceiveBufferBytes": 2097152
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -164,7 +164,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -184,7 +184,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -204,7 +204,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -224,7 +224,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -244,7 +244,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -264,7 +264,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -284,7 +284,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -302,7 +302,7 @@ public class RecorderSettingsJsonTests
                   "retentionDays": -1
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -320,7 +320,7 @@ public class RecorderSettingsJsonTests
                   "maxTotalSizeBytes": 0
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -341,7 +341,7 @@ public class RecorderSettingsJsonTests
                   "udpReceiveBufferBytes": 2097152
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -362,7 +362,7 @@ public class RecorderSettingsJsonTests
                   "udpReceiveBufferBytes": 2097152
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -383,7 +383,7 @@ public class RecorderSettingsJsonTests
                   "udpReceiveBufferBytes": 2097152
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -404,7 +404,7 @@ public class RecorderSettingsJsonTests
                   "udpReceiveBufferBytes": 262144
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -422,7 +422,7 @@ public class RecorderSettingsJsonTests
                   "reportIntervalSeconds": 0
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 
@@ -442,7 +442,7 @@ public class RecorderSettingsJsonTests
                   }
                 }
               },
-              "training": {}
+              "training": { "variantAnnouncement": "onReady" }
             }
             """;
 

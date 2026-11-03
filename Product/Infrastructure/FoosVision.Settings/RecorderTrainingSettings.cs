@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
+using System.Text.Json.Serialization;
+
 namespace FoosVision.Settings;
 
 public class RecorderTrainingSettings
 {
+    [JsonRequired]
+    public string VariantAnnouncement { get; set; } = "onReady";
+
     public List<string> EnabledStrategies { get; set; } = ["snakeShot", "pullShot", "tickTackPass"];
     public SnakeShotSettings SnakeShot { get; set; } = new();
     public PullShotSettings PullShot { get; set; } = new();
@@ -17,6 +22,11 @@ public class RecorderTrainingSettings
 
     public void Validate()
     {
+        if (VariantAnnouncement is not ("onReady" or "onShoot"))
+        {
+            throw new InvalidOperationException("training.variantAnnouncement must be onReady or onShoot.");
+        }
+
         if (EnabledStrategies is null || EnabledStrategies.Any(id => id is not ("snakeShot" or "pullShot" or "tickTackPass")) ||
             EnabledStrategies.Distinct(StringComparer.Ordinal).Count() != EnabledStrategies.Count)
         {

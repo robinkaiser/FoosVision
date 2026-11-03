@@ -10,6 +10,7 @@ namespace FoosVision.VideoPlayer.Runtime;
 public class VideoPlayerTrainingOptionsProvider : ITrainingOptionsProvider
 {
     private readonly TrainingStrategyOptions[] _Strategies;
+    private readonly TrainingVariantAnnouncement _VariantAnnouncement;
 
     public VideoPlayerTrainingOptionsProvider()
         : this(VideoPlayerLoggingBootstrap.CurrentSettings?.Settings.Training ?? RecorderTrainingSettings.CreateDefault())
@@ -20,9 +21,15 @@ public class VideoPlayerTrainingOptionsProvider : ITrainingOptionsProvider
     {
         settings.Validate();
         _Strategies = MapStrategies(settings);
+        _VariantAnnouncement = settings.VariantAnnouncement switch
+        {
+            "onReady" => TrainingVariantAnnouncement.OnReady,
+            "onShoot" => TrainingVariantAnnouncement.OnShoot,
+            _ => throw new InvalidOperationException("Unknown training variant announcement."),
+        };
     }
 
-    public TrainingOptions LoadTrainingOptions() => new(_Strategies);
+    public TrainingOptions LoadTrainingOptions() => new(_Strategies, _VariantAnnouncement);
 
     private static TrainingStrategyOptions[] MapStrategies(RecorderTrainingSettings settings)
     {
