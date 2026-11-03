@@ -12,6 +12,8 @@ internal enum ActiveSessionPendingIntent
     StopSetup = 2,
     StartGame = 3,
     StopGame = 4,
+    StartTraining = 5,
+    StopTraining = 6,
 }
 
 internal static class SessionUiStateCalculator
@@ -32,6 +34,7 @@ internal static class SessionUiStateCalculator
             RecorderRuntimeMode.Idle => CanStartMode(requestedMode, isTableAvailable),
             RecorderRuntimeMode.SetupRunning => requestedMode == SessionMode.Setup,
             RecorderRuntimeMode.GameRunning => requestedMode == SessionMode.Game,
+            RecorderRuntimeMode.TrainingRunning => requestedMode == SessionMode.Training,
             RecorderRuntimeMode.Faulted => false,
             _ => false,
         };
@@ -41,16 +44,19 @@ internal static class SessionUiStateCalculator
         RecorderRuntimeMode runtimeMode,
         SessionMode requestedMode)
     {
-        if (requestedMode == SessionMode.Setup)
+        return requestedMode switch
         {
-            return runtimeMode == RecorderRuntimeMode.SetupRunning
+            SessionMode.Setup => runtimeMode == RecorderRuntimeMode.SetupRunning
                 ? ActiveSessionPendingIntent.StopSetup
-                : ActiveSessionPendingIntent.StartSetup;
-        }
-
-        return runtimeMode == RecorderRuntimeMode.GameRunning
-            ? ActiveSessionPendingIntent.StopGame
-            : ActiveSessionPendingIntent.StartGame;
+                : ActiveSessionPendingIntent.StartSetup,
+            SessionMode.Game => runtimeMode == RecorderRuntimeMode.GameRunning
+                ? ActiveSessionPendingIntent.StopGame
+                : ActiveSessionPendingIntent.StartGame,
+            SessionMode.Training => runtimeMode == RecorderRuntimeMode.TrainingRunning
+                ? ActiveSessionPendingIntent.StopTraining
+                : ActiveSessionPendingIntent.StartTraining,
+            _ => ActiveSessionPendingIntent.None,
+        };
     }
 
     public static SessionUiState Calculate(
@@ -64,27 +70,31 @@ internal static class SessionUiStateCalculator
         {
             RecorderRuntimeMode.SetupRunning => SessionMode.Setup,
             RecorderRuntimeMode.GameRunning => SessionMode.Game,
+            RecorderRuntimeMode.TrainingRunning => SessionMode.Training,
             _ => pendingIntent switch
             {
                 ActiveSessionPendingIntent.StartSetup => SessionMode.Setup,
                 ActiveSessionPendingIntent.StopSetup => SessionMode.Setup,
                 ActiveSessionPendingIntent.StartGame => SessionMode.Game,
                 ActiveSessionPendingIntent.StopGame => SessionMode.Game,
+                ActiveSessionPendingIntent.StartTraining => SessionMode.Training,
+                ActiveSessionPendingIntent.StopTraining => SessionMode.Training,
                 _ => currentState.Mode,
             },
         };
 
         return new SessionUiState(
             Mode: mode,
-            IsRunning: runtimeMode is RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.GameRunning,
+            IsRunning: runtimeMode is RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.TrainingRunning,
             IsConnected: true,
             IsPendingCommand: pendingIntent != ActiveSessionPendingIntent.None,
             IsFaulted: runtimeMode == RecorderRuntimeMode.Faulted,
-            ProcessFps: runtimeMode is RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.GameRunning
+            ProcessFps: runtimeMode is RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.TrainingRunning
                 ? currentState.ProcessFps
                 : null,
             IsReplayActive: isReplayActive,
-            IsGameAvailable: isTableAvailable);
+            IsGameAvailable: isTableAvailable,
+            IsTrainingAvailable: isTableAvailable);
     }
 
     public static SessionUiState UpdateProcessFps(
@@ -109,6 +119,7 @@ internal static class SessionUiStateCalculator
         {
             SessionMode.Setup => true,
             SessionMode.Game => isTableAvailable,
+            SessionMode.Training => isTableAvailable,
             _ => false,
         };
     }

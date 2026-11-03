@@ -900,7 +900,7 @@ public class OverlayView : AndroidView
 
     private static VideoDisplayMode GetDisplayMode(SessionUiState state)
     {
-        if (!state.IsRunning || state.Mode != SessionMode.Game)
+        if (!state.IsRunning || state.Mode is not SessionMode.Game and not SessionMode.Training)
         {
             return VideoDisplayMode.None;
         }

@@ -103,6 +103,24 @@
             </Grid>
             <Grid WidthRequest="40"
                   HeightRequest="112">
+                <Button Text="{Binding TrainingButton.Text}"
+                        Command="{Binding ToggleTrainingModeCommand}"
+                        IsEnabled="{Binding TrainingButton.IsEnabled}"
+                        BackgroundColor="{Binding TrainingButton.BackgroundColor}"
+                        TextColor="{Binding TrainingButton.TextColor}"
+                        BorderColor="{Binding TrainingButton.BorderColor}"
+                        BorderWidth="1"
+                        CornerRadius="10"
+                        Padding="10,0"
+                        WidthRequest="104"
+                        HeightRequest="40"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        FontSize="11"
+                        Rotation="{Binding ControlsRotationDegrees}" />
+            </Grid>
+            <Grid WidthRequest="40"
+                  HeightRequest="112">
                 <Button Text="About"
                         Command="{Binding OpenAboutCommand}"
                         BackgroundColor="#761C222C"

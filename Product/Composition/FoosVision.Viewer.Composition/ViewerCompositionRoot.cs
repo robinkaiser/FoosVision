@@ -70,6 +70,7 @@ internal class ViewerCompositionRoot : IDisposable
 
         var setup = new SetupModule(_Network.CommandClient);
         var game = new GameModule(_Network.CommandClient);
+        var training = new TrainingModule(_Network.CommandClient);
         var runtimeState = new RuntimeStateModule(_Network.EventSubscriber);
 
         _ConnectedSession = Option<ConnectedViewerSession>.Some(
@@ -77,6 +78,7 @@ internal class ViewerCompositionRoot : IDisposable
                 _Network.Connection,
                 setup,
                 game,
+                training,
                 runtimeState,
                 _Network.LiveDataSubscriber,
                 _Network.LiveAnalysisSubscriber,

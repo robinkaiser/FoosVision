@@ -30,6 +30,7 @@ public class ViewerSessionController :
             fallbackCandidateSource: _FallbackCandidateSource);
         ToggleSetupModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Setup));
         ToggleGameModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Game));
+        ToggleTrainingModeCommand = new Command(async () => await ToggleModeSessionAsync(SessionMode.Training));
     }
 
     public event Action<SessionUiState>? UiStateChanged;
@@ -39,6 +40,8 @@ public class ViewerSessionController :
     public ICommand ToggleSetupModeCommand { get; }
 
     public ICommand ToggleGameModeCommand { get; }
+
+    public ICommand ToggleTrainingModeCommand { get; }
 
     public async Task AttachRuntimeAsync(IViewerScreenRuntime runtime)
     {

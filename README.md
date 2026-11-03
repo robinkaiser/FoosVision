@@ -39,13 +39,13 @@ Install FoosVision on both devices. Start `Foos Rec` on the recorder phone and `
 2. Start `Foos View` on the viewing device; it searches for recorders on the local network.
 3. Start setup and mount the recorder above the table. Setup can only be started after the viewer has connected to the recorder.
 4. Wait until the table is detected. The playing field and optionally a horizontally mounted light should be outlined, and the rods should be marked in the player colors.
-5. Stop setup and start a game session. A game can only be started after a successful setup.
+5. Stop setup and start a game or training session. Both require a successful setup.
 
 ## Performance Notes
 
 The recorder performs continuous high-speed camera capture, video encoding, streaming, and vision processing. This can put significant load on the phone, and the device may become warm during longer sessions.
 
-The viewer shows two frame rates during setup and game sessions. `Stream` should stay close to `120 fps`, and `Process` should stay close to `30 fps`. If these values drop, the recorder device, network, or playback device may be overloaded.
+The viewer shows two frame rates during setup, game, and training sessions. `Stream` should stay close to `120 fps`, and `Process` should stay close to `30 fps`. If these values drop, the recorder device, network, or playback device may be overloaded.
 
 ## Documentation
 

@@ -7,6 +7,7 @@ public enum SessionMode
 {
     Setup,
     Game,
+    Training,
 }
 
 public record struct SessionUiState(
@@ -17,4 +18,5 @@ public record struct SessionUiState(
     bool IsFaulted,
     double? ProcessFps = null,
     bool IsReplayActive = false,
-    bool IsGameAvailable = false);
+    bool IsGameAvailable = false,
+    bool IsTrainingAvailable = false);

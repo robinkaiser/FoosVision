@@ -135,71 +135,29 @@ public class ActiveSession :
             return;
         }
 
-        if (mode == SessionMode.Setup)
+        switch (mode)
         {
-            var commandId = Guid.NewGuid();
-            _PendingIntent = SessionUiStateCalculator.GetPendingIntent(_LastKnownRuntimeState.Mode, mode);
-            RefreshUiState();
-
-            try
-            {
-                CommandResponse response;
-                if (_PendingIntent == ActiveSessionPendingIntent.StopSetup)
-                {
-                    _Log.Information("Sending StopSetup command {0}.", commandId);
-                    response = await _Session.StopSetupAsync(commandId, CancellationToken.None);
-                }
-                else
-                {
-                    await StartLivePlaybackAsync();
-                    _Log.Information("Sending StartSetup command {0}.", commandId);
-                    response = await _Session.StartSetupAsync(commandId, CancellationToken.None);
-                }
-
-                if (!HandleCommandResponse(response, _PendingIntent))
-                {
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                _PendingIntent = ActiveSessionPendingIntent.None;
-                _Log.Error("Setup command send failed.", ex);
-                RefreshUiState();
-            }
-
-            return;
-        }
-
-        var gameCommandId = Guid.NewGuid();
-        _PendingIntent = SessionUiStateCalculator.GetPendingIntent(_LastKnownRuntimeState.Mode, mode);
-        RefreshUiState();
-
-        try
-        {
-            CommandResponse response;
-            if (_PendingIntent == ActiveSessionPendingIntent.StopGame)
-            {
-                _Log.Information("Sending StopGame command {0}.", gameCommandId);
-                response = await _Session.StopGameAsync(gameCommandId, CancellationToken.None);
-            }
-            else
-            {
-                await StartLivePlaybackAsync();
-                _Log.Information("Sending StartGame command {0}.", gameCommandId);
-                response = await _Session.StartGameAsync(gameCommandId, CancellationToken.None);
-            }
-
-            if (!HandleCommandResponse(response, _PendingIntent))
-            {
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            _PendingIntent = ActiveSessionPendingIntent.None;
-            _Log.Error("Game command send failed.", ex);
-            RefreshUiState();
+            case SessionMode.Setup:
+                await ToggleSessionAsync(
+                    mode,
+                    ActiveSessionPendingIntent.StopSetup,
+                    _Session.StartSetupAsync,
+                    _Session.StopSetupAsync);
+                break;
+            case SessionMode.Game:
+                await ToggleSessionAsync(
+                    mode,
+                    ActiveSessionPendingIntent.StopGame,
+                    _Session.StartGameAsync,
+                    _Session.StopGameAsync);
+                break;
+            case SessionMode.Training:
+                await ToggleSessionAsync(
+                    mode,
+                    ActiveSessionPendingIntent.StopTraining,
+                    _Session.StartTrainingAsync,
+                    _Session.StopTrainingAsync);
+                break;
         }
     }
 
@@ -208,6 +166,7 @@ public class ActiveSession :
     public void OnRecorderRuntimeStateChanged(RecorderRuntimeStateChanged state)
     {
         RecorderRuntimeMode previousMode = _LastKnownRuntimeState.Mode;
+        bool sessionChanged = _LastKnownRuntimeState.ActiveSessionId != state.ActiveSessionId;
         bool supportsReplay = state.Mode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.TrainingRunning;
         _ReplayCoordinator.SetRecorderSession(supportsReplay ? state.ActiveSessionId : null);
         _LastKnownRuntimeState = state;
@@ -220,22 +179,22 @@ public class ActiveSession :
             state.Reason,
             state.Detail);
 
-        if (previousMode == RecorderRuntimeMode.GameRunning &&
-            state.Mode != RecorderRuntimeMode.GameRunning)
+        if (previousMode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.TrainingRunning &&
+            previousMode != state.Mode)
         {
             ResetTrackingOverlay();
         }
 
-        if (previousMode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.SetupRunning &&
-            state.Mode is not RecorderRuntimeMode.GameRunning and not RecorderRuntimeMode.SetupRunning)
+        if (previousMode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.TrainingRunning &&
+            state.Mode is not RecorderRuntimeMode.GameRunning and not RecorderRuntimeMode.SetupRunning and not RecorderRuntimeMode.TrainingRunning)
         {
             _ReplayCoordinator.CancelReplayReplacement();
             _ = _ReplayCoordinator.StopReplayAsync();
             _ = _PlaybackCoordinator.StopAsync();
         }
 
-        if (previousMode != state.Mode &&
-            state.Mode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.SetupRunning)
+        if ((previousMode != state.Mode || sessionChanged) &&
+            state.Mode is RecorderRuntimeMode.GameRunning or RecorderRuntimeMode.SetupRunning or RecorderRuntimeMode.TrainingRunning)
         {
             ResetTrackingOverlay();
         }
@@ -263,11 +222,54 @@ public class ActiveSession :
         _ReplayClipSubscription.Dispose();
         _ReplayReturnToLiveSubscription.Dispose();
         _ReplayCoordinator.Dispose();
+        _ReplaySessionStore.Clear();
+        ResetTrackingOverlay();
+        _OverlaySink.UpdateTableState(TableOverlayState.Empty);
         _PlaybackCoordinator.TryStopIgnoringErrors();
         _PlaybackCoordinator.Dispose();
+        _UiState = new(SessionMode.Setup, false, false, false, false);
+        PublishUiState();
     }
 
     internal Option<TableConfiguration> LatestTableConfiguration => _TableUpdatePresenter.LatestTableConfiguration;
+
+    private async Task ToggleSessionAsync(
+        SessionMode mode,
+        ActiveSessionPendingIntent stopIntent,
+        Func<Guid, CancellationToken, Task<CommandResponse>> start,
+        Func<Guid, CancellationToken, Task<CommandResponse>> stop)
+    {
+        Guid commandId = Guid.NewGuid();
+        _PendingIntent = SessionUiStateCalculator.GetPendingIntent(_LastKnownRuntimeState.Mode, mode);
+        RefreshUiState();
+
+        try
+        {
+            CommandResponse response;
+            if (_PendingIntent == stopIntent)
+            {
+                _Log.Information("Sending Stop{0} command {1}.", mode, commandId);
+                response = await stop(commandId, CancellationToken.None);
+            }
+            else
+            {
+                await StartLivePlaybackAsync();
+                _Log.Information("Sending Start{0} command {1}.", mode, commandId);
+                response = await start(commandId, CancellationToken.None);
+            }
+
+            if (!HandleCommandResponse(response, _PendingIntent))
+            {
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _PendingIntent = ActiveSessionPendingIntent.None;
+            _Log.Error("{0} command send failed.", mode, ex);
+            RefreshUiState();
+        }
+    }
 
     private void PublishUiState()
     {

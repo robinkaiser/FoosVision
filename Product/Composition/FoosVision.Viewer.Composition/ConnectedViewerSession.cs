@@ -20,6 +20,7 @@ public class ConnectedViewerSession :
         RecorderConnection connection,
         SetupModule setup,
         GameModule game,
+        TrainingModule training,
         RuntimeStateModule runtimeState,
         IRecorderLiveDataSubscriber liveDataSubscriber,
         IRecorderLiveAnalysisSubscriber liveAnalysisSubscriber,
@@ -28,6 +29,7 @@ public class ConnectedViewerSession :
         Connection = connection;
         Setup = setup;
         Game = game;
+        Training = training;
         RuntimeState = runtimeState;
         LiveDataSubscriber = liveDataSubscriber;
         LiveAnalysisSubscriber = liveAnalysisSubscriber;
@@ -39,6 +41,8 @@ public class ConnectedViewerSession :
     public SetupModule Setup { get; }
 
     public GameModule Game { get; }
+
+    public TrainingModule Training { get; }
 
     public RuntimeStateModule RuntimeState { get; }
 
@@ -69,6 +73,16 @@ public class ConnectedViewerSession :
     public Task<CommandResponse> StopGameAsync(Guid commandId, CancellationToken ct)
     {
         return Game.CommandSender.Stop(commandId, ct);
+    }
+
+    public Task<CommandResponse> StartTrainingAsync(Guid commandId, CancellationToken ct)
+    {
+        return Training.CommandSender.Start(commandId, ct);
+    }
+
+    public Task<CommandResponse> StopTrainingAsync(Guid commandId, CancellationToken ct)
+    {
+        return Training.CommandSender.Stop(commandId, ct);
     }
 
     public void Dispose()

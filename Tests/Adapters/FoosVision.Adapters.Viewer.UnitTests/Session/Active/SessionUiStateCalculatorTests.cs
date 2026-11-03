@@ -9,6 +9,48 @@ namespace FoosVision.Adapters.Viewer.UnitTests.Session.Active;
 
 public class SessionUiStateCalculatorTests
 {
+    [Theory]
+    [InlineData(RecorderRuntimeMode.Idle, SessionMode.Training, false, false)]
+    [InlineData(RecorderRuntimeMode.Idle, SessionMode.Training, true, true)]
+    [InlineData(RecorderRuntimeMode.SetupRunning, SessionMode.Training, true, false)]
+    [InlineData(RecorderRuntimeMode.GameRunning, SessionMode.Training, true, false)]
+    [InlineData(RecorderRuntimeMode.TrainingRunning, SessionMode.Training, false, true)]
+    [InlineData(RecorderRuntimeMode.TrainingRunning, SessionMode.Game, true, false)]
+    [InlineData(RecorderRuntimeMode.TrainingRunning, SessionMode.Setup, true, false)]
+    [InlineData(RecorderRuntimeMode.Faulted, SessionMode.Training, true, false)]
+    [InlineData(RecorderRuntimeMode.Idle, (SessionMode)99, true, false)]
+    public void CanToggle_obeys_training_availability_and_exclusion(
+        RecorderRuntimeMode runtimeMode, SessionMode mode, bool hasTable, bool expected)
+    {
+        Assert.Equal(expected, SessionUiStateCalculator.CanToggle(
+            runtimeMode, ActiveSessionPendingIntent.None, mode, hasTable));
+    }
+
+    [Fact]
+    public void Training_pending_intents_and_running_state_are_explicit()
+    {
+        Assert.Equal(ActiveSessionPendingIntent.StartTraining,
+            SessionUiStateCalculator.GetPendingIntent(RecorderRuntimeMode.Idle, SessionMode.Training));
+        Assert.Equal(ActiveSessionPendingIntent.StopTraining,
+            SessionUiStateCalculator.GetPendingIntent(RecorderRuntimeMode.TrainingRunning, SessionMode.Training));
+        Assert.Equal(ActiveSessionPendingIntent.None,
+            SessionUiStateCalculator.GetPendingIntent(RecorderRuntimeMode.Idle, (SessionMode)99));
+
+        SessionUiState current = new(SessionMode.Setup, false, true, false, false, ProcessFps: 29.8);
+        SessionUiState pending = SessionUiStateCalculator.Calculate(
+            current, RecorderRuntimeMode.Idle, ActiveSessionPendingIntent.StartTraining, true, false);
+        Assert.Equal(SessionMode.Training, pending.Mode);
+        Assert.True(pending.IsPendingCommand);
+        Assert.True(pending.IsTrainingAvailable);
+
+        SessionUiState running = SessionUiStateCalculator.Calculate(
+            current, RecorderRuntimeMode.TrainingRunning, ActiveSessionPendingIntent.None, true, true);
+        Assert.Equal(SessionMode.Training, running.Mode);
+        Assert.True(running.IsRunning);
+        Assert.True(running.IsReplayActive);
+        Assert.Equal(29.8, running.ProcessFps);
+    }
+
     [Fact]
     public void CanToggle_disables_game_start_without_table_configuration()
     {

@@ -41,13 +41,17 @@ internal sealed class SessionContext
             .Returns(CreateAcceptedResponse);
         Session.StopGameAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(CreateAcceptedResponse);
+        Session.StartTrainingAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(CreateAcceptedResponse);
+        Session.StopTrainingAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(CreateAcceptedResponse);
 
         _LiveDataSubscriber
             .Subscribe<TableUpdateMessage>(Arg.Any<Action<TableUpdateMessage>>())
             .Returns(callInfo =>
             {
                 _TableUpdateHandler = callInfo.Arg<Action<TableUpdateMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
 
         _LiveDataSubscriber
@@ -55,7 +59,7 @@ internal sealed class SessionContext
             .Returns(callInfo =>
             {
                 _TrackingFrameHandler = callInfo.Arg<Action<TrackingFrameMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
 
         _LiveDataSubscriber
@@ -63,7 +67,7 @@ internal sealed class SessionContext
             .Returns(callInfo =>
             {
                 _ProcessFrameRateHandler = callInfo.Arg<Action<ProcessFrameRateMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
 
         _LiveAnalysisSubscriber
@@ -71,7 +75,7 @@ internal sealed class SessionContext
             .Returns(callInfo =>
             {
                 _VisionContextHandler = callInfo.Arg<Action<VisionContextMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
 
         _LiveAnalysisSubscriber
@@ -79,7 +83,7 @@ internal sealed class SessionContext
             .Returns(callInfo =>
             {
                 _BallDetectionMaskHandler = callInfo.Arg<Action<BallDetectionMaskMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
 
         _LiveAnalysisSubscriber
@@ -87,16 +91,29 @@ internal sealed class SessionContext
             .Returns(callInfo =>
             {
                 _ReplayStartedHandler = callInfo.Arg<Action<ReplayStartedMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
+
+        _LiveAnalysisSubscriber
+            .Subscribe<ReplayReturnToLiveMessage>(Arg.Any<Action<ReplayReturnToLiveMessage>>())
+            .Returns(_ => CreateSubscription());
 
         _LiveAnalysisSubscriber
             .Subscribe<ReplayClipMessage>(Arg.Any<Action<ReplayClipMessage>>())
             .Returns(callInfo =>
             {
                 _ReplayClipHandler = callInfo.Arg<Action<ReplayClipMessage>>();
-                return Substitute.For<IDisposable>();
+                return CreateSubscription();
             });
+    }
+
+    public List<IDisposable> Subscriptions { get; } = [];
+
+    private IDisposable CreateSubscription()
+    {
+        IDisposable subscription = Substitute.For<IDisposable>();
+        Subscriptions.Add(subscription);
+        return subscription;
     }
 
     public RecorderConnection Connection { get; } = new(

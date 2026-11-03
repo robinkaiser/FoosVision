@@ -1,8 +1,8 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-11-01. Status: Arbeitspakete 1–6 implementiert und geprüft.
-Die Recorder-Laufzeit ist angeschlossen. Arbeitspakete 7–11 bleiben offen;
-Viewer-Bedienung, lokale Sprachausgabe und Trainingsclips folgen in 7–9.
+Stand: 2026-11-01. Status: Arbeitspakete 1–7 implementiert und geprüft.
+Recorder-Laufzeit und Viewer-Bedienung sind angeschlossen. Arbeitspakete 8–11 bleiben offen;
+lokale Sprachausgabe und Trainingsclips folgen in 8–9.
 
 ## Ziel und Umfang
 
@@ -545,27 +545,54 @@ Umgesetzt und geprüft am 2026-11-01:
 
 Abhängigkeit: Schritte 5–6.
 
-- [ ] TrainingCommandSender und Viewer-TrainingModule ergänzen. ConnectedViewerSession
+- [x] TrainingCommandSender und Viewer-TrainingModule ergänzen. ConnectedViewerSession
   und IConnectedViewerSession um Trainingskommandos erweitern.
-- [ ] Recordergebundene Module und Subscriptions erst nach erfolgreicher Verbindung
+- [x] Recordergebundene Module und Subscriptions erst nach erfolgreicher Verbindung
   erzeugen. ViewerHost/ViewerCompositionRoot und SessionManager führen Abhängigkeiten
   zur ActiveSession; kein globaler Trainingszustand beim App-Start.
-- [ ] ActiveSession an Training anschließen. Bestehende Tracking-, Tisch-, Masken-,
+- [x] ActiveSession an Training anschließen. Bestehende Tracking-, Tisch-, Masken-,
   Playback- und Replay-Presenter wiederverwenden; keine Trainingsstatusanzeige ergänzen.
-- [ ] SessionMode, PendingIntent und SessionUiStateCalculator explizit um Training
+- [x] SessionMode, PendingIntent und SessionUiStateCalculator explizit um Training
   erweitern. Setup/Game-Fallbacks entfernen; Verfügbarkeit aus Setup und Runtime-State ableiten.
-- [ ] Live-Playback, FPS, Overlay-Reset und Stop-Regeln für Training ergänzen. Auch
+- [x] Live-Playback, FPS, Overlay-Reset und Stop-Regeln für Training ergänzen. Auch
   Android OverlayView auf bisherige Game-only-Bedingungen prüfen.
-- [ ] Dritten Start-/Stop-Button in ViewerSessionController, ViewerControlsViewModel und
+- [x] Dritten Start-/Stop-Button in ViewerSessionController, ViewerControlsViewModel und
   allen vier Control-Layouts ergänzen. Viewer zeigt Live oder Zeitlupe wie bei Game;
   keine Strategie-, Varianten- oder Trainingsstatusanzeige und keine Konfigurationsmaske ergänzen.
-- [ ] Disconnect, Session-Wechsel und Dispose entfernen Trainings-Subscriptions und
+- [x] Disconnect, Session-Wechsel und Dispose entfernen Trainings-Subscriptions und
   alte Anzeige-/Playback-Zustände. Audio-Lifecycle verbleibt vollständig beim Recorder.
 
 Tests: CommandTests, RuntimeStateTests, SessionUiStateCalculatorTests, SessionManagerTests,
 LiveTrackingTests und neue Trainings-Presenter-Tests in Adapters.Viewer.UnitTests.
 
 Abnahme: Viewer kann Training bedienen und visualisieren; Setup und Game bleiben bedienbar.
+
+Umgesetzt und geprüft am 2026-11-01:
+
+- TrainingCommandSender und TrainingModule folgen dem vorhandenen Game-Muster.
+  ViewerCompositionRoot erzeugt das Modul erst nach erfolgreicher Verbindung;
+  ConnectedViewerSession stellt die Kommandos über IConnectedViewerSession bereit.
+  ViewerHost und SessionManager reichen bereits diese Session an ActiveSession weiter
+  und benötigen dafür keine zusätzliche globale Trainingsabhängigkeit.
+- SessionMode, PendingIntent und UI-Berechnung behandeln Training explizit.
+  Training benötigt wie Game eine Tischkonfiguration; während eines laufenden Modus
+  ist nur dessen Stop zulässig. Ausstehende Kommandos und Faulted sperren die Bedienung.
+  Unbekannte Modi fallen nicht mehr implizit auf Game zurück.
+- ActiveSession verwendet unverändert die gemeinsamen Tracking-, Tisch-, Masken-,
+  Vision-Kontext- und Replay-Presenter. Live-Start, FPS, Overlay-Reset und Stop behandeln
+  Training wie Game. Der Android-Overlay zeigt LIVE/REPLAY auch für Training.
+  Ein Wechsel der Recorder-Session setzt die Tracking-Anzeige auch bei gleichem Modus zurück.
+- Controller, ViewModel und alle vier Control-Layouts enthalten Start/Stop Training.
+  Es gibt keine Strategie-, Varianten- oder Trainingsstatusanzeige, keine neue
+  Konfigurationsmaske und keine Viewer-Audioanbindung.
+- Der gemeinsame Dispose-Pfad entfernt alle acht Live-/Analyse-Subscriptions und
+  beendet Playback und Replay-Arbeit. Replay-Speicher, Tracking-/Masken-/Tischanzeige
+  und UI-Zustand werden geleert, damit die nächste Verbindung frisch beginnt.
+  Diese Ergänzung ist für den geforderten Session-Wechsel nötig und gilt für alle Modi.
+- Verifikation: Viewer-Adapter-Tests erfolgreich (99/99), einschließlich Trainingskommandos,
+  Startvoraussetzungen, Modussperren, Fehlerantworten, Runtime-State, gemeinsamen Presentern,
+  Replay-Stop, Session-Wechsel und Dispose. Android-Viewer-App einschließlich Composition
+  und XAML erfolgreich gebaut (0 Warnungen, 0 Fehler). `git diff --check` erfolgreich.
 
 ## 8. Sprachausgabe implementieren und in den Versuch integrieren
 
@@ -688,8 +715,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
    einschließlich Validierung, Provider-Snapshot und Konfigurationsdokumentation.
 4. Protokoll und Transport (5) sowie Recorder-Adapter, Composition und Lifecycle (6)
    sind abgeschlossen und geprüft. Training ist recorderseitig start-/stoppbar.
-5. Viewer-Bedienung und lokale Recorder-Sprachausgabe zum ersten vollständigen Feature
-   ergänzen (7–8); Sprachausgabe kann nach Schritt 6 unabhängig von Schritt 7 entstehen.
+5. Viewer-Bedienung ist abgeschlossen und geprüft (7). Lokale Recorder-Sprachausgabe
+   zum ersten vollständigen Feature ergänzen (8).
 6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
 7. Dokumentation und Verifikation pro Schnitt nachführen (10).
 

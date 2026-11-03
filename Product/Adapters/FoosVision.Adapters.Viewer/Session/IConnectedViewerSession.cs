@@ -24,4 +24,8 @@ public interface IConnectedViewerSession : IDisposable
     Task<CommandResponse> StartGameAsync(Guid commandId, CancellationToken ct);
 
     Task<CommandResponse> StopGameAsync(Guid commandId, CancellationToken ct);
+
+    Task<CommandResponse> StartTrainingAsync(Guid commandId, CancellationToken ct);
+
+    Task<CommandResponse> StopTrainingAsync(Guid commandId, CancellationToken ct);
 }

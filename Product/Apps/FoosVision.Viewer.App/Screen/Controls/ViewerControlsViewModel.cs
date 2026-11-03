@@ -32,6 +32,7 @@ public class ViewerControlsViewModel :
         viewModel.StreamFpsChanged += OnStreamFpsChanged;
         SetupButton = CreateButtonState(SessionMode.Setup);
         GameButton = CreateButtonState(SessionMode.Game);
+        TrainingButton = CreateButtonState(SessionMode.Training);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -40,11 +41,15 @@ public class ViewerControlsViewModel :
 
     public ICommand ToggleGameModeCommand => _SessionController.ToggleGameModeCommand;
 
+    public ICommand ToggleTrainingModeCommand => _SessionController.ToggleTrainingModeCommand;
+
     public ICommand OpenAboutCommand => _ViewModel.About.OpenCommand;
 
     public ViewerControlButtonState SetupButton { get; private set; }
 
     public ViewerControlButtonState GameButton { get; private set; }
+
+    public ViewerControlButtonState TrainingButton { get; private set; }
 
     public string ProcessFpsText => _ProcessFpsText;
 
@@ -70,6 +75,7 @@ public class ViewerControlsViewModel :
     {
         SetupButton = CreateButtonState(SessionMode.Setup);
         GameButton = CreateButtonState(SessionMode.Game);
+        TrainingButton = CreateButtonState(SessionMode.Training);
 
         _IsReplayActive = uiState.IsReplayActive;
         _IsProcessFpsVisible = uiState.IsRunning;
@@ -80,6 +86,7 @@ public class ViewerControlsViewModel :
 
         OnPropertyChanged(nameof(SetupButton));
         OnPropertyChanged(nameof(GameButton));
+        OnPropertyChanged(nameof(TrainingButton));
         OnPropertyChanged(nameof(ProcessFpsText));
         OnPropertyChanged(nameof(StreamFpsText));
         OnPropertyChanged(nameof(IsProcessFpsVisible));
@@ -160,6 +167,7 @@ public class ViewerControlsViewModel :
         {
             SessionMode.Setup => true,
             SessionMode.Game => uiState.IsGameAvailable,
+            SessionMode.Training => uiState.IsTrainingAvailable,
             _ => false,
         };
     }
@@ -208,7 +216,13 @@ public class ViewerControlsViewModel :
 
     private static string GetModeLabel(SessionMode mode)
     {
-        return mode == SessionMode.Setup ? "Setup" : "Game";
+        return mode switch
+        {
+            SessionMode.Setup => "Setup",
+            SessionMode.Game => "Game",
+            SessionMode.Training => "Training",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+        };
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

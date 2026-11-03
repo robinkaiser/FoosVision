@@ -10,6 +10,8 @@ using FoosVision.Domain.Replay.Entities;
 using FoosVision.Ports.Media;
 using FoosVision.Ports.Vision;
 using FoosVision.Protocol.Connectivity.Abstractions;
+using FoosVision.Protocol.Messages.Common;
+using FoosVision.Protocol.Messages.Events;
 using FoosVision.Protocol.Messages.Handshake;
 using FoosVision.Protocol.Messages.Live;
 using FoosVision.Protocol.Messages.LiveAnalysis;
@@ -20,6 +22,37 @@ namespace FoosVision.Adapters.Viewer.UnitTests.Session;
 
 public class SessionManagerTests
 {
+    [Fact]
+    public async Task Training_commands_are_bound_to_the_connected_session()
+    {
+        TestContext context = new();
+        IRecorderRuntimeStateSink? runtimeSink = null;
+        context.Session.When(session => session.AttachRuntimeStateSink(Arg.Any<IRecorderRuntimeStateSink>()))
+            .Do(call => runtimeSink = call.Arg<IRecorderRuntimeStateSink>());
+        context.Session.StopTrainingAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new CommandResponse { Accepted = true, Error = string.Empty });
+        using SessionManager sut = context.CreateSut(_ => { });
+
+        await sut.ToggleModeSessionAsync(SessionMode.Training);
+        context.Session.DidNotReceive().AttachRuntimeStateSink(Arg.Any<IRecorderRuntimeStateSink>());
+        await context.Session.DidNotReceive().StartTrainingAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+
+        await sut.InitializeAsync(CancellationToken.None);
+        Assert.NotNull(runtimeSink);
+        runtimeSink.OnRecorderRuntimeStateChanged(new RecorderRuntimeStateChanged
+        {
+            Mode = RecorderRuntimeMode.TrainingRunning, ActiveSessionId = Guid.NewGuid(),
+        });
+        await sut.ToggleModeSessionAsync(SessionMode.Training);
+
+        await context.Session.Received(1).StopTrainingAsync(Arg.Any<Guid>(), CancellationToken.None);
+        Assert.Equal(SessionMode.Training, context.UiSink.States[^1].Mode);
+
+        sut.Dispose();
+        context.Host.Received(1).Dispose();
+        Assert.False(context.UiSink.States[^1].IsConnected);
+    }
+
     [Fact]
     public async Task InitializeAsync_updates_ui_state_when_connection_succeeds()
     {
@@ -45,6 +78,7 @@ public class SessionManagerTests
 
         Assert.False(context.UiSink.States[^1].IsConnected);
         Assert.False(context.UiSink.States[^1].IsPendingCommand);
+        context.Session.DidNotReceive().AttachRuntimeStateSink(Arg.Any<IRecorderRuntimeStateSink>());
     }
 
     [Fact]
