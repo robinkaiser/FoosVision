@@ -59,7 +59,7 @@ public class TrainingSession
                 return Result(_LiveTracker.Latest ?? EmptySnapshot(frame), [], false, false);
             }
 
-            LiveTrackingSnapshot snapshot = _LiveTracker.ApplyObservations(frame, observations);
+            LiveTrackingSnapshot snapshot = _LiveTracker.ApplyObservations(frame, observations, includePredicted: true);
             return ApplyTracking(snapshot);
         }
     }
@@ -248,7 +248,7 @@ public class TrainingSession
             return;
         }
 
-        // No observations means no announcement. Tracking already owns temporary ball loss.
+        // A tracked ball is sufficient, including a prediction without a new observation.
         if (State == TrainingState.Waiting && snapshot.IsBallFound && snapshot.Frame.TimestampNs - _ReadyTimestampNs >= _WaitNs)
         {
             _ExecutionTimestampNs = snapshot.Frame.TimestampNs;

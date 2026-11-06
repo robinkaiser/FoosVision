@@ -197,9 +197,10 @@ public class TrainingUseCaseTests
     }
 
     [Theory]
-    [InlineData(TrainingVariantAnnouncement.OnReady)]
-    [InlineData(TrainingVariantAnnouncement.OnShoot)]
-    public async Task Complete_first_attempt_is_testable_through_frame_usecase_with_no_camera_network_or_audio(TrainingVariantAnnouncement mode)
+    [InlineData(TrainingVariantAnnouncement.OnReady, TrackingStatus.Observed)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot, TrackingStatus.Predicted)]
+    public async Task Complete_first_attempt_is_testable_through_frame_usecase_with_no_camera_network_or_audio(
+        TrainingVariantAnnouncement mode, TrackingStatus trackingStatus)
     {
         IBallTracker balls = Substitute.For<IBallTracker>();
         balls.ApplyObservations(Arg.Any<Frame>(), Arg.Any<IEnumerable<ObservedBall>>()).Returns(call =>
@@ -208,14 +209,15 @@ public class TrainingUseCaseTests
             long ms = frame.TimestampNs / 1_000_000;
             Point position = ms <= 2000 ? SnakePosition(Team.A) : ms == 2100 ? new(1200, 450) : new(1300, 450);
             Vector2 velocity = ms == 2100 ? new(2000, 0) : default;
-            return new TrackingSnapshot(frame, [new(1, frame, position, TrackingConfidence.High, TrackingStatus.Observed, velocity)]);
+            return new TrackingSnapshot(frame, [new(1, frame, position, TrackingConfidence.High, trackingStatus, velocity)]);
         });
         LiveTracker tracker = new(LiveTrackerParams.Default, balls, new PossessionCalculator(TableConfig.Config));
         TrainingSession session = new(Guid.NewGuid(), tracker, TableConfig.Config, new([Option(TrainingStrategyKind.SnakeShot)], mode), new CountingRandom());
         _Store.SaveActive(session);
         IFrameVisionOps vision = Substitute.For<IFrameVisionOps>();
         ObservedBall observation = new(SnakePosition(Team.A), ObservationQualityThresholds.Default.HighQuality);
-        vision.DetectBalls(TableConfig.Config).Returns([observation]);
+        ObservedBall[] observations = trackingStatus == TrackingStatus.Observed ? [observation] : [];
+        vision.DetectBalls(TableConfig.Config).Returns(observations);
         List<ProcessFrameResponse> responses = [];
         IProcessFrameOutputPort output = Substitute.For<IProcessFrameOutputPort>();
         output.ReportProcessed(Arg.Do<ProcessFrameResponse>(responses.Add)).Returns(Task.CompletedTask);
@@ -228,7 +230,7 @@ public class TrainingUseCaseTests
 
         Assert.Equal(7, responses.Count);
         Assert.All(responses, response => Assert.Equal(session.Id, response.SessionId));
-        Assert.All(responses, response => Assert.Equal(observation, Assert.Single(response.Tracking.Observations)));
+        Assert.All(responses, response => Assert.Equal(observations, response.Tracking.Observations));
         Assert.Single(responses, response => response.PreparationConfirmed is not null);
         Assert.Equal(2, responses.Count(response => response.Announcement is not null));
         ProcessFrameResponse ready = responses[1];

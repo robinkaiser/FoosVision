@@ -18,8 +18,9 @@ public class TrainingStrategyTests
     {
         TrainingOptions options = new([new(TrainingStrategyKind.PullShot, new(0, 0, WaitDistribution.Uniform), [new("long", "Lang")])]);
         FoosVision.Domain.Training.Entities.TrainingSession session = Session(options);
-        session.ApplyTracking(Snapshot(0, SnakePosition(Team.A)));
-        Assert.Null(session.ApplyTracking(Snapshot(1000, SnakePosition(Team.A))).Attempt);
+        Point outsidePull = SnakePosition(Team.A) with { Y = 480 };
+        session.ApplyTracking(Snapshot(0, outsidePull));
+        Assert.Null(session.ApplyTracking(Snapshot(1000, outsidePull)).Attempt);
         session.ApplyTracking(Snapshot(2000, Pull(Team.A)));
         Assert.Equal(TrainingStrategyKind.PullShot, session.ApplyTracking(Snapshot(3000, Pull(Team.A))).Attempt!.Strategy);
         Assert.Equal(new TrainingVariant("long", "Lang"), session.ApplyTracking(Snapshot(3001, Pull(Team.A))).Variant);
@@ -44,19 +45,25 @@ public class TrainingStrategyTests
     }
 
     [Theory]
-    [InlineData(1139, 450, false)]
-    [InlineData(1140, 450, true)]
-    [InlineData(1170, 450, true)]
-    [InlineData(1171, 450, false)]
-    [InlineData(1150, 400, false)]
-    [InlineData(1150, 401, true)]
-    [InlineData(1150, 499, true)]
-    [InlineData(1150, 500, false)]
-    public void Snake_region_uses_rod_centers_and_middle_fifteen_percent(double x, double y, bool ready)
+    [InlineData(1109, 450, false)]
+    [InlineData(1110, 450, true)]
+    [InlineData(1160, 450, true)]
+    [InlineData(1161, 450, false)]
+    [InlineData(1150, 383, false)]
+    [InlineData(1150, 384, true)]
+    [InlineData(1150, 516, true)]
+    [InlineData(1150, 517, false)]
+    public void Snake_region_uses_rod_centers_and_middle_twenty_percent(double x, double y, bool ready)
     {
-        SnakeShotTrainingStrategy strategy = Snake();
-        strategy.FindPreparation(Snapshot(0, new(x, y)));
-        Assert.Equal(ready, strategy.FindPreparation(Snapshot(1000, new(x, y))) is not null);
+        foreach (Team team in new[] { Team.A, Team.B })
+        {
+            SnakeShotTrainingStrategy strategy = Snake();
+            double sideX = team == Team.A ? x :
+                TableConfig.Config.Field.Bars.A3.Center.P0.X + TableConfig.Config.Field.Bars.B3.Center.P0.X - x;
+            Point position = new(sideX, y);
+            strategy.FindPreparation(Snapshot(0, position, Three(team)));
+            Assert.Equal(ready, strategy.FindPreparation(Snapshot(1000, position, Three(team))) is not null);
+        }
     }
 
     [Fact]
@@ -100,6 +107,28 @@ public class TrainingStrategyTests
     }
 
     [Theory]
+    [InlineData(0.249, false)]
+    [InlineData(0.25, true)]
+    [InlineData(0.50, true)]
+    [InlineData(0.501, false)]
+    public void Pull_region_includes_twenty_five_to_fifty_percent_and_mirrors_for_both_teams(double fraction, bool ready)
+    {
+        foreach (Team team in new[] { Team.A, Team.B })
+        {
+            PullShotTrainingStrategy strategy = PullStrategy();
+            Trapezium boundary = TableConfig.Config.Field.Boundary;
+            double side = team == Team.A ? fraction : 1 - fraction;
+            Point position = Pull(team) with
+            {
+                Y = boundary.UpperLeft.Y + (side * (boundary.LowerLeft.Y - boundary.UpperLeft.Y)),
+            };
+            strategy.FindPreparation(Snapshot(0, position, Three(team)));
+
+            Assert.Equal(ready, strategy.FindPreparation(Snapshot(1000, position, Three(team))) is not null);
+        }
+    }
+
+    [Theory]
     [InlineData(Team.A)]
     [InlineData(Team.B)]
     public void Pull_movement_can_confirm_shot_instead_of_immediate_setup_abort(Team team)
@@ -134,6 +163,35 @@ public class TrainingStrategyTests
         Assert.NotNull(strategy.FindPreparation(Snapshot(300, new(x, startY + 10), Five(team))));
     }
 
+    [Theory]
+    [InlineData(0.35, true)]
+    [InlineData(0.3501, false)]
+    [InlineData(0.6499, false)]
+    [InlineData(0.65, true)]
+    public void Pass_uses_outer_35_percent_for_preparation_and_holding_for_both_teams(double sideFraction, bool allowed)
+    {
+        foreach (Team team in new[] { Team.A, Team.B })
+        {
+            TickTackPassTrainingStrategy strategy = TickTack();
+            double x = team == Team.A ? 700 : 900;
+            double y = 120 + 660 * sideFraction;
+            double otherY = y + (sideFraction < 0.5 ? -10 : 10);
+            BarType bar = Five(team);
+            strategy.FindPreparation(Snapshot(0, new(x, otherY), bar));
+            strategy.FindPreparation(Snapshot(100, new(x, y), bar));
+            strategy.FindPreparation(Snapshot(200, new(x, otherY), bar));
+            TrainingPreparation? preparation = strategy.FindPreparation(Snapshot(300, new(x, y), bar));
+            Assert.Equal(allowed, preparation is not null);
+            if (preparation is null)
+            {
+                continue;
+            }
+
+            strategy.Begin(preparation);
+            Assert.Equal(TrainingExecutionState.Holding, strategy.Evaluate(Snapshot(400, new(x, y), bar)).State);
+        }
+    }
+
     [Fact]
     public void Tick_tack_does_not_count_jitter_or_combine_different_sides_or_teams()
     {
@@ -160,7 +218,7 @@ public class TrainingStrategyTests
         SnakeShotTrainingStrategy strategy = Snake();
         BeginShot(strategy, team);
         Vector2 velocity = sideSpeed ? new(0, 2000) : new(2000, 0);
-        Point moving = SnakePosition(team) with { Y = 510 };
+        Point moving = SnakePosition(team) with { Y = 530 };
         Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(1100, moving, Three(team), velocity)).State);
         TrainingExecution confirmed = strategy.Evaluate(Snapshot(1200, new(team == Team.A ? 1300 : 300, 450), Target(team)));
         Assert.Equal(TrainingExecutionState.Pending, confirmed.State);
@@ -323,8 +381,9 @@ public class TrainingStrategyTests
     {
         TickTackPassTrainingStrategy strategy = BeginPass(team);
         double x = team == Team.A ? 700 : 900;
-        Point exit = backwards ? new(x + (team == Team.A ? -20 : 20), 200) : new(x, 450);
-        Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(400, exit, Five(team))).State);
+        Point exit = backwards ? new(team == Team.A ? 500 : 1100, 200) : new(x, 450);
+        BarType exitBar = backwards ? Three(team == Team.A ? Team.B : Team.A) : Five(team);
+        Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(400, exit, exitBar)).State);
         Point target = new(team == Team.A ? 1100 : 500, 200);
         Assert.Equal(TrainingExecutionState.Lost, strategy.Evaluate(Snapshot(1150, target, Three(team))).State);
     }

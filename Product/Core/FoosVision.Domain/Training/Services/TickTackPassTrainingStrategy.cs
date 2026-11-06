@@ -11,7 +11,7 @@ namespace FoosVision.Domain.Training.Services;
 
 public class TickTackPassTrainingStrategy : ITrainingStrategy
 {
-    private const double _BandSideFraction = 0.25;
+    private const double _BandSideFraction = 0.35;
 
     // A reversal must move this far from the previous extreme; subpixel jitter is not a tick-tack.
     public const double DirectionChangeMinDistancePx = 5;
@@ -112,16 +112,17 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
                 return new(snapshot.Phase == LiveTrackingPhase.BallLost ? TrainingExecutionState.Lost : TrainingExecutionState.Holding);
             }
 
-            bool backwards = TrainingGeometry.AttackProgress(_TableConfig, preparation.Team, snapshot.BallPosition, preparation.Bar) < 0;
             bool sameSide = GetSetupSide(snapshot, preparation.Team) == _Side;
-            if (sameSide && !backwards)
+            if (sameSide)
             {
                 _LastSetupAnchor = new(snapshot.Frame, snapshot.BallPosition, snapshot.Possession);
                 return new(TrainingExecutionState.Holding);
             }
 
             _MovementFrame = snapshot.Frame;
-            _InvalidExit = backwards || snapshot.Possession == new BallPossession(preparation.Team, PossessionArea.FiveBar);
+            bool ownFive = snapshot.Possession == new BallPossession(preparation.Team, PossessionArea.FiveBar);
+            bool backwards = !ownFive && HasMovedBackwards(snapshot.BallPosition, preparation);
+            _InvalidExit = backwards || ownFive;
         }
 
         if (!_ConfirmationFrame.HasValue && snapshot.Frame.TimestampNs - _MovementFrame.Value.TimestampNs > ShotTrainingStrategy.DecisionWindowMs * 1_000_000L)
@@ -138,7 +139,7 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
                 _ConfirmationFrame ??= snapshot.Frame;
             }
 
-            _InvalidExit |= TrainingGeometry.AttackProgress(_TableConfig, preparation.Team, snapshot.BallPosition, preparation.Bar) < 0;
+            _InvalidExit |= HasMovedBackwards(snapshot.BallPosition, preparation);
         }
 
         if (!_InvalidExit && _ConfirmationFrame.HasValue)
@@ -167,6 +168,10 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
 
     private TrainingExecution Result(TrainingExecutionState state)
         => new(state, _MovementFrame, _ConfirmationFrame, _LastSetupAnchor);
+
+    private bool HasMovedBackwards(Point position, TrainingPreparation preparation)
+        => TrainingGeometry.AttackProgress(_TableConfig, preparation.Team, position, preparation.Bar) <
+           TrainingGeometry.AttackProgress(_TableConfig, preparation.Team, preparation.Anchor.Position, preparation.Bar);
 
     private int GetSetupSide(LiveTrackingSnapshot snapshot, Team team)
     {

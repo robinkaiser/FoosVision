@@ -95,7 +95,10 @@ public class FramePresenter : IProcessFrameOutputPort
             _Announcements.Request(announcement);
         }
 
-        if (_LastStatus != response.Status)
+        if (_LastStatus?.State != response.Status.State ||
+            _LastStatus?.Attempt?.SessionId != response.Status.Attempt?.SessionId ||
+            _LastStatus?.Attempt?.AttemptId != response.Status.Attempt?.AttemptId ||
+            _LastStatus?.Variant != response.Status.Variant)
         {
             _LastStatus = response.Status;
             _Log.Information("Training state changed. SessionId={SessionId} State={State} Attempt={Attempt}",

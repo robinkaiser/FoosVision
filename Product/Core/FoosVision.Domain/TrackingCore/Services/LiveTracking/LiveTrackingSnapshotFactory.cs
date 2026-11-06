@@ -9,18 +9,19 @@ namespace FoosVision.Domain.TrackingCore.Services.LiveTracking;
 
 internal static class LiveTrackingSnapshotFactory
 {
-    public static LiveTrackingSnapshot Observed(
+    public static LiveTrackingSnapshot Tracked(
         Frame frame,
         TrackedBall trackedBall,
         IReadOnlyList<TrackedBall> candidates,
         BallPossession possession,
         BallPossession lastKnownPossession,
         int possessionTimeMs,
-        BarType? closestBar)
+        BarType? closestBar,
+        int lastObservedBallAgeMs)
     {
         return new(frame, LiveTrackingPhase.Live, true, trackedBall.Position,
             trackedBall.VelocityPxPerS, candidates, possession, lastKnownPossession,
-            possessionTimeMs, 0, closestBar);
+            possessionTimeMs, lastObservedBallAgeMs, closestBar);
     }
 
     public static LiveTrackingSnapshot TemporarilyLost(

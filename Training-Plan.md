@@ -99,18 +99,22 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
 - **Beide Teams:** Eigene Dreier-/Fünferreihe und Angriffsrichtung aus Tischgeometrie und
   Team ableiten. Prozentangaben quer zum Tor werden zwischen oberer und unterer Bande
   an der betreffenden Reihe berechnet, einschließlich perspektivischer Feldkanten.
-- **Snake (`snakeShot`):** Mittlere 15 % der Spielfeldbreite, also 42,5–57,5 %.
-  Richtung Zieltor gilt 20–35 % des Abstandes zwischen den Stangenmitten der eigenen
+- **Snake (`snakeShot`):** Mittlere 20 % der Spielfeldbreite, also 40–60 %.
+  Richtung Zieltor gilt 5–30 % des Abstandes zwischen den Stangenmitten der eigenen
   Dreierreihe und der benachbarten gegnerischen Zweierreihe (0 % unter der Dreierreihe,
   100 % unter der Zweierreihe). Dreierbesitz erforderlich. 1000 ms durchgehend im Bereich
   abwarten, dann Ready; keine Unterscheidung zwischen Pendeln und Ruhe. Das Delay ist
   eine Code-Konstante. Zulässige Bewegung im Bereich startet den Timer nicht neu.
+  Auf Nutzerwunsch nach dem Seq-Tischtest vom 2026-11-06 von 42,5–57,5 % erweitert.
+  Zunächst wurden nur die Quergrenzen geändert. Auf weiteren Nutzerwunsch nach dem
+  Pull-Tischtest wurde der Abstand vor der Stange anschließend von 20–35 % auf 5–30 % geändert.
+  Grenz-/Schuss-Regressionstests sind angepasst; Domain 330/330 und Usecases 64/64 erfolgreich.
 - **Zieher (`pullShot`):** Dreierbesitz reicht für die Position in Richtung Tor.
-  Querposition für A 25–35 % von oben, für B gespiegelt 65–75 %. 1000 ms Ruhe;
+  Querposition für A 25–50 % von oben, für B gespiegelt 50–75 %. 1000 ms Ruhe;
   die bisherige Toleranz gilt: jeder Positionswert höchstens `dx² + dy² <= 50` vom
   Mittelwert des Vorbereitungsfensters entfernt (rund 7,1 Pixel). Nach Ready wird
   Bewegung gegen diese Ruheposition bewertet.
-- **Pass (`tickTackPass`):** Fünferbesitz und Querposition 0–25 % oder 75–100 %,
+- **Pass (`tickTackPass`):** Fünferbesitz und Querposition 0–35 % oder 65–100 %,
   für beide Teams und beide Banden. Zwei Richtungswechsel bestätigen die Vorbereitung.
   Position in Richtung Tor ist für die Vorbereitung nicht eingeschränkt. Als benannte
   V1-Code-Konstante zählen Richtungswechsel erst ab 5 Pixeln vom letzten Extrempunkt;
@@ -121,7 +125,9 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   dann einmaliges Abschlussereignis. Keine Bewertung der angesagten Variante oder eines Tores.
 - **Passabschluss:** Ball auf eigener Dreierreihe oder in gegnerischer Defense bestätigt
   den Pass. Seitliches Verlassen des Setup-Bereichs bei weiterem eigenen Fünferbesitz
-  oder Bewegung entgegen der Angriffsrichtung führt zum Abbruch.
+  oder rückwärtiges Verlassen der eigenen Fünferreihe führt zum Abbruch. Bei weiterem
+  Tick-Tack im selben seitlichen Bereich und eigener Fünferreihe gibt es keine zusätzliche
+  X-/Abstandsprüfung gegen die Ready-Position.
 - **Entscheidungsfenster nach Setup-Verlust:** Nicht im ersten Bewegungsframe abbrechen.
   V1 verwendet vorläufig 750 ms als benannte Code-Konstante, um Schuss-/Passabschluss
   abzuwarten. Ohne Bestätigung folgt Aborted. Ein bereits bestätigter Schuss darf seinen
@@ -163,7 +169,9 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   zusätzliche Zufallsziehung zur Priorisierung. Während des Versuchs keine Konkurrenz.
 - **Tracking/Zeit:** Vorhandene Glättung und Verlustphasen von BallTracking/LiveTracking
   verwenden. Keine zusätzliche Verdeckungstoleranz oder pauschale Zeitlückenregel.
-  Keine Ansagen ohne neue Frames, keine Ausführungsfreigabe ohne beobachteten Ball;
+  Keine Ansagen ohne neue Frames; ein getrackter Ball einschließlich Vorhersage reicht
+  für Vorbereitung, Ausführungsfreigabe und Auswertung, eine neue Beobachtung im selben
+  Frame ist für keine der drei Trainingsstrategien erforderlich;
   endgültiger Trackingverlust führt zum Abbruch. Doppelte/rückläufige Frame-Zeit ignorieren.
 - **Geometrieänderung:** Kleine laufende Korrekturen normal übernehmen; weder Versuch noch
   Erkennungshistorie deswegen zurücksetzen. Keine zusätzliche Änderungserkennung.
@@ -656,6 +664,25 @@ vorzeitige Auslösung oder Verlust der Vorbereitung führt zu Aborted und erford
 Vorbereitung. Dies funktioniert
 durch beide Rollen. Gerätetest erfolgt manuell durch den Nutzer.
 
+Tischprüfung am 2026-11-06 durch den Nutzer erfolgreich: Snake, Pull und Pass
+funktionieren mit den aktuellen Bereichen wie gewünscht. Snake verwendet seitlich
+40–60 % und einen Torachsenabstand von 5–30 %, Pull für A 25–50 % und für B 50–75 %,
+Pass die äußeren 35 % (0–35 % und 65–100 %). Beim Pass entfällt die zusätzliche
+Torachsenprüfung während des Haltens; die Richtung wird erst beim Reihenverlust geprüft.
+
+Training verwendet den führenden Track (TrackingSnapshot.Current), unabhängig davon,
+ob er im aktuellen Frame beobachtet oder vorhergesagt wurde. Vorhersagen liefern
+aktuelle Position, Geschwindigkeit und Besitz, aktualisieren aber nicht die letzte
+echte Beobachtung. Game behält seine bisherige beobachtungsbasierte Auswahl.
+Der BallTracker-Algorithmus und seine Lebensdauergrenzen bleiben unverändert.
+
+Die temporären Diagnose-Logs und die dafür eingeführten Datenverträge wurden nach
+erfolgreicher Tischprüfung entfernt. Reguläre Zustandswechsel-Logs bleiben erhalten.
+Tests sind auf grundlegendes Verhalten und aktuelle Bereichsgrenzen reduziert;
+Tischtest-Reproduktionen, Diagnose-Tests und zusätzliche Team-/Ansagemodus-Matrizen entfallen.
+Verifiziert nach der Bereinigung: Domain 316/316, Usecases 64/64 und Recorder-Adapter
+80/80 erfolgreich. Die Domain-Prüfung umfasst die bestehenden Game-Tests.
+
 Implementiert und automatisiert geprüft am 2026-11-06:
 
 Aktualisierte Nutzerentscheidung vom 2026-11-06: Feste Ansagetexte verwenden die
@@ -808,7 +835,7 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
    sind abgeschlossen und geprüft. Training ist recorderseitig start-/stoppbar.
 5. Viewer-Bedienung ist abgeschlossen und geprüft (7). Beide Ansagemodi sind in 7a ergänzt.
    Lokale Recorder-Sprachausgabe ist implementiert und automatisiert geprüft (8).
-   Manuelle Geräteabnahme von Meilenstein 1 durch den Nutzer steht noch aus.
+   Die Tischprüfung von Snake, Pull und Pass wurde vom Nutzer erfolgreich bestätigt.
 6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
 7. Dokumentation und Verifikation pro Schnitt nachführen (10).
 

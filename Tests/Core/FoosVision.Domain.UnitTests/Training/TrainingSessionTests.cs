@@ -43,7 +43,7 @@ public class TrainingSessionTests
     {
         TrainingSession session = Session();
         ReadyAndAnnounce(session, team);
-        session.ApplyTracking(Snapshot(2100, SnakePosition(team) with { Y = 510 }, Three(team), new(2000, 0)));
+        session.ApplyTracking(Snapshot(2100, SnakePosition(team) with { Y = 530 }, Three(team), new(2000, 0)));
         session.ApplyTracking(Snapshot(2200, new(team == Team.A ? 1300 : 300, 450), Target(team)));
         TrainingAttemptCompleted completed = Assert.Single(session.ApplyTracking(Snapshot(2450, default, Target(team))).Events.OfType<TrainingAttemptCompleted>());
         Assert.Equal(At(2000), completed.Attempt.Anchor.Frame);

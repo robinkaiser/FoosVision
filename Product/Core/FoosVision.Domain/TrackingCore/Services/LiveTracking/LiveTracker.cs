@@ -36,22 +36,25 @@ public class LiveTracker
 
     public LiveTrackingSnapshot? Latest { get; private set; }
 
-    public LiveTrackingSnapshot ApplyObservations(Frame frame, IEnumerable<ObservedBall> observations)
+    /// <summary>Optionally uses the tracker's current ball regardless of observation status, using its current position and possession.</summary>
+    public LiveTrackingSnapshot ApplyObservations(Frame frame, IEnumerable<ObservedBall> observations, bool includePredicted = false)
     {
-        LiveTrackingSnapshot snapshot = ObserveFrame(frame, observations);
+        LiveTrackingSnapshot snapshot = ObserveFrame(frame, observations, includePredicted);
         CompleteFrame();
         return snapshot;
     }
 
     // Allow the mode to consume this frame's facts before committing possession expiration.
-    internal LiveTrackingSnapshot ObserveFrame(Frame frame, IEnumerable<ObservedBall> observations)
+    internal LiveTrackingSnapshot ObserveFrame(Frame frame, IEnumerable<ObservedBall> observations, bool includePredicted = false)
     {
         var visualSnapshot = _BallTracker.ApplyObservations(frame, observations);
-        var observedBall = visualSnapshot.Candidates.FirstOrDefault(static c => c.Status == TrackingStatus.Observed);
+        TrackedBall? trackedBall = includePredicted
+            ? visualSnapshot.Current
+            : visualSnapshot.Candidates.FirstOrDefault(static c => c.Status == TrackingStatus.Observed);
 
-        Latest = observedBall == null
+        Latest = trackedBall == null
             ? ApplyUnobservedFrame(frame, visualSnapshot.Candidates)
-            : ApplyObservedFrame(frame, observedBall, visualSnapshot.Candidates);
+            : ApplyTrackedFrame(frame, trackedBall, visualSnapshot.Candidates);
 
         return Latest;
     }
@@ -62,7 +65,7 @@ public class LiveTracker
         _PossessionCalculator.UpdateTableConfig(tableConfig);
     }
 
-    private LiveTrackingSnapshot ApplyObservedFrame(
+    private LiveTrackingSnapshot ApplyTrackedFrame(
         Frame frame,
         TrackedBall trackedBall,
         IReadOnlyList<TrackedBall> candidates)
@@ -70,8 +73,11 @@ public class LiveTracker
         var possession = _PossessionCalculator.Compute(trackedBall.Position);
         int possessionTimeMs = UpdatePossessionTime(frame, possession);
 
-        _HasObservedBall = true;
-        _LastObservedBallFrame = trackedBall.Frame;
+        if (trackedBall.Status == TrackingStatus.Observed)
+        {
+            _HasObservedBall = true;
+            _LastObservedBallFrame = trackedBall.Frame;
+        }
 
         if (possession != BallPossession.None)
         {
@@ -81,14 +87,15 @@ public class LiveTracker
         BarType? closestBar = _PossessionCalculator.FindClosestBarType(trackedBall.Position)
             .TryGetValue(out BarType bar) ? bar : null;
 
-        return LiveTrackingSnapshotFactory.Observed(
+        return LiveTrackingSnapshotFactory.Tracked(
             frame,
             trackedBall,
             candidates,
             possession,
             _LastKnownPossession,
             possessionTimeMs,
-            closestBar);
+            closestBar,
+            trackedBall.Status == TrackingStatus.Observed ? 0 : trackedBall.UnobservedAgeMs);
     }
 
     private LiveTrackingSnapshot ApplyUnobservedFrame(Frame frame, IReadOnlyList<TrackedBall> candidates)

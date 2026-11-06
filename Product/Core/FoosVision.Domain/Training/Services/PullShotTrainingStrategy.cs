@@ -11,7 +11,7 @@ namespace FoosVision.Domain.Training.Services;
 public class PullShotTrainingStrategy : ShotTrainingStrategy
 {
     private const double _MinSideFraction = 0.25;
-    private const double _MaxSideFraction = 0.35;
+    private const double _MaxSideFraction = 0.50;
 
     public PullShotTrainingStrategy(TrainingStrategyOptions options, TableConfiguration tableConfig) : base(options, tableConfig)
     {
@@ -24,14 +24,12 @@ public class PullShotTrainingStrategy : ShotTrainingStrategy
     protected override bool IsInSetup(LiveTrackingSnapshot snapshot, Team team)
     {
         double side = TrainingGeometry.SideFraction(TableConfig, TrainingGeometry.ThreeBar(team), snapshot.BallPosition);
-        if (team == Team.B)
-        {
-            side = 1 - side;
-        }
+        double minSide = team == Team.B ? 1 - _MaxSideFraction : _MinSideFraction;
+        double maxSide = team == Team.B ? 1 - _MinSideFraction : _MaxSideFraction;
 
         return
             snapshot.Possession == new BallPossession(team, PossessionArea.ThreeBar) &&
-            side >= _MinSideFraction &&
-            side <= _MaxSideFraction;
+            side >= minSide &&
+            side <= maxSide;
     }
 }

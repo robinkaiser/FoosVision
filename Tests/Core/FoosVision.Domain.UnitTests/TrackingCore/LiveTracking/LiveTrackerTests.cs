@@ -25,12 +25,14 @@ public class LiveTrackerTests
         _Testee = new(LiveTrackerParams.Default, _BallTracker, _Calculator);
     }
 
-    [Fact]
-    public void Snapshot_exposes_observed_facts_and_all_candidates()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Snapshot_uses_tracker_current_when_predictions_are_included_otherwise_first_observed(bool includePredicted)
     {
         Assert.Null(_Testee.Latest);
         Frame frame = At(1000);
-        TrackedBall predicted = Ball(frame, TrackingStatus.Predicted);
+        TrackedBall predicted = Ball(frame, TrackingStatus.Predicted) with { UnobservedAgeMs = 33 };
         TrackedBall observed = Ball(frame, TrackingStatus.Observed) with
         {
             Position = new Point(250, 300),
@@ -39,20 +41,21 @@ public class LiveTrackerTests
         };
         Arrange(frame, predicted, observed);
 
-        LiveTrackingSnapshot snapshot = _Testee.ApplyObservations(frame, []);
+        LiveTrackingSnapshot snapshot = _Testee.ApplyObservations(frame, [], includePredicted);
+        TrackedBall selected = includePredicted ? predicted : observed;
 
         Assert.Same(snapshot, _Testee.Latest);
         Assert.Equal(LiveTrackingPhase.Live, snapshot.Phase);
         Assert.True(snapshot.IsBallFound);
         Assert.Equal(frame, snapshot.Frame);
-        Assert.Equal(observed.Position, snapshot.BallPosition);
-        Assert.Equal(observed.VelocityPxPerS, snapshot.BallVelocityPxPerS);
+        Assert.Equal(selected.Position, snapshot.BallPosition);
+        Assert.Equal(selected.VelocityPxPerS, snapshot.BallVelocityPxPerS);
         Assert.Equal(new[] { predicted, observed }, snapshot.BallCandidates);
         Assert.Equal(_Possession, snapshot.Possession);
         Assert.Equal(_Possession, snapshot.LastKnownPossession);
         Assert.Equal(BarType.A3, snapshot.ClosestBar);
         Assert.Equal(0, snapshot.PossessionTimeMs);
-        Assert.Equal(0, snapshot.LastObservedBallAgeMs);
+        Assert.Equal(selected.UnobservedAgeMs, snapshot.LastObservedBallAgeMs);
     }
 
     [Fact]
@@ -65,6 +68,51 @@ public class LiveTrackerTests
         Assert.Equal(LiveTrackingPhase.Live, snapshot.Phase);
         Assert.Equal(16001, snapshot.PossessionTimeMs);
         Assert.Equal(_Possession, snapshot.Possession);
+    }
+
+    [Fact]
+    public void Included_prediction_supplies_current_position_possession_and_actual_observation_age()
+    {
+        Observe(1000);
+        Frame frame = At(1500);
+        TrackedBall predicted = Ball(frame, TrackingStatus.Predicted) with
+        {
+            Position = new Point(900, 200),
+            VelocityPxPerS = new Vector2(0, 100),
+            UnobservedAgeMs = 500,
+        };
+        BallPossession possession = new(Team.B, PossessionArea.FiveBar);
+        _Calculator.Compute(predicted.Position).Returns(possession);
+        _Calculator.FindClosestBarType(predicted.Position).Returns(Option<BarType>.Some(BarType.B5));
+        Arrange(frame, predicted);
+
+        LiveTrackingSnapshot snapshot = _Testee.ApplyObservations(frame, [], includePredicted: true);
+
+        Assert.True(snapshot.IsBallFound);
+        Assert.Equal(LiveTrackingPhase.Live, snapshot.Phase);
+        Assert.Equal(predicted.Position, snapshot.BallPosition);
+        Assert.Equal(predicted.VelocityPxPerS, snapshot.BallVelocityPxPerS);
+        Assert.Equal(possession, snapshot.Possession);
+        Assert.Equal(BarType.B5, snapshot.ClosestBar);
+        Assert.Equal(500, snapshot.LastObservedBallAgeMs);
+    }
+
+    [Fact]
+    public void Included_prediction_has_no_additional_observation_timeout_and_does_not_reset_observation_age()
+    {
+        Observe(1000);
+        Frame frame = At(3500);
+        Arrange(frame, Ball(frame, TrackingStatus.Predicted) with { UnobservedAgeMs = 2500 });
+        LiveTrackingSnapshot predicted = _Testee.ApplyObservations(frame, [], includePredicted: true);
+        Assert.True(predicted.IsBallFound);
+        Assert.Equal(2500, predicted.LastObservedBallAgeMs);
+
+        Frame missingFrame = At(3520);
+        Arrange(missingFrame);
+        LiveTrackingSnapshot missing = _Testee.ApplyObservations(missingFrame, [], includePredicted: true);
+        Assert.False(missing.IsBallFound);
+        Assert.Equal(LiveTrackingPhase.BallLost, missing.Phase);
+        Assert.Equal(2520, missing.LastObservedBallAgeMs);
     }
 
     [Fact]
