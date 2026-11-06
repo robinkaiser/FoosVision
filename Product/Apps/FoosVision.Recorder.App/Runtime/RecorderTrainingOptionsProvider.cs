@@ -55,7 +55,6 @@ public class RecorderTrainingOptionsProvider : ITrainingOptionsProvider
             _ => throw new InvalidOperationException("Unknown training wait distribution."),
         };
         return new(kind, new(settings.MinWaitSeconds, settings.MaxWaitSeconds, distribution),
-            settings.Variants.Select(variant => new TrainingVariant(variant.Id, variant.Text)),
-            TrainingVariantSelection.RandomWithRepeats);
+            settings.Variants.Select(variant => new TrainingVariant(variant.Id, variant.Text, variant.Weight)));
     }
 }

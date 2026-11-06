@@ -44,10 +44,16 @@ public class RecorderTrainingSettings
     }
 }
 
-public class TrainingVariantSettings(string id, string text)
+public class TrainingVariantSettings(string id, string text, double weight)
 {
+    [JsonRequired]
     public string Id { get; set; } = id;
+
+    [JsonRequired]
     public string Text { get; set; } = text;
+
+    [JsonRequired]
+    public double Weight { get; set; } = weight;
 }
 
 public abstract class TrainingStrategySettings
@@ -55,7 +61,6 @@ public abstract class TrainingStrategySettings
     public double MinWaitSeconds { get; set; } = 1;
     public double MaxWaitSeconds { get; set; } = 10;
     public string WaitDistribution { get; set; } = "uniform";
-    public string VariantSelection { get; set; } = "randomWithRepeats";
     public List<TrainingVariantSettings> Variants { get; set; } = [];
 
     public void Validate(string[] allowedVariants)
@@ -66,16 +71,18 @@ public abstract class TrainingStrategySettings
             throw new InvalidOperationException("Training wait seconds must be finite, nonnegative, min <= max and representable in frame nanoseconds.");
         }
 
-        if (WaitDistribution is not ("uniform" or "preferLong" or "preferShort") || VariantSelection != "randomWithRepeats")
+        if (WaitDistribution is not ("uniform" or "preferLong" or "preferShort"))
         {
-            throw new InvalidOperationException("Unsupported training wait distribution or variant selection.");
+            throw new InvalidOperationException("Unsupported training wait distribution.");
         }
 
         if (Variants is null || Variants.Count == 0 ||
-            Variants.Any(variant => variant is null || !allowedVariants.Contains(variant.Id, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(variant.Text)) ||
-            Variants.Select(variant => variant.Id).Distinct(StringComparer.Ordinal).Count() != Variants.Count)
+            Variants.Any(variant => variant is null || !allowedVariants.Contains(variant.Id, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(variant.Text) ||
+                !double.IsFinite(variant.Weight) || variant.Weight < 0) ||
+            Variants.Select(variant => variant.Id).Distinct(StringComparer.Ordinal).Count() != Variants.Count ||
+            !double.IsFinite(Variants.Sum(variant => variant.Weight)) || Variants.Sum(variant => variant.Weight) <= 0)
         {
-            throw new InvalidOperationException("Training variants must be nonempty, unique, valid for their strategy and have nonempty texts.");
+            throw new InvalidOperationException("Training variants must be nonempty, unique, valid for their strategy, and have nonempty texts and finite nonnegative weights with a finite positive sum.");
         }
     }
 }
@@ -85,7 +92,7 @@ public class SnakeShotSettings : TrainingStrategySettings
     public SnakeShotSettings()
     {
         MaxWaitSeconds = 12;
-        Variants = [new("left", "Left"), new("right", "Right"), new("middle", "Middle")];
+        Variants = [new("left", "Left", 1), new("right", "Right", 1), new("middle", "Middle", 1)];
     }
 }
 
@@ -93,7 +100,7 @@ public class PullShotSettings : TrainingStrategySettings
 {
     public PullShotSettings()
     {
-        Variants = [new("short", "Short"), new("middle", "Middle"), new("long", "Long")];
+        Variants = [new("short", "Short", 1), new("middle", "Middle", 1), new("long", "Long", 1)];
     }
 }
 
@@ -101,6 +108,6 @@ public class TickTackPassSettings : TrainingStrategySettings
 {
     public TickTackPassSettings()
     {
-        Variants = [new("wall", "Wall"), new("lane", "Lane"), new("split", "Split")];
+        Variants = [new("wall", "Wall", 1), new("lane", "Lane", 1), new("split", "Split", 1)];
     }
 }

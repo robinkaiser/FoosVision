@@ -3,4 +3,4 @@
 
 namespace FoosVision.Domain.Training.ValueObjects;
 
-public record TrainingVariant(string Id, string Text);
+public record TrainingVariant(string Id, string Text, double Weight);

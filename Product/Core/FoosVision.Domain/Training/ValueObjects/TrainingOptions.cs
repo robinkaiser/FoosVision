@@ -62,44 +62,38 @@ public record TrainingWaitOptions
     }
 }
 
-public enum TrainingVariantSelection
-{
-    RandomWithRepeats,
-}
-
 public record TrainingStrategyOptions
 {
     public TrainingStrategyOptions(TrainingStrategyKind kind, TrainingWaitOptions wait,
-        IEnumerable<TrainingVariant>? variants = null,
-        TrainingVariantSelection variantSelection = TrainingVariantSelection.RandomWithRepeats)
+        IEnumerable<TrainingVariant>? variants = null)
     {
         Kind = kind;
         Wait = wait;
-        VariantSelection = variantSelection;
         Variants = Array.AsReadOnly((variants ?? DefaultVariants(kind)).ToArray());
     }
 
     public TrainingStrategyKind Kind { get; }
     public TrainingWaitOptions Wait { get; }
     public IReadOnlyList<TrainingVariant> Variants { get; }
-    public TrainingVariantSelection VariantSelection { get; }
 
     internal void Validate()
     {
         string[] allowed = [.. DefaultVariants(Kind).Select(variant => variant.Id)];
-        if (Wait is null || !Enum.IsDefined(VariantSelection) || Variants.Count == 0 ||
-            Variants.Any(variant => variant is null || !allowed.Contains(variant.Id, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(variant.Text)) ||
-            Variants.Select(variant => variant.Id).Distinct(StringComparer.Ordinal).Count() != Variants.Count)
+        if (Wait is null || Variants.Count == 0 ||
+            Variants.Any(variant => variant is null || !allowed.Contains(variant.Id, StringComparer.Ordinal) || string.IsNullOrWhiteSpace(variant.Text) ||
+                !double.IsFinite(variant.Weight) || variant.Weight < 0) ||
+            Variants.Select(variant => variant.Id).Distinct(StringComparer.Ordinal).Count() != Variants.Count ||
+            !double.IsFinite(Variants.Sum(variant => variant.Weight)) || Variants.Sum(variant => variant.Weight) <= 0)
         {
-            throw new ArgumentException("Invalid strategy variants or selection.");
+            throw new ArgumentException("Invalid strategy variants or weights.");
         }
     }
 
     private static TrainingVariant[] DefaultVariants(TrainingStrategyKind kind) => kind switch
     {
-        TrainingStrategyKind.SnakeShot => [new("left", "Left"), new("right", "Right"), new("middle", "Middle")],
-        TrainingStrategyKind.PullShot => [new("short", "Short"), new("middle", "Middle"), new("long", "Long")],
-        _ => [new("wall", "Wall"), new("lane", "Lane"), new("split", "Split")],
+        TrainingStrategyKind.SnakeShot => [new("left", "Left", 1), new("right", "Right", 1), new("middle", "Middle", 1)],
+        TrainingStrategyKind.PullShot => [new("short", "Short", 1), new("middle", "Middle", 1), new("long", "Long", 1)],
+        _ => [new("wall", "Wall", 1), new("lane", "Lane", 1), new("split", "Split", 1)],
     };
 }
 

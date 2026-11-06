@@ -1,6 +1,6 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-11-06. Status: Arbeitspakete 1–8 einschließlich 7a implementiert und automatisiert geprüft.
+Stand: 2026-11-06. Status: Arbeitspakete 1–8 einschließlich 7a und 8a implementiert und automatisiert geprüft.
 Recorder-Laufzeit, Viewer-Bedienung und lokale Sprachausgabe sind angeschlossen.
 Die manuelle Geräteabnahme von Meilenstein 1 bleibt beim Nutzer. Arbeitspakete 9–11 bleiben offen;
 Trainingsclips folgen in 9.
@@ -148,7 +148,7 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   `preferLong = sqrt(u)`, `preferShort = 1 - sqrt(u)`; Zeit = min + (max - min) * Anteil.
   Min = max ergibt feste Wartezeit. Keine zusätzlichen Bias-Parameter.
 - **Varianten:** Snake: Left/Right/Middle; Pull: Short/Middle/Long; Pass: Wall/Lane/Split.
-  Gleichverteilte zufällige Auswahl, direkte Wiederholungen erlaubt. Stabile IDs und
+  Gewichtete zufällige Auswahl gemäß 8a, direkte Wiederholungen erlaubt. Stabile IDs und
   sprechbare Texte im Core; keine Erfolgsprüfung der angesagten Variante.
 - **Ansagemodus:** Pflichtfeld `training.variantAnnouncement` vor `enabledStrategies`:
   `onReady` (Default) wählt die Variante bei Ready und sagt „<Variantentext> ready“,
@@ -748,6 +748,33 @@ Wiedergabe, Audio-Fokus-/Lifecycle-Verhalten und Latenz bleiben manuell zu prüf
   einschließlich hörbarer Ausgabe, Fokus/Lifecycle und Latenz bleibt offen; Checkliste
   und Sprachvoraussetzung stehen in der Produktdokumentation.
 
+## 8a. Gewichtete Variantenauswahl
+
+Nutzerentscheidung vom 2026-11-06, eingeschoben vor Arbeitspaket 9:
+
+- [x] `variantSelection` vollständig entfernen; jeder `variants`-Eintrag erhält neben
+  `id` und `text` das Pflichtfeld `weight`. Keine Abwärtskompatibilität oder Migration;
+  alte Felder und fehlende Gewichte machen die Konfiguration ungültig.
+- [x] Pro Versuch relativ zur Gewichtssumme wählen; die Summe muss weder 1 noch 100 sein.
+  Wiederholungen bleiben möglich. Nullgewichte schließen Varianten aus; bei `1, 0, 0`
+  wird immer die erste Variante gewählt. Alle Defaults erhalten Gewicht 1.
+- [x] Endliche, nichtnegative Gewichte und eine endliche positive Summe je Strategie
+  validieren, auch bei deaktivierten Strategien. Unveränderliche Core-Optionen und
+  Recorder-/VideoPlayer-Mapping anpassen; beide Ansagemodi bleiben erhalten.
+- [x] Deterministische Tests für Auswahlintervalle, Skalierung, Nullgewichte,
+  Wiederholungen, ungültige/alte Konfiguration und Provider-Snapshot ergänzen.
+- [x] Configuration.md und aktuelle Release Notes aktualisieren. Diagnostics.md geprüft;
+  Diagnoseverhalten und Settings-Propagation bleiben unverändert.
+
+Die historischen Notizen zu gleichverteilter Auswahl und `randomWithRepeats` in
+Arbeitspaketen 3 und 4 werden durch 8a ersetzt. Keine neuen Projektabhängigkeiten
+und keine Protokolländerungen. Arbeitspaket 9 bleibt offen.
+
+Verifiziert am 2026-11-06, sequenziell mit `--no-restore`: Domain 328/328,
+Settings 76/76, Usecases 64/64, Recorder-Adapter 80/80 und VideoPlayer 11/11.
+Android-App-Build erfolgreich, 0 Warnungen/0 Fehler. `git diff --check` sowie
+LF-/Final-Newline-Prüfung erfolgreich. Keine Apps oder Geräteworkflows gestartet.
+
 ## 9. Gemeinsame Replay-Ausführung und Training-Replay ergänzen
 
 Abhängigkeit: stabiler Meilenstein 1 und Replay-Entscheidungen aus Schritt 0.
@@ -836,7 +863,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
 5. Viewer-Bedienung ist abgeschlossen und geprüft (7). Beide Ansagemodi sind in 7a ergänzt.
    Lokale Recorder-Sprachausgabe ist implementiert und automatisiert geprüft (8).
    Die Tischprüfung von Snake, Pull und Pass wurde vom Nutzer erfolgreich bestätigt.
-6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
+6. Gewichtete Variantenauswahl ist als Zwischenschritt 8a ergänzt.
+   Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
 7. Dokumentation und Verifikation pro Schnitt nachführen (10).
 
 Erledigte Checkboxen erst nach Implementierung und der jeweiligen Abnahme markieren.

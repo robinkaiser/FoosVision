@@ -268,7 +268,19 @@ public class TrainingSession
     {
         double unit = _Random.NextUnit();
         TrainingWaitOptions.ValidateUnit(unit);
-        return strategy.Variants[(int)(unit * strategy.Variants.Count)];
+        double selection = unit * strategy.Variants.Sum(variant => variant.Weight);
+        double cumulativeWeight = 0;
+        foreach (TrainingVariant variant in strategy.Variants)
+        {
+            cumulativeWeight += variant.Weight;
+            if (selection < cumulativeWeight)
+            {
+                return variant;
+            }
+        }
+
+        // Multiplication can round up to the total weight even when unit is below 1.
+        return strategy.Variants.Last(variant => variant.Weight > 0);
     }
 
     private void Abort(List<TrainingEvent> events, TrainingAbortReason reason)

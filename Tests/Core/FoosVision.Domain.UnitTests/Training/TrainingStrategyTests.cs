@@ -16,14 +16,14 @@ public class TrainingStrategyTests
     [Fact]
     public void Session_only_detects_enabled_strategies_and_announces_configured_variant_text()
     {
-        TrainingOptions options = new([new(TrainingStrategyKind.PullShot, new(0, 0, WaitDistribution.Uniform), [new("long", "Lang")])]);
+        TrainingOptions options = new([new(TrainingStrategyKind.PullShot, new(0, 0, WaitDistribution.Uniform), [new("long", "Lang", 1)])]);
         FoosVision.Domain.Training.Entities.TrainingSession session = Session(options);
         Point outsidePull = SnakePosition(Team.A) with { Y = 480 };
         session.ApplyTracking(Snapshot(0, outsidePull));
         Assert.Null(session.ApplyTracking(Snapshot(1000, outsidePull)).Attempt);
         session.ApplyTracking(Snapshot(2000, Pull(Team.A)));
         Assert.Equal(TrainingStrategyKind.PullShot, session.ApplyTracking(Snapshot(3000, Pull(Team.A))).Attempt!.Strategy);
-        Assert.Equal(new TrainingVariant("long", "Lang"), session.ApplyTracking(Snapshot(3001, Pull(Team.A))).Variant);
+        Assert.Equal(new TrainingVariant("long", "Lang", 1), session.ApplyTracking(Snapshot(3001, Pull(Team.A))).Variant);
     }
 
     [Theory]

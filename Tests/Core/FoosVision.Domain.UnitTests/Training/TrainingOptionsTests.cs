@@ -56,18 +56,37 @@ public class TrainingOptionsTests
     [Fact]
     public void Strategy_options_snapshot_variants_and_reject_invalid_variants()
     {
-        List<TrainingVariant> variants = [new("right", "Rechts")];
+        List<TrainingVariant> variants = [new("right", "Rechts", 1)];
         TrainingStrategyOptions snake = new(TrainingStrategyKind.SnakeShot, new(1, 2, WaitDistribution.Uniform), variants);
         variants.Clear();
-        Assert.Equal(new TrainingVariant("right", "Rechts"), Assert.Single(snake.Variants));
+        Assert.Equal(new TrainingVariant("right", "Rechts", 1), Assert.Single(snake.Variants));
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
-            new(TrainingStrategyKind.SnakeShot, snake.Wait, [new("wall", "Wall")])]));
+            new(TrainingStrategyKind.SnakeShot, snake.Wait, [new("wall", "Wall", 1)])]));
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
-            new(TrainingStrategyKind.PullShot, snake.Wait, [new("short", " ")])]));
+            new(TrainingStrategyKind.PullShot, snake.Wait, [new("short", " ", 1)])]));
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
             new(TrainingStrategyKind.TickTackPass, snake.Wait, [])]));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void Invalid_variant_weights_are_rejected(double weight)
+    {
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
-            new(TrainingStrategyKind.SnakeShot, snake.Wait, variantSelection: (TrainingVariantSelection)99)]));
+            new(TrainingStrategyKind.SnakeShot, new(1, 1, WaitDistribution.Uniform), [new("left", "Left", weight)])]));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(double.MaxValue)]
+    public void Zero_or_overflowing_weight_sum_is_rejected(double weight)
+    {
+        Assert.Throws<ArgumentException>(() => new TrainingOptions([
+            new(TrainingStrategyKind.SnakeShot, new(1, 1, WaitDistribution.Uniform),
+                [new("left", "Left", weight), new("right", "Right", weight)])]));
     }
 
     [Fact]

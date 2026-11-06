@@ -39,7 +39,7 @@ public class TrainingSettingsTests
         json["training"]![id]!["minWaitSeconds"] = 2;
         json["training"]![id]!["maxWaitSeconds"] = 2;
         json["training"]![id]!["waitDistribution"] = "preferLong";
-        json["training"]![id]!["variants"] = new JsonArray(new JsonObject { ["id"] = variant, ["text"] = "Ansage" });
+        json["training"]![id]!["variants"] = new JsonArray(new JsonObject { ["id"] = variant, ["text"] = "Ansage", ["weight"] = 2 });
         string text = json.ToJsonString();
         RecorderSettings parsed = RecorderSettingsJson.DeserializeAndValidate(text);
         Assert.Equal([id], parsed.Training.EnabledStrategies);
@@ -65,13 +65,12 @@ public class TrainingSettingsTests
     [InlineData("pullShot", "maxWaitSeconds", "0")]
     [InlineData("tickTackPass", "maxWaitSeconds", "1e20")]
     [InlineData("snakeShot", "waitDistribution", "\"gaussian\"")]
-    [InlineData("pullShot", "variantSelection", "\"noRepeats\"")]
     [InlineData("snakeShot", "variants", "[]")]
-    [InlineData("pullShot", "variants", "[{\"id\":\"left\",\"text\":\"Left\"}]")]
-    [InlineData("tickTackPass", "variants", "[{\"id\":\"wall\",\"text\":\" \"}]")]
-    [InlineData("snakeShot", "variants", "[{\"id\":\"left\",\"text\":\"A\"},{\"id\":\"left\",\"text\":\"B\"}]")]
-    [InlineData("snakeShot", "variants", "[{\"id\":\"short\",\"text\":\"Short\"}]")]
-    [InlineData("snakeShot", "variants", "[{\"id\":\"long\",\"text\":\"Long\"}]")]
+    [InlineData("pullShot", "variants", "[{\"id\":\"left\",\"text\":\"Left\",\"weight\":1}]")]
+    [InlineData("tickTackPass", "variants", "[{\"id\":\"wall\",\"text\":\" \",\"weight\":1}]")]
+    [InlineData("snakeShot", "variants", "[{\"id\":\"left\",\"text\":\"A\",\"weight\":1},{\"id\":\"left\",\"text\":\"B\",\"weight\":1}]")]
+    [InlineData("snakeShot", "variants", "[{\"id\":\"short\",\"text\":\"Short\",\"weight\":1}]")]
+    [InlineData("snakeShot", "variants", "[{\"id\":\"long\",\"text\":\"Long\",\"weight\":1}]")]
     public void Invalid_strategy_config_is_rejected_even_when_disabled_and_initializer_preserves_file(string id, string property, string value)
     {
         JsonObject json = DefaultJson();
@@ -123,7 +122,7 @@ public class TrainingSettingsTests
         Assert.Equal(["variantAnnouncement", "enabledStrategies", "snakeShot", "pullShot", "tickTackPass"], training.Select(property => property.Key));
         foreach (string id in new[] { "snakeShot", "pullShot", "tickTackPass" })
         {
-            Assert.Equal(["minWaitSeconds", "maxWaitSeconds", "waitDistribution", "variantSelection", "variants"],
+            Assert.Equal(["minWaitSeconds", "maxWaitSeconds", "waitDistribution", "variants"],
                 training[id]!.AsObject().Select(property => property.Key));
         }
     }
@@ -181,6 +180,55 @@ public class TrainingSettingsTests
         RecorderSettings settings = RecorderSettingsJson.DeserializeAndValidate(json.ToJsonString());
         Assert.Equal(mode, settings.Training.VariantAnnouncement);
         Assert.Equal(mode, RecorderSettingsJson.DeserializeAndValidate(RecorderSettingsJson.Serialize(settings)).Training.VariantAnnouncement);
+    }
+
+    [Theory]
+    [InlineData("id")]
+    [InlineData("text")]
+    [InlineData("weight")]
+    public void Missing_variant_fields_are_rejected(string property)
+    {
+        JsonObject json = DefaultJson();
+        json["training"]!["snakeShot"]!["variants"]![0]!.AsObject().Remove(property);
+        Assert.Throws<JsonException>(() => RecorderSettingsJson.DeserializeAndValidate(json.ToJsonString()));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void Invalid_variant_weights_are_rejected_even_when_disabled(double weight)
+    {
+        RecorderTrainingSettings settings = new() { EnabledStrategies = [] };
+        settings.SnakeShot.Variants[0].Weight = weight;
+        Assert.Throws<InvalidOperationException>(() => settings.Validate());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(double.MaxValue)]
+    public void Zero_or_overflowing_weight_sum_is_rejected(double weight)
+    {
+        JsonObject json = DefaultJson();
+        foreach (JsonNode? variant in json["training"]!["snakeShot"]!["variants"]!.AsArray())
+        {
+            variant!["weight"] = weight;
+        }
+        AssertInvalidAndPreserved(json.ToJsonString());
+    }
+
+    [Theory]
+    [InlineData(0.25)]
+    [InlineData(25)]
+    public void Relative_weights_and_zero_roundtrip(double weight)
+    {
+        RecorderSettings settings = RecorderSettings.CreateDefault();
+        settings.Training.SnakeShot.Variants[0].Weight = weight;
+        settings.Training.SnakeShot.Variants[1].Weight = 0;
+        RecorderSettings parsed = RecorderSettingsJson.DeserializeAndValidate(RecorderSettingsJson.Serialize(settings));
+        Assert.Equal(weight, parsed.Training.SnakeShot.Variants[0].Weight);
+        Assert.Equal(0, parsed.Training.SnakeShot.Variants[1].Weight);
     }
 
     private static JsonObject DefaultJson() => JsonNode.Parse(RecorderSettingsJson.Serialize(RecorderSettings.CreateDefault()))!.AsObject();

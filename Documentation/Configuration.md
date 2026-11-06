@@ -95,19 +95,21 @@ Alternative PC workflow:
       "minWaitSeconds": 1,
       "maxWaitSeconds": 12,
       "waitDistribution": "uniform",
-      "variantSelection": "randomWithRepeats",
       "variants": [
         {
           "id": "left",
-          "text": "Left"
+          "text": "Left",
+          "weight": 1
         },
         {
           "id": "right",
-          "text": "Right"
+          "text": "Right",
+          "weight": 1
         },
         {
           "id": "middle",
-          "text": "Middle"
+          "text": "Middle",
+          "weight": 1
         }
       ]
     },
@@ -115,19 +117,21 @@ Alternative PC workflow:
       "minWaitSeconds": 1,
       "maxWaitSeconds": 10,
       "waitDistribution": "uniform",
-      "variantSelection": "randomWithRepeats",
       "variants": [
         {
           "id": "short",
-          "text": "Short"
+          "text": "Short",
+          "weight": 1
         },
         {
           "id": "middle",
-          "text": "Middle"
+          "text": "Middle",
+          "weight": 1
         },
         {
           "id": "long",
-          "text": "Long"
+          "text": "Long",
+          "weight": 1
         }
       ]
     },
@@ -135,19 +139,21 @@ Alternative PC workflow:
       "minWaitSeconds": 1,
       "maxWaitSeconds": 10,
       "waitDistribution": "uniform",
-      "variantSelection": "randomWithRepeats",
       "variants": [
         {
           "id": "wall",
-          "text": "Wall"
+          "text": "Wall",
+          "weight": 1
         },
         {
           "id": "lane",
-          "text": "Lane"
+          "text": "Lane",
+          "weight": 1
         },
         {
           "id": "split",
-          "text": "Split"
+          "text": "Split",
+          "weight": 1
         }
       ]
     }
@@ -249,5 +255,5 @@ Each strategy has these settings:
 
 - `minWaitSeconds` / `maxWaitSeconds`: minimum/maximum delay between Ready and the execution cue (“Shoot!” for `onReady`, the variant for `onShoot`), in seconds. Equal values give a fixed delay.
 - `waitDistribution`: `uniform` gives all delays equal probability; `preferLong` favors longer delays; `preferShort` favors shorter delays.
-- `variantSelection`: `randomWithRepeats` selects variants randomly with equal probability, allowing immediate repeats.
-- `variants`: variants to choose from. Each entry has a unique `id` and a spoken `text`. Include at least one variant.
+- `variants`: variants to choose from. Each entry has a unique `id`, a spoken `text`, and a required `weight`. Include at least one variant.
+- `variants[].weight`: finite, nonnegative relative selection weight. The sum must be finite and greater than zero; each probability is its weight divided by that sum.

@@ -319,7 +319,7 @@ public class TrainingSessionTests
     public void OnReady_announces_selected_text_then_shoot_without_selecting_again(TrainingStrategyKind kind, string id, string text)
     {
         CountingRandom random = new(0, 0);
-        TrainingOptions options = new([new(kind, new(5, 5, WaitDistribution.Uniform), [new(id, text)])]);
+        TrainingOptions options = new([new(kind, new(5, 5, WaitDistribution.Uniform), [new(id, text, 1)])]);
         TrainingSession session = Session(options, random);
         Point setup = kind == TrainingStrategyKind.SnakeShot ? SnakePosition(Team.A) : Pull(Team.A);
         BarType bar = BarType.A3;
@@ -342,7 +342,7 @@ public class TrainingSessionTests
         TrainingAnnouncementRequested announcement = Assert.Single(ready.Events.OfType<TrainingAnnouncementRequested>());
         Assert.Equal(TrainingAnnouncementKind.Ready, announcement.Kind);
         Assert.Equal($"{text} ready", announcement.Text);
-        Assert.Equal(new TrainingVariant(id, text), announcement.Variant);
+        Assert.Equal(new TrainingVariant(id, text, 1), announcement.Variant);
         Assert.Equal(announcement.Variant, ready.Variant);
         Assert.Equal(TrainingState.Waiting, ready.State);
         Assert.Equal(2, random.Calls);
@@ -359,6 +359,44 @@ public class TrainingSessionTests
         Assert.Empty(session.ApplyTracking(Snapshot(readyMs + 7999, setup, bar)).Events);
         Assert.Equal(TrainingAbortReason.ExecutionTimeout, Assert.Single(session.ApplyTracking(
             Snapshot(readyMs + 8000, setup, bar)).Events.OfType<TrainingAttemptAborted>()).Reason);
+    }
+
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady, 1)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot, 1)]
+    [InlineData(TrainingVariantAnnouncement.OnReady, 0.01)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot, 0.01)]
+    public void Variant_selection_uses_relative_weights_and_interval_boundaries(TrainingVariantAnnouncement mode, double scale)
+    {
+        double[] units = [0, 0.249, 0.25, 0.749, 0.75, 0.999];
+        string[] expected = ["left", "left", "right", "right", "middle", "middle"];
+        for (int i = 0; i < units.Length; i++)
+        {
+            TrainingStrategyOptions strategy = new(TrainingStrategyKind.SnakeShot, new(1, 1, WaitDistribution.Uniform),
+                [new("left", "Left", 25 * scale), new("right", "Right", 50 * scale), new("middle", "Middle", 25 * scale)]);
+            TrainingSession session = Session(new([strategy], mode), new(0, units[i]));
+            ReadyAndAnnounce(session, Team.A);
+            Assert.Equal(expected[i], session.ApplyTracking(Snapshot(2001, SnakePosition(Team.A))).Variant!.Id);
+        }
+    }
+
+    [Theory]
+    [InlineData(TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingVariantAnnouncement.OnShoot)]
+    public void Only_positive_variant_is_repeated_and_zero_weights_are_never_selected(TrainingVariantAnnouncement mode)
+    {
+        TrainingStrategyOptions strategy = new(TrainingStrategyKind.SnakeShot, new(1, 1, WaitDistribution.Uniform),
+            [new("left", "Left", 0), new("right", "Right", 1), new("middle", "Middle", 0)]);
+        CountingRandom random = new(0, 0, 0, 0.999);
+        TrainingSession session = Session(new([strategy], mode), random);
+        ReadyAndAnnounce(session, Team.A);
+        Assert.Equal("right", session.ApplyTracking(Snapshot(2001, SnakePosition(Team.A))).Variant!.Id);
+        session.ApplyTracking(Snapshot(2100, new(1180, 450)));
+        session.ApplyTracking(Snapshot(2850, new(1180, 450)));
+        session.ApplyTracking(Snapshot(3000, SnakePosition(Team.A)));
+        session.ApplyTracking(Snapshot(4000, SnakePosition(Team.A)));
+        Assert.Equal("right", session.ApplyTracking(Snapshot(5000, SnakePosition(Team.A))).Variant!.Id);
+        Assert.Equal(4, random.Calls);
     }
 
     private static void ReadyAndAnnounce(TrainingSession session, Team team)
