@@ -235,9 +235,9 @@ public class TrainingUseCaseTests
         Assert.NotNull(ready.PreparationConfirmed);
         TrainingAnnouncementRequest readyAnnouncement = Assert.IsType<TrainingAnnouncementRequest>(ready.Announcement);
         Assert.Equal(TrainingAnnouncementKind.Ready, readyAnnouncement.Kind);
-        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? "Push ready" : "Snake ready", readyAnnouncement.Text);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? "Left ready" : "Snake ready", readyAnnouncement.Text);
         Assert.Equal(1, readyAnnouncement.AnnouncementId);
-        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? new TrainingVariant("push", "Push") : null, readyAnnouncement.Variant);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? new TrainingVariant("left", "Left") : null, readyAnnouncement.Variant);
         Assert.Equal(readyAnnouncement.Variant, ready.Status.Variant);
         Assert.Equal(TrainingState.Waiting, ready.Status.State);
         Assert.Equal(1, ready.Status.Attempt!.AttemptId);
@@ -246,9 +246,9 @@ public class TrainingUseCaseTests
         ProcessFrameResponse variant = responses[2];
         TrainingAnnouncementRequest variantAnnouncement = Assert.IsType<TrainingAnnouncementRequest>(variant.Announcement);
         Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? TrainingAnnouncementKind.Shoot : TrainingAnnouncementKind.Variant, variantAnnouncement.Kind);
-        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? "Shoot!" : "Push", variantAnnouncement.Text);
+        Assert.Equal(mode == TrainingVariantAnnouncement.OnReady ? "Shoot!" : "Left", variantAnnouncement.Text);
         Assert.Equal(2, variantAnnouncement.AnnouncementId);
-        Assert.Equal(new TrainingVariant("push", "Push"), variantAnnouncement.Variant);
+        Assert.Equal(new TrainingVariant("left", "Left"), variantAnnouncement.Variant);
         Assert.Equal(variantAnnouncement.Variant, variant.Status.Variant);
         Assert.Equal(ready.Status.Attempt, variant.Status.Attempt);
         ProcessFrameResponse completed = Assert.Single(responses, response => response.CompletedAttempt is not null);

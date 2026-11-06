@@ -6,6 +6,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using FoosVision.Viewer.App.Runtime;
+using FoosVision.Recorder.App.Runtime;
 
 namespace FoosVision.Platforms.Android;
 
@@ -47,6 +48,7 @@ public class MainActivity : MauiAppCompatActivity
         ApplyRoleOrientation(role);
         AppLaunch.RequestRole(role);
         ViewerForegroundState.SetForeground(role == AppRole.Viewer);
+        RecorderForegroundState.SetForeground(role == AppRole.Recorder);
     }
 
     protected override void OnResume()
@@ -54,11 +56,13 @@ public class MainActivity : MauiAppCompatActivity
         base.OnResume();
         AppWindowController.OnResumed(Window);
         ViewerForegroundState.SetForeground(AppLaunch.CurrentRole == AppRole.Viewer);
+        RecorderForegroundState.SetForeground(AppLaunch.CurrentRole == AppRole.Recorder);
     }
 
     protected override void OnPause()
     {
         ViewerForegroundState.SetForeground(false);
+        RecorderForegroundState.SetForeground(false);
         base.OnPause();
     }
 

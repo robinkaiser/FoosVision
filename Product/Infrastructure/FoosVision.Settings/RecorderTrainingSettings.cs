@@ -38,7 +38,7 @@ public class RecorderTrainingSettings
             throw new InvalidOperationException("Training strategy sections must not be null.");
         }
 
-        SnakeShot.Validate(["push", "pull", "middle"]);
+        SnakeShot.Validate(["left", "right", "middle"]);
         PullShot.Validate(["short", "middle", "long"]);
         TickTackPass.Validate(["wall", "lane", "split"]);
     }
@@ -85,7 +85,7 @@ public class SnakeShotSettings : TrainingStrategySettings
     public SnakeShotSettings()
     {
         MaxWaitSeconds = 12;
-        Variants = [new("push", "Push"), new("pull", "Pull"), new("middle", "Middle")];
+        Variants = [new("left", "Left"), new("right", "Right"), new("middle", "Middle")];
     }
 }
 

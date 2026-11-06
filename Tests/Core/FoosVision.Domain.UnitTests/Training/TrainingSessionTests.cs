@@ -237,8 +237,8 @@ public class TrainingSessionTests
     }
 
     [Theory]
-    [InlineData(TrainingStrategyKind.SnakeShot, 0.0, "push")]
-    [InlineData(TrainingStrategyKind.SnakeShot, 0.5, "pull")]
+    [InlineData(TrainingStrategyKind.SnakeShot, 0.0, "left")]
+    [InlineData(TrainingStrategyKind.SnakeShot, 0.5, "right")]
     [InlineData(TrainingStrategyKind.SnakeShot, 0.99, "middle")]
     [InlineData(TrainingStrategyKind.PullShot, 0.0, "short")]
     [InlineData(TrainingStrategyKind.PullShot, 0.5, "middle")]
@@ -270,7 +270,14 @@ public class TrainingSessionTests
             readyMs = 1000;
         }
 
-        session.ApplyTracking(Snapshot(readyMs, setup, bar));
+        TrainingFrameResult ready = session.ApplyTracking(Snapshot(readyMs, setup, bar));
+        string readyText = kind switch
+        {
+            TrainingStrategyKind.SnakeShot => "Snake ready",
+            TrainingStrategyKind.PullShot => "Pull ready",
+            _ => "Pass ready",
+        };
+        Assert.Equal(readyText, Assert.Single(ready.Events.OfType<TrainingAnnouncementRequested>()).Text);
         TrainingFrameResult result = session.ApplyTracking(Snapshot(readyMs + 1000, setup, bar));
         Assert.Equal(expected, Assert.Single(result.Events.OfType<TrainingAnnouncementRequested>()).Variant!.Id);
         Assert.Equal(TrainingState.AwaitingExecution, result.State);
@@ -306,7 +313,7 @@ public class TrainingSessionTests
     }
 
     [Theory]
-    [InlineData(TrainingStrategyKind.SnakeShot, "pull", "Ziehen")]
+    [InlineData(TrainingStrategyKind.SnakeShot, "right", "Rechts")]
     [InlineData(TrainingStrategyKind.PullShot, "long", "Lang")]
     [InlineData(TrainingStrategyKind.TickTackPass, "lane", "Spur")]
     public void OnReady_announces_selected_text_then_shoot_without_selecting_again(TrainingStrategyKind kind, string id, string text)

@@ -98,12 +98,12 @@ Alternative PC workflow:
       "variantSelection": "randomWithRepeats",
       "variants": [
         {
-          "id": "push",
-          "text": "Push"
+          "id": "left",
+          "text": "Left"
         },
         {
-          "id": "pull",
-          "text": "Pull"
+          "id": "right",
+          "text": "Right"
         },
         {
           "id": "middle",
@@ -243,7 +243,7 @@ Operational diagnostics workflows are documented in [Diagnostics](Diagnostics.md
 ## Training Settings
 
 - `variantAnnouncement` (required): `onReady` (default) announces “<variant text> ready”, waits, then announces “Shoot!”. `onShoot` keeps the strategy-specific Ready announcement, waits, then announces the variant.
-- `enabledStrategies`: active strategies: `snakeShot` (Snake), `pullShot` (Pull), `tickTackPass` (Tick-Tack Pass). An empty list enables all strategies.
+- `enabledStrategies`: active strategies: `snakeShot` (Snake), `pullShot` (Pull), `tickTackPass` (Pass). An empty list enables all strategies.
 
 Each strategy has these settings:
 

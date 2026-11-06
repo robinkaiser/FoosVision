@@ -5,6 +5,7 @@ using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Android.CameraFeed;
 using FoosVision.Media.Android.Diagnostics;
+using FoosVision.Media.Android.Speech;
 using FoosVision.Recorder.App.Runtime;
 using FoosVision.Recorder.App.Platforms.Android;
 using FoosVision.Recorder.Composition.Diagnostics;
@@ -47,6 +48,7 @@ public static partial class RecorderPlatformComposition
             CameraFeed cameraFeed = new(_Context, runtimeMetricsOptions);
             var videoDumpWriter = CreateVideoDumpWriter();
             IDisposable? processNetworkBinding = AndroidWifiProcessNetworkBinding.Bind(_Context);
+            AndroidSpeechOutput speech = new(_Context);
 
             bool publishObservations = false;
             bool publishBallDetectionMask = false;
@@ -65,6 +67,7 @@ public static partial class RecorderPlatformComposition
                     cameraFeed,
                     _ViewModel,
                     videoDumpWriter,
+                    speech,
                     publishObservations,
                     publishBallDetectionMask,
                     runtimeMetricsOptions,
@@ -74,6 +77,7 @@ public static partial class RecorderPlatformComposition
             }
             catch
             {
+                speech.Dispose();
                 processNetworkBinding?.Dispose();
                 throw;
             }

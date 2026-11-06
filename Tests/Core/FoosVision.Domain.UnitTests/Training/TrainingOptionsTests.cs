@@ -56,10 +56,10 @@ public class TrainingOptionsTests
     [Fact]
     public void Strategy_options_snapshot_variants_and_reject_invalid_variants()
     {
-        List<TrainingVariant> variants = [new("pull", "Ziehen")];
+        List<TrainingVariant> variants = [new("right", "Rechts")];
         TrainingStrategyOptions snake = new(TrainingStrategyKind.SnakeShot, new(1, 2, WaitDistribution.Uniform), variants);
         variants.Clear();
-        Assert.Equal(new TrainingVariant("pull", "Ziehen"), Assert.Single(snake.Variants));
+        Assert.Equal(new TrainingVariant("right", "Rechts"), Assert.Single(snake.Variants));
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
             new(TrainingStrategyKind.SnakeShot, snake.Wait, [new("wall", "Wall")])]));
         Assert.Throws<ArgumentException>(() => new TrainingOptions([

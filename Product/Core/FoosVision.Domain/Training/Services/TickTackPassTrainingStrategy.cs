@@ -35,7 +35,7 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
     }
 
     public TrainingStrategyOptions Options { get; }
-    public string ReadyText => "Tick tack ready";
+    public string ReadyText => "Pass ready";
     public IReadOnlyList<TrainingVariant> Variants => Options.Variants;
 
     public TrainingPreparation? FindPreparation(LiveTrackingSnapshot snapshot)

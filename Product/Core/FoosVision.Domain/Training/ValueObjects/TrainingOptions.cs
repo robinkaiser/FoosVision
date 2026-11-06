@@ -97,7 +97,7 @@ public record TrainingStrategyOptions
 
     private static TrainingVariant[] DefaultVariants(TrainingStrategyKind kind) => kind switch
     {
-        TrainingStrategyKind.SnakeShot => [new("push", "Push"), new("pull", "Pull"), new("middle", "Middle")],
+        TrainingStrategyKind.SnakeShot => [new("left", "Left"), new("right", "Right"), new("middle", "Middle")],
         TrainingStrategyKind.PullShot => [new("short", "Short"), new("middle", "Middle"), new("long", "Long")],
         _ => [new("wall", "Wall"), new("lane", "Lane"), new("split", "Split")],
     };

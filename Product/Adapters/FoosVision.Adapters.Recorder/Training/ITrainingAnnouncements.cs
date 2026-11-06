@@ -15,7 +15,7 @@ public interface ITrainingAnnouncements
     void StopSession(Guid sessionId);
 }
 
-/// <summary>Speech execution is connected in training work package 8.</summary>
+/// <summary>For hosts without local speech output, such as offline tools.</summary>
 public class NullTrainingAnnouncements : ITrainingAnnouncements
 {
     public void StartSession(Guid sessionId) { }

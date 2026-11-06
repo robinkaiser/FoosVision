@@ -3,7 +3,7 @@
 
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
-using FoosVision.Adapters.Recorder.Training;
+using FoosVision.Ports.Media;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Core.Capture;
 using FoosVision.Protocol.Messages.Events;
@@ -27,7 +27,7 @@ public class RecorderHost : IDisposable
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
         RuntimeMetricsOptions? runtimeMetricsOptions = null,
-        ITrainingAnnouncements? trainingAnnouncements = null)
+        ISpeechOutput? speechOutput = null)
     {
         _Root = RecorderCompositionRoot.Compose(
             cameraFeed,
@@ -39,7 +39,7 @@ public class RecorderHost : IDisposable
             publishObservations,
             publishBallDetectionMask,
             runtimeMetricsOptions,
-            trainingAnnouncements);
+            speechOutput);
     }
 
     public event Action? ViewerConnected

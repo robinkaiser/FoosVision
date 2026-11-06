@@ -56,7 +56,7 @@ internal class TrainingModule : IDisposable
         IVideoDumpOrchestrator videoDumpOrchestrator,
         SessionGate sessionGate,
         ITrainingOptionsProvider optionsProvider,
-        ITrainingAnnouncements? announcements,
+        ISpeechOutput? speechOutput,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
         RuntimeMetricsOptions? runtimeMetricsOptions = null)
@@ -64,7 +64,7 @@ internal class TrainingModule : IDisposable
         _RuntimeState = runtimeState;
         _VideoDumpOrchestrator = videoDumpOrchestrator;
         SessionStore = new TrainingSessionStore();
-        _Announcements = announcements ?? new NullTrainingAnnouncements();
+        _Announcements = speechOutput is null ? new NullTrainingAnnouncements() : new TrainingAnnouncements(speechOutput);
 
         StartTraining = new StartTrainingInteractor(SessionStore, settingsStore, frameSource, optionsProvider, new TrainingRandom(), sessionGate);
         StopTraining = new StopTrainingInteractor(SessionStore, frameSource, sessionGate);
@@ -130,6 +130,7 @@ internal class TrainingModule : IDisposable
     {
         GC.SuppressFinalize(this);
         FrameLoop.Stop();
+        (_Announcements as IDisposable)?.Dispose();
         _VisionContextUpdatePublisher.Dispose();
         _FrameProcessingRatePublisher.Dispose();
     }

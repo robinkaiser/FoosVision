@@ -5,6 +5,7 @@ using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Common.Logging;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Core.Capture;
+using FoosVision.Media.Android.Speech;
 using FoosVision.Protocol.Messages.Events;
 using FoosVision.Recorder.Composition;
 
@@ -17,6 +18,7 @@ public class RecorderRuntime : IRecorderRuntime
     private readonly ICameraFeed _CameraFeed;
     private readonly MainViewModel _ViewModel;
     private readonly RecorderHost _RecorderHost;
+    private readonly AndroidSpeechOutput _Speech;
     private readonly IDisposable? _ProcessNetworkBinding;
     private bool _Started;
 
@@ -24,6 +26,7 @@ public class RecorderRuntime : IRecorderRuntime
         ICameraFeed cameraFeed,
         MainViewModel viewModel,
         IVideoDumpWriter videoDumpWriter,
+        AndroidSpeechOutput speech,
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
         RuntimeMetricsOptions? runtimeMetricsOptions = null,
@@ -32,6 +35,7 @@ public class RecorderRuntime : IRecorderRuntime
         _CameraFeed = cameraFeed;
         _ViewModel = viewModel;
         _ProcessNetworkBinding = processNetworkBinding;
+        _Speech = speech;
 
         RecorderVersionProvider versionProvider = new();
 
@@ -44,7 +48,11 @@ public class RecorderRuntime : IRecorderRuntime
             videoDumpWriter,
             publishObservations,
             publishBallDetectionMask,
-            runtimeMetricsOptions);
+            runtimeMetricsOptions,
+            speechOutput: _Speech);
+
+        _Speech.SetForeground(RecorderForegroundState.IsForeground);
+        RecorderForegroundState.Changed += _Speech.SetForeground;
 
         _RecorderHost.ViewerConnected += OnViewerConnected;
         _RecorderHost.RuntimeStateChanged += OnRecorderRuntimeStateChanged;
@@ -91,6 +99,8 @@ public class RecorderRuntime : IRecorderRuntime
         _RecorderHost.ViewerConnected -= OnViewerConnected;
         _RecorderHost.RuntimeStateChanged -= OnRecorderRuntimeStateChanged;
         _RecorderHost.Dispose();
+        RecorderForegroundState.Changed -= _Speech.SetForeground;
+        _Speech.Dispose();
         _ProcessNetworkBinding?.Dispose();
     }
 

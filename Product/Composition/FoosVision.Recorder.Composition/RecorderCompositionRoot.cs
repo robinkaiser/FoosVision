@@ -3,7 +3,7 @@
 
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
-using FoosVision.Adapters.Recorder.Training;
+using FoosVision.Ports.Media;
 using FoosVision.Common.Metrics;
 using FoosVision.Media.Core.Capture;
 using FoosVision.Media.Core.EncodedVideoStreaming;
@@ -63,7 +63,7 @@ internal class RecorderCompositionRoot : IDisposable
         bool publishObservations = false,
         bool publishBallDetectionMask = false,
         RuntimeMetricsOptions? runtimeMetricsOptions = null,
-        ITrainingAnnouncements? trainingAnnouncements = null)
+        ISpeechOutput? speechOutput = null)
     {
         var settings = new SettingsStore();
         var sessionGate = new SessionGate();
@@ -152,7 +152,7 @@ internal class RecorderCompositionRoot : IDisposable
             videoDumpOrchestrator: videoDumpOrchestrator,
             sessionGate: sessionGate,
             optionsProvider: trainingOptionsProvider,
-            announcements: trainingAnnouncements,
+            speechOutput: speechOutput,
             publishObservations: publishObservations,
             publishBallDetectionMask: publishBallDetectionMask,
             runtimeMetricsOptions: runtimeMetricsOptions);

@@ -28,7 +28,8 @@ public class TrainingSettingsTests
     }
 
     [Theory]
-    [InlineData("snakeShot", "push")]
+    [InlineData("snakeShot", "left")]
+    [InlineData("snakeShot", "right")]
     [InlineData("pullShot", "long")]
     [InlineData("tickTackPass", "wall")]
     public void Json_and_initializer_load_each_strategy_and_update_example(string id, string variant)
@@ -66,9 +67,11 @@ public class TrainingSettingsTests
     [InlineData("snakeShot", "waitDistribution", "\"gaussian\"")]
     [InlineData("pullShot", "variantSelection", "\"noRepeats\"")]
     [InlineData("snakeShot", "variants", "[]")]
-    [InlineData("pullShot", "variants", "[{\"id\":\"push\",\"text\":\"Push\"}]")]
+    [InlineData("pullShot", "variants", "[{\"id\":\"left\",\"text\":\"Left\"}]")]
     [InlineData("tickTackPass", "variants", "[{\"id\":\"wall\",\"text\":\" \"}]")]
-    [InlineData("snakeShot", "variants", "[{\"id\":\"push\",\"text\":\"A\"},{\"id\":\"push\",\"text\":\"B\"}]")]
+    [InlineData("snakeShot", "variants", "[{\"id\":\"left\",\"text\":\"A\"},{\"id\":\"left\",\"text\":\"B\"}]")]
+    [InlineData("snakeShot", "variants", "[{\"id\":\"short\",\"text\":\"Short\"}]")]
+    [InlineData("snakeShot", "variants", "[{\"id\":\"long\",\"text\":\"Long\"}]")]
     public void Invalid_strategy_config_is_rejected_even_when_disabled_and_initializer_preserves_file(string id, string property, string value)
     {
         JsonObject json = DefaultJson();

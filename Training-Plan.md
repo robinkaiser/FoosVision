@@ -1,9 +1,9 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-11-03. Status: Arbeitspakete 1–7 implementiert und geprüft.
-Außerplanmäßige Erweiterung 7a ergänzt zwei Ansagemodi vor Arbeitspaket 8.
-Recorder-Laufzeit und Viewer-Bedienung sind angeschlossen. Arbeitspakete 8–11 bleiben offen;
-lokale Sprachausgabe und Trainingsclips folgen in 8–9.
+Stand: 2026-11-06. Status: Arbeitspakete 1–8 einschließlich 7a implementiert und automatisiert geprüft.
+Recorder-Laufzeit, Viewer-Bedienung und lokale Sprachausgabe sind angeschlossen.
+Die manuelle Geräteabnahme von Meilenstein 1 bleibt beim Nutzer. Arbeitspakete 9–11 bleiben offen;
+Trainingsclips folgen in 9.
 
 ## Ziel und Umfang
 
@@ -110,7 +110,7 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   die bisherige Toleranz gilt: jeder Positionswert höchstens `dx² + dy² <= 50` vom
   Mittelwert des Vorbereitungsfensters entfernt (rund 7,1 Pixel). Nach Ready wird
   Bewegung gegen diese Ruheposition bewertet.
-- **Tick-Tack (`tickTackPass`):** Fünferbesitz und Querposition 0–25 % oder 75–100 %,
+- **Pass (`tickTackPass`):** Fünferbesitz und Querposition 0–25 % oder 75–100 %,
   für beide Teams und beide Banden. Zwei Richtungswechsel bestätigen die Vorbereitung.
   Position in Richtung Tor ist für die Vorbereitung nicht eingeschränkt. Als benannte
   V1-Code-Konstante zählen Richtungswechsel erst ab 5 Pixeln vom letzten Extrempunkt;
@@ -141,7 +141,7 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
   Unterstützte Verteilungen für gleichverteiltes `u` in [0,1): `uniform = u`,
   `preferLong = sqrt(u)`, `preferShort = 1 - sqrt(u)`; Zeit = min + (max - min) * Anteil.
   Min = max ergibt feste Wartezeit. Keine zusätzlichen Bias-Parameter.
-- **Varianten:** Snake: Push/Pull/Middle; Pull: Short/Middle/Long; Tick-Tack: Wall/Lane/Split.
+- **Varianten:** Snake: Left/Right/Middle; Pull: Short/Middle/Long; Pass: Wall/Lane/Split.
   Gleichverteilte zufällige Auswahl, direkte Wiederholungen erlaubt. Stabile IDs und
   sprechbare Texte im Core; keine Erfolgsprüfung der angesagten Variante.
 - **Ansagemodus:** Pflichtfeld `training.variantAnnouncement` vor `enabledStrategies`:
@@ -622,28 +622,28 @@ für Folgepakete gelten beide Modi. Keine Protokoll- oder Projektabhängigkeits�
 Abhängigkeit: Schritte 0, 3, 4 und 6. Ausgabe ausschließlich am Recorder-Lautsprecher;
 Viewer-Implementierung und Audio-Protokoll sind dafür nicht erforderlich.
 
-- [ ] Schmalen Audio-Port, beispielsweise ISpeechOutput, in Ports.Media ergänzen:
+- [x] Schmalen Audio-Port, beispielsweise ISpeechOutput, in Ports.Media ergänzen:
   vorbereiten, asynchron sprechen, abbrechen und aussagekräftiges Ergebnis liefern.
   Keine Plattformtypen in Port, Domain oder Protokoll verwenden.
-- [ ] Android-TTS-Implementierung in bestehender Media.Android-Infrastruktur vorsehen.
+- [x] Android-TTS-Implementierung in bestehender Media.Android-Infrastruktur vorsehen.
   Vor Umsetzung aktuelle Android-Dokumentation prüfen: Initialisierung, Sprachverfügbarkeit,
   Offline-Stimmen, Abschluss/Fehler-Callbacks, Audio-Fokus und Lifecycle. Keine neue
   Projektabhängigkeit stillschweigend einführen.
-- [ ] Dienst über Recorder-Rollenmodul und RecorderCompositionRoot ins TrainingModule
+- [x] Dienst über Recorder-Rollenmodul und RecorderCompositionRoot ins TrainingModule
   einspeisen. Android-Engine kann vorbereitet werden; Ansage-Queue und Cancellation
   gehören zur aktiven TrainingSession und werden beim Stop/Neustart zurückgesetzt.
-- [ ] Recorder-Adapter koordiniert deduplizierte Ansagen anhand von Session/Versuch/Ansage-ID.
+- [x] Recorder-Adapter koordiniert deduplizierte Ansagen anhand von Session/Versuch/Ansage-ID.
   Audio läuft außerhalb der Frame-Verarbeitung. Warteschlange begrenzen; veraltete
   Ansagen verwerfen und bei Abbruch auch bereits laufende Ausgabe stoppen.
-- [ ] Sprachausgabe vorbereiten. Technische
+- [x] Sprachausgabe vorbereiten. Technische
   Fehler auf Infrastruktur-Ebene regulär protokollieren; keinen zusätzlichen
   UI-/Trainings-Fehlerablauf, automatischen Retry oder Versuchsabbruch dafür einbauen.
   Veraltete Ansagen lediglich verwerfen.
-- [ ] Zusammenspiel mit Replay, App-Hintergrund, Audio-Fokusverlust, Disconnect und
+- [x] Zusammenspiel mit Replay, App-Hintergrund, Audio-Fokusverlust, Disconnect und
   Rollenwechsel definieren. Bei Fortsetzung keine alte Ansage nachholen.
-- [ ] Beide Modi aus 7a ausführen: Ready mit optionaler Variante sowie Shoot/Variant
+- [x] Beide Modi aus 7a ausführen: Ready mit optionaler Variante sowie Shoot/Variant
   anhand des vom Core gelieferten Texts sprechen; keine erneute Variantenauswahl im Adapter.
-- [ ] Recorder führt die angeforderte Ansage lokal aus. Ausgabelatenz beeinflusst weder
+- [x] Recorder führt die angeforderte Ansage lokal aus. Ausgabelatenz beeinflusst weder
   Timer noch Trainingszustand; der Viewer erhält keine Audioanforderung.
 
 Tests: In Recorder-Adapter-Tests Fake-Speech-Port mit kontrollierten Abschlüssen für Duplikate, Abbruch,
@@ -655,6 +655,71 @@ Abnahme Meilenstein 1: Für alle drei per JSON kombinierbaren Strategien funktio
 vorzeitige Auslösung oder Verlust der Vorbereitung führt zu Aborted und erfordert erneute
 Vorbereitung. Dies funktioniert
 durch beide Rollen. Gerätetest erfolgt manuell durch den Nutzer.
+
+Implementiert und automatisiert geprüft am 2026-11-06:
+
+Aktualisierte Nutzerentscheidung vom 2026-11-06: Feste Ansagetexte verwenden die
+mitgelieferten MP3s in Media.Android/Resources/raw; nur unbekannte vollständige
+Config-Texte verwenden die Standardstimme der Android-TTS-Engine. Keine erzwungene
+englische Offline-Stimme mehr. MP3-Ausgabe ist unabhängig von TTS-Verfügbarkeit;
+die Engine wird erst für unbekannte Texte initialisiert. Pass heißt in der Ansage
+„Pass ready“ und verwendet speech_pass_ready.mp3; technische Strategie-ID und Erkennung
+bleiben tickTackPass. Alle 21 MP3-Dateien verwenden einheitlich das Präfix speech_,
+das auch reservierte Java-Wörter als Android-Ressourcennamen vermeidet. Die folgenden ursprünglichen
+TTS-Notizen beschreiben die Erstimplementierung und sind damit insoweit überholt.
+
+Umgesetzt und geprüft: `SpeechRecordingCatalog` ordnet vollständige feste Texte
+den 21 Aufnahmen zu. Android spielt sie mit MediaPlayer direkt aus den Raw-Ressourcen
+ab, bereitet asynchron vor und behandelt Abschluss, Fehler, Audio-Fokus und Abbruch
+über denselben Ausgabe-Lifecycle wie TTS. MediaPlayer-Zugriffe laufen auf demselben
+Looper. Bei einer defekten festen Aufnahme wird kein zusätzlicher TTS-Fallback ausgelöst.
+Die Config-Dokumentation, Diagnostik und Release Notes beschreiben diese aktuelle Ausgabe.
+Keine neuen Projekte, Projektabhängigkeiten oder Protokolländerungen.
+
+Verifikation dieser Ergänzung, sequenziell mit `--no-restore`: Media.Core 112/112
+(einschließlich Zuordnung aller festen Texte und unbekannter Config-Texte), Domain
+305/305 (einschließlich „Pass ready“), Recorder-Adapter 80/80 und Usecases 64/64.
+Android-App-Build erfolgreich mit 0 Warnungen/0 Fehlern. Alle 21 MP3s im signierten
+APK auf identischen Inhalt und unkomprimierte Raw-Paketierung geprüft. Diff- und
+LF-/Final-Newline-Prüfung erfolgreich. Kein Gerät/App gestartet; tatsächliche
+Wiedergabe, Audio-Fokus-/Lifecycle-Verhalten und Latenz bleiben manuell zu prüfen.
+
+- `ISpeechOutput` in Ports.Media kapselt Vorbereitung, asynchrone Ausgabe, Abbruch über
+  CancellationToken, Ausgabeerlaubnis, externe Unterbrechung und differenzierte Ergebnisse.
+  Es enthält keine Plattformtypen. Keine neue Projektabhängigkeit eingeführt.
+- `AndroidSpeechOutput` verwendet die aktuelle Android-TTS-API: asynchrone Initialisierung,
+  verfügbare installierte englische Offline-Stimme (bevorzugt US-Englisch, danach geringe
+  gemeldete Latenz), Utterance-Abschluss-/Fehler-/Stop-Callbacks und transienten Audio-Fokus
+  ohne verzögerte Freigabe. Die TTS-Service-Abfrage steht im Android-Manifest. Ressourcen
+  werden beim Recorder-Dispose freigegeben. Quellen sind in Diagnostics.md verlinkt.
+- Recorder-Rollenmodul erzeugt die Plattformausgabe und reicht sie über RecorderHost und
+  RecorderCompositionRoot ins TrainingModule. Dort koordiniert `TrainingAnnouncements`
+  je aktiver Session die Ausgabe außerhalb der Frame-Verarbeitung. Eine laufende und
+  höchstens eine wartende Ansage sind möglich; neuere wartende Ansagen ersetzen ältere.
+  Session-/Versuch-/Ansage-ID deduplizieren und verwerfen überholte Anforderungen.
+  Invalidierung stoppt auch laufende Sprache; die nachfolgende Aborted-Ausgabe bleibt gültig.
+- Beide Ansagemodi sprechen unverändert die Core-Texte aller drei Strategien. Es gibt keine
+  Variantenauswahl im Adapter, keine Audio-Rückkopplung auf Trainingszustand oder Timer
+  und keine Audioanforderungen an den Viewer. Technische Fehler werden regulär geloggt;
+  weder Retry noch UI-Fehlerablauf oder fachlicher Versuchsabbruch wurde ergänzt.
+- Hintergrund und Fokusverlust verwerfen laufende/wartende Ausgabe. Anforderungen im
+  Hintergrund werden ebenfalls verworfen; nach Rückkehr werden nur frische Ansagen erlaubt.
+  Stop, zentraler Verbindungs-/Sessionabbau, Neustart und Rollenwechsel verwerfen die alte
+  Session-Queue. Alte Abschlüsse/Invalidierungen können keine neue Session beeinflussen.
+  Die vorhandene Einschränkung aus Paket 6 gilt weiter: keine neue Erkennung stiller
+  Netzwerkabbrüche. Viewer-Replay unterbricht Recorder-Audio nicht; Ready und die vorhandene
+  Rückkehranforderung warten nicht auf Sprache. Trainingsclips bleiben ausschließlich Paket 9.
+- Verifikation, sequenziell mit `--no-restore`: Recorder-Adapter 80/80, Domain 305/305,
+  Usecases 64/64 und Viewer-Adapter 99/99 erfolgreich. Neue Speech-Fake-Tests prüfen beide
+  Modi/alle Strategietexte, Duplikate, begrenzte Queue, Invalidierung, späte Abschlüsse,
+  Vorbereitung/Sprachfehler, Fokusunterbrechung, Hintergrund, Session-Neustart und Dispose.
+  `dotnet build Product/Apps/FoosVision/FoosVision.csproj --no-restore` erfolgreich,
+  0 Warnungen/0 Fehler. `git diff --check` und LF-/Final-Newline-Prüfung erfolgreich.
+- Configuration.md, Diagnostics.md und aktuelle Release Notes sind nachgeführt.
+  Keine Protokollnachrichten, Handshake-Verträge oder Versionen geändert. Keine Apps,
+  Tools oder Geräteworkflows gestartet. Die manuelle Geräteabnahme von Meilenstein 1
+  einschließlich hörbarer Ausgabe, Fokus/Lifecycle und Latenz bleibt offen; Checkliste
+  und Sprachvoraussetzung stehen in der Produktdokumentation.
 
 ## 9. Gemeinsame Replay-Ausführung und Training-Replay ergänzen
 
@@ -742,7 +807,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
 4. Protokoll und Transport (5) sowie Recorder-Adapter, Composition und Lifecycle (6)
    sind abgeschlossen und geprüft. Training ist recorderseitig start-/stoppbar.
 5. Viewer-Bedienung ist abgeschlossen und geprüft (7). Beide Ansagemodi sind in 7a ergänzt.
-   Lokale Recorder-Sprachausgabe zum ersten vollständigen Feature ergänzen (8).
+   Lokale Recorder-Sprachausgabe ist implementiert und automatisiert geprüft (8).
+   Manuelle Geräteabnahme von Meilenstein 1 durch den Nutzer steht noch aus.
 6. Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
 7. Dokumentation und Verifikation pro Schnitt nachführen (10).
 
