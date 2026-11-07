@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Domain.Table.ValueObjects;
 using FoosVision.Domain.TrackingCore.Services.LiveTracking;
 using FoosVision.Domain.TrackingCore.ValueObjects;
@@ -22,7 +23,8 @@ public record ProcessFrameResponse(
     TrainingAnnouncementInvalidation? AnnouncementInvalidation,
     TrainingAttemptCompletion? CompletedAttempt,
     TrainingAttemptAbort? AbortedAttempt,
-    Frame? ReturnToLiveReplayFrame = null);
+    Frame? ReturnToLiveReplayFrame = null,
+    ReplayPlan? Replay = null);
 
 public record TrackingFrameResponse(
     Frame Frame,

@@ -138,6 +138,8 @@ internal class RecorderCompositionRoot : IDisposable
         var training = new TrainingModule(
             frameSource: cameraControl,
             frameFeed: cameraControl,
+            replayBuffer: cameraControl,
+            liveVideoStreamController: cameraControl,
             ballFinder: vision,
             ballDetectionMaskProvider: vision,
             tableConfigFinder: vision,

@@ -265,11 +265,12 @@ public class GameSessionTests
         Assert.Contains(changes, c => c is TrackedBallInfo);
         var requestInfo = changes.OfType<ReplayRequest>().FirstOrDefault();
         Assert.NotNull(requestInfo);
-        Assert.Equal(frame1, requestInfo.AnchorFrame);
-        Assert.Equal(tracked.Position, requestInfo.AnchorPosition);
-        Assert.Equal(_AnyPossession, requestInfo.AnchorPossession);
-        Assert.Equal(1234, requestInfo.AnchorPossessionTimeMs);
-        Assert.Equal(ReplayTriggerKind.BallDisappeared, requestInfo.TriggerKind);
+        Assert.Equal(frame1, requestInfo.Replay.AnchorFrame);
+        Assert.Equal(tracked.Position, requestInfo.Replay.AnchorPosition);
+        Assert.Equal(_AnyPossession, requestInfo.Replay.AnchorPossession);
+        Assert.Equal(1234, requestInfo.Replay.AnchorPossessionTimeMs);
+        Assert.Equal(frame1.TimestampNs, requestInfo.Replay.StartTimestampNs);
+        Assert.Equal(frame1.TimestampNs + 1_000_000_000, requestInfo.Replay.EndTimestampNs);
     }
 
     [Fact]

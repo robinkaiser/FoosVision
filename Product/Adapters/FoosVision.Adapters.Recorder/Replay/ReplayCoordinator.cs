@@ -4,19 +4,19 @@
 using System.Threading.Channels;
 using FoosVision.Common.Logging;
 using FoosVision.Common.Types;
-using FoosVision.Domain.Game.Services.ReplayDecision;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Ports.Media;
 using FoosVision.Protocol.Connectivity.Abstractions;
 using FoosVision.Protocol.Messages.Live;
 using FoosVision.Protocol.Messages.LiveAnalysis;
 
-namespace FoosVision.Adapters.Recorder.Game.Orchestration;
+namespace FoosVision.Adapters.Recorder.Replay;
 
 public class ReplayCoordinator : IReplayCoordinator, IDisposable
 {
-    private const long _BallDisappearedReplayDurationNs = 1_000L * 1_000_000L;
-    private const long _SavedShotReplayDurationNs = 700L * 1_000_000L;
+    private const int _TailCheckIntervalMs = 20;
+    private const int _MaxTailChecks = 50;
 
     private static readonly Source _Log = new("ReplayCoordinator");
 
@@ -28,13 +28,18 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
     private readonly Task _Worker;
     private readonly Lock _RequestGate = new();
     private ReplayRequest? _AcceptedReplay;
+    private readonly TimeProvider _TimeProvider;
+    private Guid? _SessionId;
+    private CancellationTokenSource? _SessionCancellation;
 
     public ReplayCoordinator(
         IEncodedReplayBuffer replayBuffer,
         ILiveVideoStreamController liveVideoStreamController,
         IRecorderLiveAnalysisPublisher liveAnalysisPublisher,
-        TaskScheduler? workerScheduler = null)
+        TaskScheduler? workerScheduler = null,
+        TimeProvider? timeProvider = null)
     {
+        _TimeProvider = timeProvider ?? TimeProvider.System;
         _ReplayBuffer = replayBuffer;
         _LiveVideoStreamController = liveVideoStreamController;
         _LiveAnalysisPublisher = liveAnalysisPublisher;
@@ -51,44 +56,63 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
             workerScheduler ?? TaskScheduler.Default).Unwrap();
     }
 
-    public Task RequestReplay(
-        Guid sessionId,
-        Frame triggerFrame,
-        Frame anchorFrame,
-        Point anchorPosition,
-        BallPossession anchorPossession,
-        int anchorPossessionTimeMs,
-        ReplayTriggerKind triggerKind)
+    public void StartSession(Guid sessionId)
     {
-        ReplayRequest request = new(
-            sessionId,
-            triggerFrame,
-            anchorFrame,
-            anchorPosition,
-            anchorPossession,
-            anchorPossessionTimeMs,
-            triggerKind);
-
-        if (!_Requests.Writer.TryWrite(request))
-        {
-            _Log.Warning("Request skipped, the worker send queue is closed. TriggerFrameId={FrameId}", triggerFrame.Id);
-            return Task.CompletedTask;
-        }
-
         lock (_RequestGate)
         {
+            _SessionCancellation?.Cancel();
+            _SessionCancellation?.Dispose();
+            _SessionCancellation = new();
+            _SessionId = sessionId;
+            _AcceptedReplay = null;
+        }
+    }
+
+    public void StopSession(Guid sessionId)
+    {
+        lock (_RequestGate)
+        {
+            if (_SessionId != sessionId)
+            {
+                return;
+            }
+
+            _SessionCancellation?.Cancel();
+            _SessionCancellation?.Dispose();
+            _SessionCancellation = null;
+            _SessionId = null;
+            _AcceptedReplay = null;
+        }
+    }
+
+    public Task RequestReplay(Guid sessionId, Frame triggerFrame, ReplayPlan replay)
+    {
+        lock (_RequestGate)
+        {
+            if (_SessionId != sessionId || _SessionCancellation is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            ReplayRequest request = new(sessionId, triggerFrame, replay, _SessionCancellation.Token);
+            if (!_Requests.Writer.TryWrite(request))
+            {
+                _Log.Warning("Request skipped, the worker send queue is closed. TriggerFrameId={FrameId}", triggerFrame.Id);
+                return Task.CompletedTask;
+            }
+
             _AcceptedReplay = request;
         }
 
         _Log.Information(
             "Request accepted. TriggerFrameId={TriggerFrameId} AnchorFrameId={AnchorFrameId} AnchorTimestampNs={AnchorTimestampNs} AnchorPosition=({X},{Y}) ReplayStartNs={ReplayStartNs} ReplayEndNs={ReplayEndNs}",
             triggerFrame.Id,
-            anchorFrame.Id,
-            anchorFrame.TimestampNs,
-            anchorPosition.X,
-            anchorPosition.Y,
-            anchorFrame.TimestampNs,
-            anchorFrame.TimestampNs + GetReplayDurationNs(triggerKind));
+            replay.AnchorFrame.Id,
+            replay.AnchorFrame.TimestampNs,
+            replay.AnchorPosition.X,
+            replay.AnchorPosition.Y,
+            replay.StartTimestampNs,
+            replay.EndTimestampNs);
         return Task.CompletedTask;
     }
 
@@ -126,6 +150,7 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
         {
         }
 
+        _SessionCancellation?.Dispose();
         _Cts.Dispose();
     }
 
@@ -137,11 +162,16 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
             {
                 try
                 {
-                    await ProcessRequest(request, ct);
+                    using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, request.SessionCancellation);
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    await ProcessRequest(request, cancellation.Token);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
                     break;
+                }
+                catch (OperationCanceledException) when (request.SessionCancellation.IsCancellationRequested)
+                {
                 }
                 catch (Exception ex)
                 {
@@ -156,18 +186,17 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
 
     private async Task ProcessRequest(ReplayRequest request, CancellationToken ct)
     {
-        long startTimeNs = request.AnchorFrame.TimestampNs;
-        long endTimeNs = startTimeNs + GetReplayDurationNs(request.TriggerKind);
-
-        if (!_ReplayBuffer.TryGetReplaySegment(startTimeNs, endTimeNs, out EncodedReplaySegment segment))
+        ReplayPlan replay = request.Replay;
+        EncodedReplaySegment? segment = await GetReplaySegment(replay, ct);
+        if (segment is null)
         {
             _Log.Warning(
                 "Replay segment unavailable. TriggerFrameId={TriggerFrameId} AnchorFrameId={AnchorFrameId}",
-                request.TriggerFrame.Id,
-                request.AnchorFrame.Id);
+                request.TriggerFrame.Id, replay.AnchorFrame.Id);
             return;
         }
 
+        ct.ThrowIfCancellationRequested();
         int accessUnitBytes = segment.AccessUnits.Sum(accessUnit => accessUnit.Buffer.Length);
 
         ReplayStartedMessage startedMessage = new()
@@ -175,13 +204,15 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
             SessionId = request.SessionId,
             TriggerFrameId = request.TriggerFrame.Id,
             TriggerTimestampNs = request.TriggerFrame.TimestampNs,
-            AnchorFrameId = request.AnchorFrame.Id,
-            AnchorTimestampNs = request.AnchorFrame.TimestampNs,
-            AnchorPosition = CreatePosition(request.AnchorPosition),
-            AnchorPossession = CreatePossession(request.AnchorPossession),
-            AnchorPossessionTimeMs = request.AnchorPossessionTimeMs,
+            AnchorFrameId = replay.AnchorFrame.Id,
+            AnchorTimestampNs = replay.AnchorFrame.TimestampNs,
+            AnchorPosition = CreatePosition(replay.AnchorPosition),
+            AnchorPossession = CreatePossession(replay.AnchorPossession),
+            AnchorPossessionTimeMs = replay.AnchorPossessionTimeMs,
             ReplayStartTimestampNs = segment.StartTimeNs,
             ReplayEndTimestampNs = segment.EndTimeNs,
+            Speed = replay.Speed,
+            RequiredCompletedLoops = replay.RequiredCompletedLoops,
             Codec = CreateCodec(segment.Codec),
             ParameterSetCount = segment.ParameterSets.Count,
             AccessUnitCount = segment.AccessUnits.Count,
@@ -195,13 +226,15 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
             SessionId = request.SessionId,
             TriggerFrameId = request.TriggerFrame.Id,
             TriggerTimestampNs = request.TriggerFrame.TimestampNs,
-            AnchorFrameId = request.AnchorFrame.Id,
-            AnchorTimestampNs = request.AnchorFrame.TimestampNs,
-            AnchorPosition = CreatePosition(request.AnchorPosition),
-            AnchorPossession = CreatePossession(request.AnchorPossession),
-            AnchorPossessionTimeMs = request.AnchorPossessionTimeMs,
+            AnchorFrameId = replay.AnchorFrame.Id,
+            AnchorTimestampNs = replay.AnchorFrame.TimestampNs,
+            AnchorPosition = CreatePosition(replay.AnchorPosition),
+            AnchorPossession = CreatePossession(replay.AnchorPossession),
+            AnchorPossessionTimeMs = replay.AnchorPossessionTimeMs,
             ReplayStartTimestampNs = segment.StartTimeNs,
             ReplayEndTimestampNs = segment.EndTimeNs,
+            Speed = replay.Speed,
+            RequiredCompletedLoops = replay.RequiredCompletedLoops,
             Codec = CreateCodec(segment.Codec),
             ParameterSets = [.. segment.ParameterSets.Select(CreateParameterSet)],
             AccessUnits = [.. segment.AccessUnits.Select(CreateAccessUnit)],
@@ -221,13 +254,30 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
         }
     }
 
-    private static long GetReplayDurationNs(ReplayTriggerKind triggerKind)
+    private async Task<EncodedReplaySegment?> GetReplaySegment(ReplayPlan replay, CancellationToken ct)
     {
-        return triggerKind switch
+        // Capture may still be encoding the requested tail, especially for a completed pass.
+        // A missing start/keyframe cannot be recovered by waiting; an incomplete tail can.
+        for (int check = 0; check <= _MaxTailChecks; check++)
         {
-            ReplayTriggerKind.SavedShot => _SavedShotReplayDurationNs,
-            _ => _BallDisappearedReplayDurationNs,
-        };
+            ct.ThrowIfCancellationRequested();
+            if (!_ReplayBuffer.TryGetReplaySegment(replay.StartTimestampNs, replay.EndTimestampNs, out EncodedReplaySegment segment))
+            {
+                return null;
+            }
+
+            if (segment.EndTimeNs >= replay.EndTimestampNs)
+            {
+                return segment;
+            }
+
+            if (check < _MaxTailChecks)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(_TailCheckIntervalMs), _TimeProvider, ct);
+            }
+        }
+
+        return null;
     }
 
     private static BallPositionMessage CreatePosition(Point point)
@@ -287,9 +337,6 @@ public class ReplayCoordinator : IReplayCoordinator, IDisposable
     private readonly record struct ReplayRequest(
         Guid SessionId,
         Frame TriggerFrame,
-        Frame AnchorFrame,
-        Point AnchorPosition,
-        BallPossession AnchorPossession,
-        int AnchorPossessionTimeMs,
-        ReplayTriggerKind TriggerKind);
+        ReplayPlan Replay,
+        CancellationToken SessionCancellation);
 }

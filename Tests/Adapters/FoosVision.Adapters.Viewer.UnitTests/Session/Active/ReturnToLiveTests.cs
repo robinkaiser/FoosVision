@@ -104,6 +104,22 @@ public class ReturnToLiveTests
     }
 
     [Fact]
+    public async Task Recorder_minimum_loop_count_is_applied_before_early_return()
+    {
+        using ReplayCoordinatorContext context = new();
+        context.EnableReplayAnalysisPrerequisites();
+        context.Sut.HandleReplayReturnToLive(new() { SessionId = SessionId, TriggerFrameId = 42, TriggerTimestampNs = 2_000_000_000 });
+        context.Sut.HandleReplayClip(CreateReplayClipMessage() with { RequiredCompletedLoops = 2 });
+        await context.PlaybackController.ReplayStarted.WaitAsync(TestContext.Current.CancellationToken);
+        await context.PlaybackController.CompleteReplayLoopAsync();
+        Assert.True(context.Sut.IsReplayActive);
+        Assert.DoesNotContain("start-playback", context.Events);
+        await context.PlaybackController.CompleteReplayLoopAsync();
+        await context.PlaybackController.LiveStarted.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.False(context.Sut.IsReplayActive);
+    }
+
+    [Fact]
     public async Task Loop_without_command_keeps_replay_and_later_command_returns_immediately()
     {
         using ReplayCoordinatorContext context = new();

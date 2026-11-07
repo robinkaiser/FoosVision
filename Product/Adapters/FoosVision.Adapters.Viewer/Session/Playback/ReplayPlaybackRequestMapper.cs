@@ -7,14 +7,18 @@ namespace FoosVision.Adapters.Viewer.Session.Playback;
 
 internal static class ReplayPlaybackRequestMapper
 {
-    private const double _ReplaySpeed = 0.25D;
-
     public static bool TryMap(ReplayClipMessage message, out PlaybackRequest playbackRequest, out string rejectionReason)
     {
         ArgumentNullException.ThrowIfNull(message);
 
         playbackRequest = default;
         rejectionReason = string.Empty;
+
+        if (!double.IsFinite(message.Speed) || message.Speed <= 0 || message.RequiredCompletedLoops < 1)
+        {
+            rejectionReason = "Replay playback settings are invalid.";
+            return false;
+        }
 
         PlaybackCodec codec = MapCodec(message.Codec);
         if (codec != PlaybackCodec.H264)
@@ -35,7 +39,7 @@ internal static class ReplayPlaybackRequestMapper
             message.ReplayEndTimestampNs,
             [.. message.ParameterSets.Select(MapParameterSet)],
             [.. message.AccessUnits.Select(MapAccessUnit)],
-            _ReplaySpeed);
+            message.Speed);
 
         playbackRequest = new PlaybackRequest(string.Empty, PlaybackKind.EncodedReplay, replay);
         return true;

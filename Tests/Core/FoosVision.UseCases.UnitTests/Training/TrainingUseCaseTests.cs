@@ -255,7 +255,7 @@ public class TrainingUseCaseTests
         Assert.Equal(ready.Status.Attempt, variant.Status.Attempt);
         ProcessFrameResponse completed = Assert.Single(responses, response => response.CompletedAttempt is not null);
         TrainingAttemptCompletion completion = Assert.IsType<TrainingAttemptCompletion>(completed.CompletedAttempt);
-        Assert.Equal(At(2000), completion.Attempt.Anchor.Frame);
+        Assert.Equal(At(1000), completion.Attempt.Anchor.Frame);
         Assert.Equal(At(2200), completion.ConfirmationFrame);
         Assert.Equal(At(2450), completion.CompletionFrame);
         Assert.Equal(variant.Status.Variant, completion.Variant);
@@ -263,6 +263,13 @@ public class TrainingUseCaseTests
         Assert.Equal(TrainingState.Completed, completed.Status.State);
         Assert.Null(completed.Announcement);
         Assert.Null(completed.AbortedAttempt);
+        Assert.Single(responses, response => response.Replay is not null);
+        Assert.NotNull(completed.Replay);
+        Assert.Equal(At(1000), completed.Replay.AnchorFrame);
+        Assert.Equal(700_000_000, completed.Replay.StartTimestampNs);
+        Assert.Equal(2_500_000_000, completed.Replay.EndTimestampNs);
+        Assert.Equal(0.25, completed.Replay.Speed);
+        Assert.Equal(1, completed.Replay.RequiredCompletedLoops);
         Assert.Null(responses.Last().CompletedAttempt);
         Assert.Null(responses.Last().Announcement);
     }
@@ -318,6 +325,7 @@ public class TrainingUseCaseTests
         Assert.Null(response.Announcement);
         Assert.Null(response.AbortedAttempt);
         Assert.Null(response.CompletedAttempt);
+        Assert.Null(response.Replay);
     }
 
     [Fact]
@@ -363,6 +371,7 @@ public class TrainingUseCaseTests
         Assert.Equal(abort.Attempt, announcement.Attempt);
         Assert.Null(aborted.PreparationConfirmed);
         Assert.Null(aborted.CompletedAttempt);
+        Assert.All(responses, response => Assert.Null(response.Replay));
         Assert.Null(responses[5].AbortedAttempt);
         Assert.Null(responses[5].Announcement);
         Assert.Null(responses[5].AnnouncementInvalidation);

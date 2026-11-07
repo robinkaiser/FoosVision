@@ -7,7 +7,7 @@ using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Adapters.Recorder.Game.Control;
 using FoosVision.Adapters.Recorder.Game.Live;
-using FoosVision.Adapters.Recorder.Game.Orchestration;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Adapters.Recorder.Live;
 using FoosVision.Common.Metrics;
 using FoosVision.Ports.Media;
@@ -125,8 +125,8 @@ internal class GameModule : IDisposable
         CommandHandler = new GameCommandHandler(
             StartGame,
             StopGame,
-            cmdId => new GameEventPresenter(FrameLoop, runtimeState, videoDumpOrchestrator),
-            cmdId => new GameEventPresenter(FrameLoop, runtimeState, videoDumpOrchestrator));
+            cmdId => new GameEventPresenter(FrameLoop, _ReplayCoordinator, runtimeState, videoDumpOrchestrator),
+            cmdId => new GameEventPresenter(FrameLoop, _ReplayCoordinator, runtimeState, videoDumpOrchestrator));
     }
 
     public void Dispose()
@@ -157,7 +157,7 @@ internal class GameModule : IDisposable
     {
         if (!SessionStore.HasActive) return;
 
-        GameEventPresenter presenter = new(FrameLoop, _RuntimeState, _VideoDumpOrchestrator, reason);
+        GameEventPresenter presenter = new(FrameLoop, _ReplayCoordinator, _RuntimeState, _VideoDumpOrchestrator, reason);
         await StopGame.Handle(new StopGameRequest(), presenter, ct);
     }
 }

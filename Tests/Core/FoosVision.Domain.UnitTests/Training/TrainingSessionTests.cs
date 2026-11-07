@@ -39,14 +39,14 @@ public class TrainingSessionTests
     [Theory]
     [InlineData(Team.A)]
     [InlineData(Team.B)]
-    public void Shot_completion_is_once_with_last_setup_anchor_and_next_attempt_needs_fresh_preparation(Team team)
+    public void Shot_completion_is_once_with_earlier_setup_anchor_and_next_attempt_needs_fresh_preparation(Team team)
     {
         TrainingSession session = Session();
         ReadyAndAnnounce(session, team);
         session.ApplyTracking(Snapshot(2100, SnakePosition(team) with { Y = 530 }, Three(team), new(2000, 0)));
         session.ApplyTracking(Snapshot(2200, new(team == Team.A ? 1300 : 300, 450), Target(team)));
         TrainingAttemptCompleted completed = Assert.Single(session.ApplyTracking(Snapshot(2450, default, Target(team))).Events.OfType<TrainingAttemptCompleted>());
-        Assert.Equal(At(2000), completed.Attempt.Anchor.Frame);
+        Assert.Equal(At(1000), completed.Attempt.Anchor.Frame);
         Assert.Equal(SnakePosition(team), completed.Attempt.Anchor.Position);
         Assert.Equal(At(2200), completed.ConfirmationFrame);
         Assert.Equal(At(2450), completed.CompletionFrame);

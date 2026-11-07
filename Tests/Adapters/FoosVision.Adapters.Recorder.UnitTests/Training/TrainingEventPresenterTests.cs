@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using FoosVision.Adapters.Common.Live;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Adapters.Recorder.Training.Control;
@@ -30,14 +31,17 @@ public class TrainingEventPresenterTests
         RecorderRuntimeStateController runtime = new(Substitute.For<IRecorderEventPublisher>());
         ITrainingAnnouncements speech = Substitute.For<ITrainingAnnouncements>();
         IVideoDumpOrchestrator dumps = Substitute.For<IVideoDumpOrchestrator>();
-        TrainingEventPresenter presenter = new(loop, runtime, dumps, speech, reason);
+        IReplayCoordinator replay = Substitute.For<IReplayCoordinator>();
+        TrainingEventPresenter presenter = new(loop, replay, runtime, dumps, speech, reason);
         try
         {
             await presenter.ReportStarted(new(session));
             Assert.Equal(1, feed.Subscribers);
+            replay.Received(1).StartSession(session);
             Assert.Equal(RecorderRuntimeMode.TrainingRunning, runtime.CurrentState.Mode);
             await presenter.ReportStopped(new(session));
             Assert.Equal(0, feed.Subscribers);
+            replay.Received(1).StopSession(session);
             speech.Received(1).StopSession(session);
             speech.DidNotReceive().Invalidate(Arg.Any<TrainingAnnouncementInvalidation>());
             Assert.Equal(RecorderRuntimeMode.Idle, runtime.CurrentState.Mode);
@@ -57,7 +61,8 @@ public class TrainingEventPresenterTests
         await runtime.PublishIfChanged(RecorderRuntimeMode.GameRunning, current,
             RecorderStateChangeReason.CommandCompleted, "", TestContext.Current.CancellationToken);
         ITrainingAnnouncements speech = Substitute.For<ITrainingAnnouncements>();
-        TrainingEventPresenter presenter = new(loop, runtime, Substitute.For<IVideoDumpOrchestrator>(), speech);
+        IReplayCoordinator replay = Substitute.For<IReplayCoordinator>();
+        TrainingEventPresenter presenter = new(loop, replay, runtime, Substitute.For<IVideoDumpOrchestrator>(), speech);
         await presenter.ReportStartFailed("busy");
         await presenter.ReportStopFailed("not active");
         Assert.Equal(current, runtime.CurrentState.ActiveSessionId);
@@ -65,6 +70,7 @@ public class TrainingEventPresenterTests
         Assert.Equal(1, runtime.CurrentState.Sequence);
         Assert.Equal(0, feed.Subscribers);
         Assert.Empty(speech.ReceivedCalls());
+        Assert.Empty(replay.ReceivedCalls());
     }
 
     private sealed class RecordingFeed : IFrameFeed

@@ -3,7 +3,7 @@
 
 using FoosVision.Common.Types;
 using FoosVision.Domain.Game.Entities;
-using FoosVision.Domain.Game.Services.ReplayDecision;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.UseCases.Game.Ports;
 
@@ -38,13 +38,8 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
         bool isTimeFoul = false;
         bool requestTableConfigUpdate = false;
         bool requestTableSceneUpdate = false;
-        bool requestReplay = false;
+        ReplayPlan? replay = null;
         Frame? returnToLiveReplayFrame = null;
-        Frame replayAnchorFrame = new();
-        Point replayAnchorPosition = new();
-        BallPossession replayAnchorPossession = BallPossession.None;
-        int replayAnchorPossessionTimeMs = 0;
-        ReplayTriggerKind replayTriggerKind = ReplayTriggerKind.BallDisappeared;
 
         foreach (var change in changes)
         {
@@ -72,13 +67,8 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
                     requestTableSceneUpdate = true;
                     break;
 
-                case ReplayRequest(Frame anchorFrame, Point anchorPosition, BallPossession anchorPossession, int anchorPossessionTimeMs, ReplayTriggerKind triggerKind):
-                    requestReplay = true;
-                    replayAnchorFrame = anchorFrame;
-                    replayAnchorPosition = anchorPosition;
-                    replayAnchorPossession = anchorPossession;
-                    replayAnchorPossessionTimeMs = anchorPossessionTimeMs;
-                    replayTriggerKind = triggerKind;
+                case ReplayRequest replayRequest:
+                    replay = replayRequest.Replay;
                     break;
             }
         }
@@ -95,12 +85,7 @@ public class ProcessFrameInteractor : IProcessFrameInputPort
             isTimeFoul,
             requestTableConfigUpdate,
             requestTableSceneUpdate,
-            requestReplay,
-            replayAnchorFrame,
-            replayAnchorPosition,
-            replayAnchorPossession,
-            replayAnchorPossessionTimeMs,
-            replayTriggerKind,
+            replay,
             session.Id,
             returnToLiveReplayFrame);
 

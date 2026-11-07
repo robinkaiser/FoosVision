@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
-using FoosVision.Domain.Game.Services.ReplayDecision;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 
 namespace FoosVision.UseCases.Game.ProcessFrame;
@@ -19,12 +19,7 @@ public record ProcessFrameResponse(
     bool IsTimeFoul,
     bool RequestTableConfigUpdate,
     bool RequestTableSceneUpdate,
-    bool RequestReplay,
-    Frame ReplayAnchorFrame,
-    Point ReplayAnchorPosition,
-    BallPossession ReplayAnchorPossession,
-    int ReplayAnchorPossessionTimeMs,
-    ReplayTriggerKind ReplayTriggerKind,
+    ReplayPlan? Replay,
     Guid SessionId = default,
     Frame? ReturnToLiveReplayFrame = null);
 

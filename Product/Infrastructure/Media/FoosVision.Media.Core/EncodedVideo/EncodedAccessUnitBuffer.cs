@@ -13,6 +13,7 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
 
     private static readonly Source _Log = new("EncodedAccessUnitBuffer");
 
+    private readonly Lock _MetadataGate = new();
     private readonly int _Capacity;
     private readonly int _MaxChunkSize;
     private readonly byte[] _Buffer;
@@ -42,19 +43,44 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
 
     public bool HasHeader { get; private set; }
 
-    public IEnumerable<ParameterSet> Header => _Header.Values;
+    public IEnumerable<ParameterSet> Header
+    {
+        get
+        {
+            lock (_MetadataGate)
+            {
+                return _Header.Values.ToArray();
+            }
+        }
+    }
 
     public void SetEncodedUnitReadyNotificationSink(Action<EncodedAccessUnit> sink)
         => _EncodedUnitReadyNotificationSink = sink;
 
     public void Completed(long timeNs, int size)
     {
-        if (size <= 0) return;
+        EncodedAccessUnit? unit;
+
+        lock (_MetadataGate)
+        {
+            unit = CompleteMetadata(timeNs, size);
+        }
+
+        // Streaming callbacks must not extend the metadata critical section.
+        if (unit is EncodedAccessUnit completed)
+        {
+            _EncodedUnitReadyNotificationSink?.Invoke(completed);
+        }
+    }
+
+    private EncodedAccessUnit? CompleteMetadata(long timeNs, int size)
+    {
+        if (size <= 0) return null;
 
         if (size > _MaxChunkSize)
         {
             _Log.Warning($"Completed: Unexpected size of {size}. Max size expected: {_MaxChunkSize}");
-            return;
+            return null;
         }
 
         int start = Offset;
@@ -63,7 +89,7 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
         if (endExclusive > _Capacity)
         {   // Defensive (should not happen if producer respects remaining space)
             _Log.Error($"Completed: Chunk exceeds capacity. Offset={Offset}, size={size}, capacity={_Capacity}");
-            return;
+            return null;
         }
 
         var count = AnnexBParser.FindNals(_Buffer, start, endExclusive, _ParsedNalRanges, _MAX_NALS_PER_COMPLETION);
@@ -71,13 +97,13 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
         if (count == 0)
         {
             _Log.Warning($"Completed: Invalid NAL (no start code). Time: {timeNs}");
-            return;
+            return null;
         }
 
         if (count == -1)
         {
             _Log.Warning($"Completed: Too many NALs inside this unit. Time: {timeNs}");
-            return;
+            return null;
         }
 
         bool sawVclNal = false;
@@ -140,7 +166,7 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
 
         if (Codec == CodecType.Unknown)
         {   // If we never detected codec, discard (don’t advance Offset so producer overwrites)
-            return;
+            return null;
         }
 
         // Update HasHeader after we may have stored headers from this chunk
@@ -161,7 +187,7 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
         if (!HasHeader || !sawVclNal)
         {   // If this chunk is header-only (or non-VCL), or header isn’t complete yet, don’t store it as a frame.
             // Leave Offset unchanged so it’s overwritten.
-            return;
+            return null;
         }
 
         // Remove any stored units whose byte range will be overwritten by this new chunk
@@ -197,105 +223,112 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
             Offset = 0;
         }
 
-        _EncodedUnitReadyNotificationSink?.Invoke(unit);
+        return unit;
     }
 
     public bool TryGetReplaySegment(long startTimeNs, long endTimeNs, out EncodedReplaySegment segment)
     {
-        if (_UnitBuffer.Count == 0 ||
-            endTimeNs < startTimeNs)
+        ReplayMetadata metadata;
+
+        lock (_MetadataGate)
         {
-            LogReplaySegmentUnavailable("empty buffer or invalid range", startTimeNs, endTimeNs);
-            segment = CreateEmptyReplaySegment(startTimeNs, endTimeNs);
-            return false;
+            if (_UnitBuffer.Count == 0 ||
+                endTimeNs < startTimeNs)
+            {
+                LogReplaySegmentUnavailable("empty buffer or invalid range", startTimeNs, endTimeNs);
+                segment = CreateEmptyReplaySegment(startTimeNs, endTimeNs);
+                return false;
+            }
+
+            if (!HasHeader)
+            {
+                LogReplaySegmentUnavailable("header missing", startTimeNs, endTimeNs);
+                segment = CreateEmptyReplaySegment(startTimeNs, endTimeNs);
+                return false;
+            }
+
+            int startIndex = FindKeyFrameAtOrBefore(startTimeNs);
+
+            if (startIndex < 0)
+            {
+                LogReplaySegmentUnavailable("no keyframe at or before requested start", startTimeNs, endTimeNs);
+                segment = CreateEmptyReplaySegment(startTimeNs, endTimeNs);
+                return false;
+            }
+
+            int endIndex = startIndex;
+
+            while (endIndex < _UnitBuffer.Count &&
+                   _UnitBuffer[endIndex].TimeNs < endTimeNs)
+            {
+                endIndex++;
+            }
+
+            if (endIndex == _UnitBuffer.Count)
+            {
+                endIndex--;
+            }
+
+            metadata = CaptureMetadata(startIndex, endIndex);
         }
 
-        if (!HasHeader)
-        {
-            LogReplaySegmentUnavailable("header missing", startTimeNs, endTimeNs);
-            segment = CreateEmptyReplaySegment(startTimeNs, endTimeNs);
-            return false;
-        }
-
-        int startIndex = FindKeyFrameAtOrBefore(startTimeNs);
-
-        if (startIndex < 0)
-        {
-            LogReplaySegmentUnavailable("no keyframe at or before requested start", startTimeNs, endTimeNs);
-            segment = CreateEmptyReplaySegment(startTimeNs, endTimeNs);
-            return false;
-        }
-
-        int endIndex = startIndex;
-
-        while (endIndex < _UnitBuffer.Count &&
-               _UnitBuffer[endIndex].TimeNs < endTimeNs)
-        {
-            endIndex++;
-        }
-
-        if (endIndex == _UnitBuffer.Count)
-        {
-            endIndex--;
-        }
-
-        segment = CreateSegment(
-            startIndex,
-            endIndex,
-            _UnitBuffer[startIndex].TimeNs,
-            _UnitBuffer[endIndex].TimeNs);
-
+        segment = CreateSegment(metadata);
         return true;
     }
 
     public bool TryGetSnapshot(out EncodedReplaySegment segment)
     {
-        if (_UnitBuffer.Count == 0)
+        ReplayMetadata metadata;
+        lock (_MetadataGate)
         {
-            _Log.Warning("TryGetSnapshot: Failed. Entry count: 0");
-            segment = CreateEmptyReplaySegment(0, 0);
-            return false;
+            if (_UnitBuffer.Count == 0)
+            {
+                _Log.Warning("TryGetSnapshot: Failed. Entry count: 0");
+                segment = CreateEmptyReplaySegment(0, 0);
+                return false;
+            }
+
+            if (!HasHeader)
+            {
+                _Log.Warning("TryGetSnapshot: Header missing");
+                segment = CreateEmptyReplaySegment(_UnitBuffer[0].TimeNs, _UnitBuffer[^1].TimeNs);
+                return false;
+            }
+
+            int startIndex = 0;
+
+            while (startIndex < _UnitBuffer.Count &&
+                  !_UnitBuffer[startIndex].IsKeyFrame)
+            {
+                startIndex++;
+            }
+
+            if (startIndex == _UnitBuffer.Count)
+            {
+                segment = CreateEmptyReplaySegment(_UnitBuffer[0].TimeNs, _UnitBuffer[^1].TimeNs);
+                return false;
+            }
+
+            int endIndex = _UnitBuffer.Count - 1;
+
+            metadata = CaptureMetadata(startIndex, endIndex);
         }
 
-        if (!HasHeader)
-        {
-            _Log.Warning("TryGetSnapshot: Header missing");
-            segment = CreateEmptyReplaySegment(_UnitBuffer[0].TimeNs, _UnitBuffer[^1].TimeNs);
-            return false;
-        }
-
-        int startIndex = 0;
-
-        while (startIndex < _UnitBuffer.Count &&
-              !_UnitBuffer[startIndex].IsKeyFrame)
-        {
-            startIndex++;
-        }
-
-        if (startIndex == _UnitBuffer.Count)
-        {
-            segment = CreateEmptyReplaySegment(_UnitBuffer[0].TimeNs, _UnitBuffer[^1].TimeNs);
-            return false;
-        }
-
-        int endIndex = _UnitBuffer.Count - 1;
-
-        segment = CreateSegment(
-            startIndex,
-            endIndex,
-            _UnitBuffer[startIndex].TimeNs,
-            _UnitBuffer[endIndex].TimeNs);
+        segment = CreateSegment(metadata);
         return true;
     }
 
     public void Reset()
     {
-        _UnitBuffer.Clear();
-        _Header.Clear();
+        lock (_MetadataGate)
+        {
+            _UnitBuffer.Clear();
+            _Header.Clear();
 
-        Codec = CodecType.Unknown;
-        Offset = 0;
-        HasHeader = false;
+            Codec = CodecType.Unknown;
+            Offset = 0;
+            HasHeader = false;
+        }
     }
 
     private void StoreHeader(ParameterSetType headerType, int start, int endExclusive)
@@ -316,9 +349,21 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
         }
     }
 
-    private EncodedReplaySegment CreateSegment(int startIndex, int endIndex, long startTimeNs, long endTimeNs)
+    private ReplayMetadata CaptureMetadata(int startIndex, int endIndex)
     {
-        var parameterSets = _Header.Values
+        EncodedAccessUnit[] accessUnits = new EncodedAccessUnit[endIndex - startIndex + 1];
+        _UnitBuffer.CopyTo(startIndex, accessUnits, 0, accessUnits.Length);
+        return new(Codec, _Header.Values.ToArray(), accessUnits);
+    }
+
+    private EncodedReplaySegment CreateSegment(ReplayMetadata metadata)
+    {
+        // Only immutable metadata is captured under the lock. Payload copying must not
+        // block the encoder. Replay data is much younger than the roughly one-minute
+        // buffer retention: its bytes are overwritten only when the writer reaches them
+        // again on a later ring traversal. We assume copying finishes before that happens.
+        // Byte ranges are not pinned; a full-buffer snapshot has no such age margin.
+        var parameterSets = metadata.Header
             .Select(p => new EncodedReplayParameterSet(
                 ConvertParameterSetType(p.Type),
                 [.. p.Buffer]))
@@ -326,9 +371,8 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
 
         List<EncodedReplayAccessUnit> accessUnits = [];
 
-        for (int i = startIndex; i <= endIndex; i++)
+        foreach (EncodedAccessUnit unit in metadata.AccessUnits)
         {
-            EncodedAccessUnit unit = _UnitBuffer[i];
             accessUnits.Add(new EncodedReplayAccessUnit(
                 unit.TimeNs,
                 unit.IsKeyFrame,
@@ -337,9 +381,9 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
         }
 
         return new EncodedReplaySegment(
-            ConvertCodec(Codec),
-            startTimeNs,
-            endTimeNs,
+            ConvertCodec(metadata.Codec),
+            metadata.AccessUnits[0].TimeNs,
+            metadata.AccessUnits[^1].TimeNs,
             parameterSets,
             accessUnits);
     }
@@ -413,6 +457,8 @@ public class EncodedAccessUnitBuffer : IEncodedAccessUnitSink
             Offset,
             _Capacity);
     }
+
+    private record ReplayMetadata(CodecType Codec, ParameterSet[] Header, EncodedAccessUnit[] AccessUnits);
 
     private static EncodedReplaySegment CreateEmptyReplaySegment(long startTimeNs, long endTimeNs)
         => new(

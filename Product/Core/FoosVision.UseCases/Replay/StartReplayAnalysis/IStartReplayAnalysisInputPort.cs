@@ -10,7 +10,8 @@ namespace FoosVision.UseCases.Replay.StartReplayAnalysis;
 public record StartReplayAnalysisRequest(
     ReplayId ReplayId,
     ReplayTrackAnchor TrackAnchor,
-    TableConfiguration TableConfiguration);
+    TableConfiguration TableConfiguration,
+    int RequiredCompletedLoops = ReplaySession.DefaultRequiredCompletedLoops);
 
 public interface IStartReplayAnalysisInputPort
 {

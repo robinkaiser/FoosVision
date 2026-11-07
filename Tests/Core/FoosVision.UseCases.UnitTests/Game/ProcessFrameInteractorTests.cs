@@ -104,7 +104,7 @@ public class ProcessFrameInteractorTests
         Assert.False(r.IsTimeFoul);
         Assert.False(r.RequestTableConfigUpdate);
         Assert.False(r.RequestTableSceneUpdate);
-        Assert.False(r.RequestReplay);
+        Assert.Null(r.Replay);
 
         var ballCandidate = Assert.Single(r.BallCandidates);
         Assert.Equal(candidate.Position.X, ballCandidate.Position.X);
@@ -197,12 +197,13 @@ public class ProcessFrameInteractorTests
         Assert.False(r.IsBallFound);
         Assert.Equal(0, r.PossessionTimeMs);
         Assert.False(r.IsTimeFoul);
-        Assert.True(r.RequestReplay);
-        Assert.Equal(frame1, r.ReplayAnchorFrame);
-        Assert.Equal(tracked1.Position, r.ReplayAnchorPosition);
-        Assert.Equal(possession, r.ReplayAnchorPossession);
-        Assert.Equal(1234, r.ReplayAnchorPossessionTimeMs);
-        Assert.Equal(ReplayTriggerKind.BallDisappeared, r.ReplayTriggerKind);
+        Assert.NotNull(r.Replay);
+        Assert.Equal(frame1, r.Replay.AnchorFrame);
+        Assert.Equal(tracked1.Position, r.Replay.AnchorPosition);
+        Assert.Equal(possession, r.Replay.AnchorPossession);
+        Assert.Equal(1234, r.Replay.AnchorPossessionTimeMs);
+        Assert.Equal(frame1.TimestampNs, r.Replay.StartTimestampNs);
+        Assert.Equal(frame1.TimestampNs + 1_000_000_000, r.Replay.EndTimestampNs);
     }
 
     [Fact]

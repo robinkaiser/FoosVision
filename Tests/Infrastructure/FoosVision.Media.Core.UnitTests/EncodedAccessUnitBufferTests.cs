@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Media.Core.EncodedVideo;
+using FoosVision.Ports.Media;
 
 namespace FoosVision.Media.Core.UnitTests;
 
@@ -303,6 +304,53 @@ public class EncodedAccessUnitBufferTests
         Add(_H264_Frame_IDR_10, 6); // Replaces 1 & 2
 
         VerifyReplay(3, int.MaxValue, 3, 4, 5, 6);
+    }
+
+    [Fact]
+    public void Header_enumeration_remains_stable_after_reset_and_new_headers()
+    {
+        Add(_H264_SpsPps);
+        IEnumerable<ParameterSet> header = _Testee.Header;
+
+        _Testee.Reset();
+        Add(_H265_Vps);
+        Add(_H265_Sps);
+        Add(_H265_Pps);
+
+        Assert.Equal([ParameterSetType.SPS, ParameterSetType.PPS], header.Select(p => p.Type));
+        Assert.Equal(_H264_Sps4, header.First().Buffer);
+        Assert.Equal(CodecType.H265, _Testee.Codec);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Captured_segment_remains_stable_after_ring_wrap_and_reset(bool snapshot)
+    {
+        Add(_H264_SpsPps);
+        Add(_H264_Frame_IDR_05, 1);
+        Add(_H264_Frame_IDR_05, 2);
+        Add(_H264_Frame_IDR_10, 3);
+        Add(_H264_Frame_IDR_10, 4);
+        Add(_H264_Frame_IDR_10, 5);
+
+        EncodedReplaySegment segment;
+        bool found = snapshot
+            ? _Testee.TryGetSnapshot(out segment)
+            : _Testee.TryGetReplaySegment(1, 5, out segment);
+        Assert.True(found);
+
+        Add(_H264_Frame_IDR_10, 6); // Removes entries 1 and 2 and shifts remaining indices.
+        VerifyReplay(3, 6, 3, 4, 5, 6);
+        _Testee.Reset();
+
+        Assert.Equal(EncodedReplayCodec.H264, segment.Codec);
+        Assert.Equal(1, segment.StartTimeNs);
+        Assert.Equal(5, segment.EndTimeNs);
+        Assert.Equal([1L, 2, 3, 4, 5], segment.AccessUnits.Select(unit => unit.TimeNs));
+        Assert.Equal(_H264_Frame_IDR_05, segment.AccessUnits[0].Buffer);
+        Assert.Equal(_H264_Frame_IDR_10, segment.AccessUnits[^1].Buffer);
+        Assert.Equal(_H264_Sps4, segment.ParameterSets.Single(p => p.Type == EncodedReplayParameterSetType.SPS).Buffer);
     }
 
     private EncodedAccessUnit? Add(byte[] chunk, int time = 0)

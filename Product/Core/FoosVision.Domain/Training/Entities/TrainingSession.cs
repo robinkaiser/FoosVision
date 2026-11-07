@@ -15,6 +15,7 @@ namespace FoosVision.Domain.Training.Entities;
 public class TrainingSession
 {
     public const int ExecutionTimeoutMs = 3000;
+    private const long _ReplayAnchorLeadNs = 300L * 1_000_000L;
 
     private readonly Lock _Gate = new();
     private readonly LiveTracker _LiveTracker;
@@ -30,6 +31,7 @@ public class TrainingSession
     private long _ReadyTimestampNs;
     private long _WaitNs;
     private long? _ExecutionTimestampNs;
+    private readonly List<TrainingAnchor> _ReplayAnchorHistory = [];
     private TrainingAttempt? _ReplayAttempt;
     private Frame? _ReplayTriggerFrame;
     private TrainingReturnToLiveRequested? _ReturnToLive;
@@ -107,6 +109,7 @@ public class TrainingSession
             }
 
             State = TrainingState.Stopped;
+            _ReplayAnchorHistory.Clear();
             ResetStrategies();
             _ActiveStrategy = null;
             _TableUpdates.CompleteTableUpdate();
@@ -182,6 +185,8 @@ public class TrainingSession
         _Attempt = new(Id, ++_AttemptId, selected.Options.Kind, preparation.Team, preparation.Bar, preparation.Anchor);
         _ActiveStrategy = selected;
         selected.Begin(preparation);
+        _ReplayAnchorHistory.Clear();
+        _ReplayAnchorHistory.Add(preparation.Anchor);
         _Variant = null;
         _ExecutionTimestampNs = null;
         _ReadyTimestampNs = snapshot.Frame.TimestampNs;
@@ -202,9 +207,22 @@ public class TrainingSession
     {
         ITrainingStrategy strategy = _ActiveStrategy!;
         TrainingExecution execution = strategy.Evaluate(snapshot);
-        if (execution.Anchor is not null)
+        if (execution.MovementFrame is Frame movementFrame)
         {
-            _Attempt = _Attempt! with { Anchor = execution.Anchor };
+            // Keep frame and position together, and freeze selection at the movement onset.
+            long cutoff = movementFrame.TimestampNs - _ReplayAnchorLeadNs;
+            TrainingAnchor anchor = _ReplayAnchorHistory.LastOrDefault(item => item.Frame.TimestampNs <= cutoff)
+                ?? _ReplayAnchorHistory[0];
+            _Attempt = _Attempt! with { Anchor = anchor };
+        }
+        else if (snapshot.IsBallFound)
+        {
+            _ReplayAnchorHistory.Add(new(snapshot.Frame, snapshot.BallPosition, snapshot.Possession));
+            long cutoff = snapshot.Frame.TimestampNs - _ReplayAnchorLeadNs;
+            while (_ReplayAnchorHistory.Count > 1 && _ReplayAnchorHistory[1].Frame.TimestampNs <= cutoff)
+            {
+                _ReplayAnchorHistory.RemoveAt(0);
+            }
         }
 
         if (_ExecutionTimestampNs.HasValue && execution.MovementFrame.HasValue &&
@@ -299,6 +317,7 @@ public class TrainingSession
         }
 
         _ActiveStrategy = null;
+        _ReplayAnchorHistory.Clear();
         State = state;
     }
 

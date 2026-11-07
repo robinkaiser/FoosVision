@@ -59,6 +59,27 @@ public class ReplayPlaybackRequestMapperTests
         Assert.Equal("Replay contains no access units.", reason);
     }
 
+    [Fact]
+    public void TryMap_uses_recorder_speed()
+    {
+        Assert.True(ReplayPlaybackRequestMapper.TryMap(CreateReplayClipMessage() with { Speed = 0.5 }, out PlaybackRequest request, out _));
+        Assert.Equal(0.5, request.EncodedReplay!.Speed);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-1, 1)]
+    [InlineData(double.NaN, 1)]
+    [InlineData(double.PositiveInfinity, 1)]
+    [InlineData(0.25, 0)]
+    public void TryMap_rejects_invalid_playback_settings(double speed, int loops)
+    {
+        Assert.False(ReplayPlaybackRequestMapper.TryMap(CreateReplayClipMessage() with
+        {
+            Speed = speed, RequiredCompletedLoops = loops,
+        }, out _, out _));
+    }
+
     private static ReplayClipMessage CreateReplayClipMessage()
     {
         return new ReplayClipMessage

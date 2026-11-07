@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Recorder.Calibration;
+using FoosVision.Adapters.Recorder.Replay;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Adapters.Recorder.Training.Live;
 using FoosVision.Adapters.Recorder.Training;
 using FoosVision.Common.Types;
@@ -20,6 +22,7 @@ namespace FoosVision.Adapters.Recorder.UnitTests.Training;
 
 public class FramePresenterTests
 {
+    private readonly IReplayCoordinator _Replay = Substitute.For<IReplayCoordinator>();
     private readonly Guid _SessionId = Guid.NewGuid();
     private readonly IRecorderLiveDataPublisher _LiveDataPublisher = Substitute.For<IRecorderLiveDataPublisher>();
     private readonly IRecorderLiveAnalysisPublisher _LiveAnalysisPublisher = Substitute.For<IRecorderLiveAnalysisPublisher>();
@@ -43,8 +46,8 @@ public class FramePresenterTests
             m.FrameId == r.Tracking.Frame.Id && m.IsBallFound && !m.IsTimeFoul && m.Observations.Count == 0), Arg.Any<CancellationToken>());
         await _Calibration.Received(1).RequestTableUpdate(r.Tracking.Frame);
         await _Calibration.Received(1).RequestTableSceneUpdate(r.Tracking.Frame, Arg.Is<Option<Point>>(p => p.HasValue && p.Value == r.Tracking.BallPosition));
-        await _LiveAnalysisPublisher.Received(1).PublishReplayReturnToLive(Arg.Is<ReplayReturnToLiveMessage>(m =>
-            m.SessionId == _SessionId && m.TriggerFrameId == 9 && m.TriggerTimestampNs == 900_000_000), Arg.Any<CancellationToken>());
+        await _Replay.Received(1).RequestReturnToLive(_SessionId, new Frame(9, 900_000_000));
+        await _Replay.DidNotReceive().RequestReplay(Arg.Any<Guid>(), Arg.Any<Frame>(), Arg.Any<ReplayPlan>());
         await _LiveAnalysisPublisher.DidNotReceive().PublishReplayClip(Arg.Any<ReplayClipMessage>(), Arg.Any<CancellationToken>());
         _MaskProvider.DidNotReceive().GetEncodedBallDetectionMask(out Arg.Any<EncodedBallDetectionMask>());
     }
@@ -72,6 +75,18 @@ public class FramePresenterTests
         await _LiveAnalysisPublisher.Received(1).PublishBallDetectionMask(Arg.Is<BallDetectionMaskMessage>(m => m.FrameId == 10), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ReportProcessed_hands_domain_replay_plan_to_shared_execution()
+    {
+        FramePresenter testee = CreateTestee();
+        ProcessFrameResponse response = CreateResponse();
+        ReplayPlan replay = new(response.Tracking.Frame, new(100, 200), BallPossession.None, 0,
+            850_000_000, 1_150_000_000, 0.25, 1);
+        await testee.ReportProcessed(response with { Replay = replay, ReturnToLiveReplayFrame = null });
+        await _Replay.Received(1).RequestReplay(_SessionId, response.Tracking.Frame, replay);
+        await _Replay.DidNotReceive().RequestReturnToLive(Arg.Any<Guid>(), Arg.Any<Frame>());
+    }
+
     private FramePresenter CreateTestee(
         bool publishObservations = false,
         bool publishBallDetectionMask = false)
@@ -79,6 +94,7 @@ public class FramePresenterTests
         return new FramePresenter(
             _LiveDataPublisher,
             _Calibration,
+            _Replay,
             _LiveAnalysisPublisher,
             _MaskProvider,
             _Announcements,

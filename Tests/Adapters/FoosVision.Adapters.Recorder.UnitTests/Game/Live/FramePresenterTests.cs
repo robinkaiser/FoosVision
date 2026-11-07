@@ -3,9 +3,9 @@
 
 using FoosVision.Adapters.Recorder.Calibration;
 using FoosVision.Adapters.Recorder.Game.Live;
-using FoosVision.Adapters.Recorder.Game.Orchestration;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Common.Types;
-using FoosVision.Domain.Game.Services.ReplayDecision;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Domain.TrackingCore.ValueObjects;
 using FoosVision.Ports.Vision;
 using FoosVision.Protocol.Connectivity.Abstractions;
@@ -35,6 +35,17 @@ public class FramePresenterTests
         ];
 
         _MaskProvider = new(4, 4, _EncodedMask);
+    }
+
+    [Fact]
+    public async Task ReportProcessed_forwards_domain_replay_plan_without_changing_window()
+    {
+        FramePresenter testee = CreateTestee();
+        ProcessFrameResponse response = CreateResponse();
+        ReplayPlan replay = new(response.Frame, new(100, 200), BallPossession.None, 0,
+            1_000_000_000, 1_700_000_000, 0.25, 1);
+        await testee.ReportProcessed(response with { Replay = replay });
+        await _Replay.Received(1).RequestReplay(response.SessionId, response.Frame, replay);
     }
 
     [Fact]
@@ -142,12 +153,7 @@ public class FramePresenterTests
             IsTimeFoul: false,
             RequestTableConfigUpdate: false,
             RequestTableSceneUpdate: false,
-            RequestReplay: false,
-            ReplayAnchorFrame: new Frame(1, 1_000_000_000),
-            ReplayAnchorPosition: new Point(960, 540),
-            ReplayAnchorPossession: BallPossession.None,
-            ReplayAnchorPossessionTimeMs: 0,
-            ReplayTriggerKind: ReplayTriggerKind.BallDisappeared);
+            Replay: null);
     }
 
     private sealed class RecordingLiveDataPublisher : IRecorderLiveDataPublisher

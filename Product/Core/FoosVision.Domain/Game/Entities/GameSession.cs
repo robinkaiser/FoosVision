@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Common.Types;
+using FoosVision.Domain.Replay.ValueObjects;
 using FoosVision.Domain.CalibrationCore.Services;
 using FoosVision.Domain.Game.Services.GameTracking;
 using FoosVision.Domain.Game.Services.ReplayDecision;
@@ -37,12 +38,7 @@ public record UpdateTableSceneRequest() : Change(ChangeKind.UpdateTableSceneRequ
 
 public record ReturnToLiveRequest(Frame ReplayTriggerFrame) : Change(ChangeKind.ReturnToLiveRequest);
 
-public record ReplayRequest(
-    Frame AnchorFrame,
-    Point AnchorPosition,
-    BallPossession AnchorPossession,
-    int AnchorPossessionTimeMs,
-    ReplayTriggerKind TriggerKind) : Change(ChangeKind.ReplayRequest);
+public record ReplayRequest(ReplayPlan Replay) : Change(ChangeKind.ReplayRequest);
 
 public class GameSession
 {
@@ -109,12 +105,7 @@ public class GameSession
             if (snapshot.IsReplaySuggested &&
                 snapshot.ReplayAnchor != null)
             {
-                ReplayRequest check = new(
-                    snapshot.ReplayAnchor.Frame,
-                    snapshot.ReplayAnchor.Position,
-                    snapshot.ReplayAnchor.Possession,
-                    snapshot.ReplayAnchor.PossessionTimeMs,
-                    snapshot.ReplayAnchor.TriggerKind);
+                ReplayRequest check = new(GameReplayRules.Create(snapshot.ReplayAnchor));
                 changes.Add(check);
                 _ReplayTriggerFrame = frame;
                 _ReturnToLiveReferencePosition = null;

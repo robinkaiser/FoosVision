@@ -374,7 +374,8 @@ internal class ViewerReplayCoordinator :
             StartReplayAnalysisRequest request = new(
                 replayId,
                 trackAnchor,
-                tableConfiguration);
+                tableConfiguration,
+                message.RequiredCompletedLoops);
 
             EncodedReplayPlayback replay = playbackRequest.EncodedReplay
                 ?? throw new InvalidOperationException("Replay mapping did not produce replay playback data.");

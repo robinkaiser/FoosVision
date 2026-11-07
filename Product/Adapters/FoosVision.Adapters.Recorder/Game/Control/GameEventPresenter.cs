@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Common.Live;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Protocol.Messages.Events;
@@ -15,17 +16,20 @@ public class GameEventPresenter :
     IStopGameOutputPort
 {
     private readonly FrameProcessingLoop _FrameLoop;
+    private readonly IReplayCoordinator _Replay;
     private readonly RecorderRuntimeStateController _RuntimeState;
     private readonly IVideoDumpOrchestrator _VideoDumpOrchestrator;
     private readonly RecorderStateChangeReason _StopReason;
 
     public GameEventPresenter(
         FrameProcessingLoop frameLoop,
+        IReplayCoordinator replay,
         RecorderRuntimeStateController runtimeState,
         IVideoDumpOrchestrator videoDumpOrchestrator,
         RecorderStateChangeReason stopReason = RecorderStateChangeReason.CommandCompleted)
     {
         _FrameLoop = frameLoop;
+        _Replay = replay;
         _RuntimeState = runtimeState;
         _VideoDumpOrchestrator = videoDumpOrchestrator;
         _StopReason = stopReason;
@@ -33,6 +37,7 @@ public class GameEventPresenter :
 
     public async Task ReportStarted(StartGameResponse response)
     {
+        _Replay.StartSession(response.SessionId);
         _FrameLoop.Start();
 
         await _RuntimeState.PublishIfChanged(
@@ -56,6 +61,7 @@ public class GameEventPresenter :
     public async Task ReportStopped(StopGameResponse response)
     {
         _FrameLoop.Stop();
+        _Replay.StopSession(response.SessionId);
 
         await _RuntimeState.PublishIfChanged(
             RecorderRuntimeMode.Idle,

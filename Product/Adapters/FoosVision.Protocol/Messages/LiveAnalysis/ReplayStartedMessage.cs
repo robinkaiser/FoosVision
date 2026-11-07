@@ -37,6 +37,10 @@ public record ReplayStartedMessage
 
     public long ReplayEndTimestampNs { get; init; }
 
+    public double Speed { get; init; } = 0.25;
+
+    public int RequiredCompletedLoops { get; init; } = 1;
+
     public EncodedReplayCodecMessage Codec { get; init; }
 
     public int ParameterSetCount { get; init; }

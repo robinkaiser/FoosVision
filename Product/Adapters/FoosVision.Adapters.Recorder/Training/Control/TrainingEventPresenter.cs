@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Common.Live;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Protocol.Messages.Events;
@@ -16,12 +17,14 @@ public class TrainingEventPresenter :
 {
     private readonly ITrainingAnnouncements _Announcements;
     private readonly FrameProcessingLoop _FrameLoop;
+    private readonly IReplayCoordinator _Replay;
     private readonly RecorderRuntimeStateController _RuntimeState;
     private readonly IVideoDumpOrchestrator _VideoDumpOrchestrator;
     private readonly RecorderStateChangeReason _StopReason;
 
     public TrainingEventPresenter(
         FrameProcessingLoop frameLoop,
+        IReplayCoordinator replay,
         RecorderRuntimeStateController runtimeState,
         IVideoDumpOrchestrator videoDumpOrchestrator,
         ITrainingAnnouncements announcements,
@@ -29,6 +32,7 @@ public class TrainingEventPresenter :
     {
         _Announcements = announcements;
         _FrameLoop = frameLoop;
+        _Replay = replay;
         _RuntimeState = runtimeState;
         _VideoDumpOrchestrator = videoDumpOrchestrator;
         _StopReason = stopReason;
@@ -37,6 +41,7 @@ public class TrainingEventPresenter :
     public async Task ReportStarted(StartTrainingResponse response)
     {
         _Announcements.StartSession(response.SessionId);
+        _Replay.StartSession(response.SessionId);
         _FrameLoop.Start();
 
         await _RuntimeState.PublishIfChanged(
@@ -61,6 +66,7 @@ public class TrainingEventPresenter :
     {
         _Announcements.StopSession(response.SessionId);
         _FrameLoop.Stop();
+        _Replay.StopSession(response.SessionId);
 
         await _RuntimeState.PublishIfChanged(
             RecorderRuntimeMode.Idle,

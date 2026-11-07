@@ -6,6 +6,7 @@ using FoosVision.Adapters.Recorder.Calibration;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Adapters.Recorder.Live;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Adapters.Recorder.Training.Control;
 using FoosVision.Adapters.Recorder.Training.Live;
 using FoosVision.Adapters.Recorder.Training;
@@ -35,6 +36,7 @@ internal class TrainingModule : IDisposable
 {
     private readonly RecorderRuntimeStateController _RuntimeState;
     private readonly ITrainingAnnouncements _Announcements;
+    private readonly ReplayCoordinator _ReplayCoordinator;
     private readonly VisionContextUpdatePublisher _VisionContextUpdatePublisher;
     private readonly IVideoDumpOrchestrator _VideoDumpOrchestrator;
     private readonly FrameProcessingRatePublisher _FrameProcessingRatePublisher;
@@ -42,6 +44,8 @@ internal class TrainingModule : IDisposable
     public TrainingModule(
         IFrameSource frameSource,
         IFrameFeed frameFeed,
+        IEncodedReplayBuffer replayBuffer,
+        ILiveVideoStreamController liveVideoStreamController,
         IBallFinder ballFinder,
         IEncodedBallDetectionMaskProvider ballDetectionMaskProvider,
         ITableConfigFinder tableConfigFinder,
@@ -92,6 +96,8 @@ internal class TrainingModule : IDisposable
                     () => CompleteTableSceneUpdate.Handle(new(session.Id), CancellationToken.None));
             });
 
+        _ReplayCoordinator = new ReplayCoordinator(replayBuffer, liveVideoStreamController, liveAnalysisPublisher);
+
         _VisionContextUpdatePublisher = new VisionContextUpdatePublisher(
             visionContextProvider,
             liveAnalysisPublisher,
@@ -100,6 +106,7 @@ internal class TrainingModule : IDisposable
         var framePresenter = new FramePresenter(
             liveDataPublisher,
             calibration,
+            _ReplayCoordinator,
             liveAnalysisPublisher,
             ballDetectionMaskProvider,
             _Announcements,
@@ -122,14 +129,15 @@ internal class TrainingModule : IDisposable
         CommandHandler = new TrainingCommandHandler(
             StartTraining,
             StopTraining,
-            cmdId => new TrainingEventPresenter(FrameLoop, runtimeState, videoDumpOrchestrator, _Announcements),
-            cmdId => new TrainingEventPresenter(FrameLoop, runtimeState, videoDumpOrchestrator, _Announcements));
+            cmdId => new TrainingEventPresenter(FrameLoop, _ReplayCoordinator, runtimeState, videoDumpOrchestrator, _Announcements),
+            cmdId => new TrainingEventPresenter(FrameLoop, _ReplayCoordinator, runtimeState, videoDumpOrchestrator, _Announcements));
     }
 
     public void Dispose()
     {
         GC.SuppressFinalize(this);
         FrameLoop.Stop();
+        _ReplayCoordinator.Dispose();
         (_Announcements as IDisposable)?.Dispose();
         _VisionContextUpdatePublisher.Dispose();
         _FrameProcessingRatePublisher.Dispose();
@@ -155,7 +163,7 @@ internal class TrainingModule : IDisposable
     {
         if (!SessionStore.HasActive) return;
 
-        TrainingEventPresenter presenter = new(FrameLoop, _RuntimeState, _VideoDumpOrchestrator, _Announcements, reason);
+        TrainingEventPresenter presenter = new(FrameLoop, _ReplayCoordinator, _RuntimeState, _VideoDumpOrchestrator, _Announcements, reason);
         await StopTraining.Handle(new StopTrainingRequest(), presenter, ct);
     }
 

@@ -61,6 +61,20 @@ public class StartReplayAnalysisInteractorTests
         Assert.Equal(0, session.CompletedLoops);
     }
 
+    [Fact]
+    public async Task Start_analysis_uses_recorder_minimum_loops_and_still_requires_return_request()
+    {
+        ReplayId replayId = new(42, 1_000_000);
+        await _Testee.Handle(CreateRequest(replayId, new(100, 200)) with { RequiredCompletedLoops = 2 }, _Output, CancellationToken.None);
+        ReplaySession session = _FakeStore.LoadActive().Value;
+        session.CompleteLoop();
+        Assert.False(session.CanReturnToLive);
+        session.CompleteLoop();
+        Assert.False(session.CanReturnToLive);
+        session.RequestReturnToLive(replayId);
+        Assert.True(session.CanReturnToLive);
+    }
+
     private static StartReplayAnalysisRequest CreateRequest(ReplayId replayId, Point lastKnownBallPosition)
         => new(
             replayId,

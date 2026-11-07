@@ -25,6 +25,7 @@ internal sealed class SessionContext
     private Action<BallDetectionMaskMessage>? _BallDetectionMaskHandler;
     private Action<ReplayStartedMessage>? _ReplayStartedHandler;
     private Action<ReplayClipMessage>? _ReplayClipHandler;
+    private Action<ReplayReturnToLiveMessage>? _ReplayReturnHandler;
 
     public SessionContext()
     {
@@ -96,7 +97,11 @@ internal sealed class SessionContext
 
         _LiveAnalysisSubscriber
             .Subscribe<ReplayReturnToLiveMessage>(Arg.Any<Action<ReplayReturnToLiveMessage>>())
-            .Returns(_ => CreateSubscription());
+            .Returns(callInfo =>
+            {
+                _ReplayReturnHandler = callInfo.Arg<Action<ReplayReturnToLiveMessage>>();
+                return CreateSubscription();
+            });
 
         _LiveAnalysisSubscriber
             .Subscribe<ReplayClipMessage>(Arg.Any<Action<ReplayClipMessage>>())
@@ -178,6 +183,12 @@ internal sealed class SessionContext
     {
         Assert.NotNull(_ProcessFrameRateHandler);
         _ProcessFrameRateHandler(message);
+    }
+
+    public void PublishReplayReturn(ReplayReturnToLiveMessage message)
+    {
+        Assert.NotNull(_ReplayReturnHandler);
+        _ReplayReturnHandler(message);
     }
 
     public void PublishReplayClip(ReplayClipMessage message)

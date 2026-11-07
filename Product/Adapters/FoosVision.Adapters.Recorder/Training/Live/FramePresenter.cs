@@ -3,11 +3,11 @@
 
 using FoosVision.Adapters.Recorder.Calibration;
 using FoosVision.Adapters.Recorder.Live;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Common.Logging;
 using FoosVision.Common.Types;
 using FoosVision.Ports.Vision;
 using FoosVision.Protocol.Connectivity.Abstractions;
-using FoosVision.Protocol.Messages.LiveAnalysis;
 using FoosVision.UseCases.Training.ProcessFrame;
 
 namespace FoosVision.Adapters.Recorder.Training.Live;
@@ -17,7 +17,7 @@ public class FramePresenter : IProcessFrameOutputPort
     private static readonly Source _Log = new("Recorder.Training");
     private readonly LiveFramePublisher _Live;
     private readonly ICalibrationCoordinator _Calibration;
-    private readonly IRecorderLiveAnalysisPublisher _LiveAnalysisPublisher;
+    private readonly IReplayCoordinator _Replay;
     private readonly ITrainingAnnouncements _Announcements;
     private readonly bool _PublishBallDetectionMask;
     private TrainingStatusResponse? _LastStatus;
@@ -25,6 +25,7 @@ public class FramePresenter : IProcessFrameOutputPort
     public FramePresenter(
         IRecorderLiveDataPublisher liveDataPublisher,
         ICalibrationCoordinator calibration,
+        IReplayCoordinator replay,
         IRecorderLiveAnalysisPublisher liveAnalysisPublisher,
         IEncodedBallDetectionMaskProvider ballDetectionMaskProvider,
         ITrainingAnnouncements announcements,
@@ -33,7 +34,7 @@ public class FramePresenter : IProcessFrameOutputPort
     {
         _Live = new(liveDataPublisher, liveAnalysisPublisher, ballDetectionMaskProvider, publishObservations);
         _Calibration = calibration;
-        _LiveAnalysisPublisher = liveAnalysisPublisher;
+        _Replay = replay;
         _Announcements = announcements;
         _PublishBallDetectionMask = publishBallDetectionMask;
     }
@@ -62,14 +63,14 @@ public class FramePresenter : IProcessFrameOutputPort
             await _Calibration.RequestTableSceneUpdate(r.Frame, ballPosition);
         }
 
+        if (response.Replay is { } replay)
+        {
+            await _Replay.RequestReplay(response.SessionId, r.Frame, replay);
+        }
+
         if (response.ReturnToLiveReplayFrame is Frame triggerFrame)
         {
-            await _LiveAnalysisPublisher.PublishReplayReturnToLive(new ReplayReturnToLiveMessage
-            {
-                SessionId = response.SessionId,
-                TriggerFrameId = triggerFrame.Id,
-                TriggerTimestampNs = triggerFrame.TimestampNs,
-            });
+            await _Replay.RequestReturnToLive(response.SessionId, triggerFrame);
         }
 
         if (_PublishBallDetectionMask)

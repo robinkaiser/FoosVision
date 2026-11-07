@@ -3,6 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using FoosVision.Adapters.Common.Live;
+using FoosVision.Adapters.Recorder.Replay;
+using NSubstitute;
 using FoosVision.Adapters.Recorder.Connectivity;
 using FoosVision.Adapters.Recorder.Diagnostics;
 using FoosVision.Adapters.Recorder.Game.Control;
@@ -36,6 +38,7 @@ public class VideoDumpPresenterTests
         RecordingVideoDumpOrchestrator videoDumpOrchestrator = new();
         GameEventPresenter testee = new(
             CreateFrameLoop(),
+            Substitute.For<IReplayCoordinator>(),
             new RecorderRuntimeStateController(new RecordingEventPublisher()),
             videoDumpOrchestrator);
 

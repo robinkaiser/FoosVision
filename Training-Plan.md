@@ -1,9 +1,9 @@
 # FoosVision Training – Umsetzungsplan
 
-Stand: 2026-11-06. Status: Arbeitspakete 1–8 einschließlich 7a und 8a implementiert und automatisiert geprüft.
-Recorder-Laufzeit, Viewer-Bedienung und lokale Sprachausgabe sind angeschlossen.
-Die manuelle Geräteabnahme von Meilenstein 1 bleibt beim Nutzer. Arbeitspakete 9–11 bleiben offen;
-Trainingsclips folgen in 9.
+Stand: 2026-11-07. Status: Arbeitspakete 1–9 einschließlich 7a und 8a implementiert und automatisiert geprüft.
+Recorder-Laufzeit, Viewer-Bedienung, lokale Sprachausgabe und Trainings-Replay sind angeschlossen.
+Die manuelle Geräteabnahme einschließlich Trainings-Replay bleibt beim Nutzer.
+Arbeitspakete 10–11 bleiben offen.
 
 ## Ziel und Umfang
 
@@ -183,9 +183,12 @@ ersetzen die früher vorgesehenen Ruhe-/Pendelheuristiken und Replay-Wiederverwe
 
 ### Erst für spätere Arbeitspakete offen
 
-- [ ] Replay-Clip-Vor-/Nachlauf, Geschwindigkeit und Replay bei abgebrochenen Versuchen
-  für Arbeitspaket 9 konkretisieren. Der fachliche Schussnachlauf von 250 ms und der
-  Setup-Anchor aus Arbeitspaket 3 ersetzen noch keine Clip-/Playback-Konfiguration.
+- [x] Replay-Werte für Arbeitspaket 9 am 2026-11-07 vom Nutzer bestätigt: 500 ms vor
+  dem Analyseanker bis 500 ms nach der bestätigten Ausführung, Viertelgeschwindigkeit,
+  keine Clips bei abgebrochenen Versuchen. Gilt für Snake, Pull und Pass in beiden
+  Ansagemodi. Der fachliche Schussnachlauf von 250 ms bleibt unverändert; der Clip
+  endet unabhängig davon nach seinem eigenen Nachlauf. Der vorherige Keyframe kann
+  den tatsächlichen Vorlauf verlängern; das Ende liegt auf einer encoded Frame-Grenze.
 
 ## 1. Gemeinsamen Tracking-Kern fachlich abgrenzen
 
@@ -779,33 +782,33 @@ LF-/Final-Newline-Prüfung erfolgreich. Keine Apps oder Geräteworkflows gestart
 
 Abhängigkeit: stabiler Meilenstein 1 und Replay-Entscheidungen aus Schritt 0.
 
-- [ ] Replay-Entscheidung als modusspezifische Domain-Logik behandeln. Gemeinsame
+- [x] Replay-Entscheidung als modusspezifische Domain-Logik behandeln. Gemeinsame
   Anforderung enthält Anker, explizites Clip-Zeitfenster und Wiedergabevorgaben.
   Fachliche Wiederholungs-/Abbruchregeln bleiben im Core, nicht im Medienadapter.
-- [ ] Auslösungsereignis der gewählten Trainingsstrategie als möglichen Replay-Anker
+- [x] Auslösungsereignis der gewählten Trainingsstrategie als möglichen Replay-Anker
   verwenden. Strategieerkennung nicht im ReplayCoordinator erneut implementieren;
   konkrete Replay-Regeln verwenden Strategieergebnisse und Versuchskontext.
-- [ ] Recorder Game/Orchestration/ReplayCoordinator als gemeinsame Replay-Ausführung
+- [x] Recorder Game/Orchestration/ReplayCoordinator als gemeinsame Replay-Ausführung
   extrahieren. Game liefert seine bisherigen Dauern explizit; Training liefert eigene.
-- [ ] Replay-Puffergrenzen, noch nicht erfassten Nachlauf, Keyframe-Anforderungen,
+- [x] Replay-Puffergrenzen, noch nicht erfassten Nachlauf, Keyframe-Anforderungen,
   Überlappungen und nicht verfügbare Segmente behandeln. Nicht unbegrenzt puffern/warten.
-- [ ] ReplayStartedMessage/ReplayClipMessage und Mapper um notwendige Informationen ergänzen;
+- [x] ReplayStartedMessage/ReplayClipMessage und Mapper um notwendige Informationen ergänzen;
   Session-/Replay-Zuordnung und gemeinsame ReplayReturnToLiveMessage aus Schritt 5 verwenden.
-- [ ] Bestehende ReplaySession, Replay-Usecases, ViewerReplayCoordinator und
+- [x] Bestehende ReplaySession, Replay-Usecases, ViewerReplayCoordinator und
   ReplayPlaybackRequestMapper für Dauer, Geschwindigkeit, Wiederholungszahl und
   Rückkehrregel prüfen und gezielt erweitern. Analyse und Decoder weiterverwenden.
   Die gemeinsame Rückkehrnachricht und Mindestwiedergabe sind bereits in Schritt 5 umgesetzt;
   hier deren Trainings-Anschluss verwenden, keine neue Viewer-Rückkehrregel einführen.
-- [ ] Trainings-Replay in beiden Ansagemodi wiederholen, bis der Recorder eine neue Vorbereitung bestätigt.
+- [x] Trainings-Replay in beiden Ansagemodi wiederholen, bis der Recorder eine neue Vorbereitung bestätigt.
   Laufendes Live-Tracking erkennt diese auch während Wiedergabe/Analyse. Recorder spricht
   Ready lokal und fordert mit der gemeinsamen ReplayReturnToLiveMessage die Rückkehr an.
   Viewer beendet Replay, sobald mindestens ein vollständiger Durchlauf abgeschlossen ist.
   Recorder wartet weder auf das Wiedergabeende noch eine Viewer-Bestätigung;
   das neue Setup beendet die Schleife.
-- [ ] Game-Regel zur Beendigung bei wieder aufgenommenem Spiel für Training nicht anwenden:
+- [x] Game-Regel zur Beendigung bei wieder aufgenommenem Spiel für Training nicht anwenden:
   Nach einem Pass darf Ball auf der Dreierreihe/im Spiel bleiben und Replay weiterlaufen.
   Abbruchpolicy in Replay-Domain/Usecases ausdrücken, nicht nur im UI unterdrücken.
-- [ ] Ready fordert die Rückkehr auch für vorbereitete/übertragene Replays an. Ein noch
+- [x] Ready fordert die Rückkehr auch für vorbereitete/übertragene Replays an. Ein noch
   erwarteter Clip wird einmal vollständig gezeigt; nach Rückkehr zu Live sind Duplikate
   verworfen. Stop/Disconnect beendet sofort. Nur der Clip wird wiederholt, nicht erneut übertragen.
 
@@ -814,6 +817,92 @@ Puffergrenzen, Wiederholungen bis Ready, weiterlaufender Ball nach Pass, neue Vo
 während Replay, Ready vor Clip-Eingang, vorzeitiger Abbruch und Session-Wechsel.
 
 Abnahme Meilenstein 2: Training besitzt eigene Replay-Regeln und nutzt dieselbe technische Pipeline.
+
+Umgesetzt und automatisiert geprüft am 2026-11-07:
+
+- `ReplayPlan` in der Replay-Domain enthält Anker, explizites Zeitfenster, Geschwindigkeit
+  und Mindestdurchläufe. Der gemeinsame Vertrag wiederholt bis zur Recorder-Rückkehr;
+  es gibt keine zusätzliche endliche Wiederholungszahl oder modusspezifische Viewer-Regel.
+  `GameReplayRules` liefert unverändert 1000 ms bei Ballverlust bzw. 700 ms bei Saved Shot
+  ab Anker, Viertelgeschwindigkeit und einen Mindestdurchlauf. GameSession behält ihre
+  Bewegungsprüfung nach 6 Sekunden; die entsprechenden Regressionstests sind erhalten.
+- `TrainingReplayRules` verwendet ausschließlich den einmaligen erfolgreichen
+  `TrainingAttemptCompleted` und dessen Strategie-Anker/Bestätigungsframe. Vorlauf und
+  Nachlauf sind jeweils 500 ms, Geschwindigkeit 0,25 und Mindestdurchläufe 1. Abbrüche
+  erzeugen keinen Plan. Keine erneute Strategieerkennung und keine Game-Abbruchregel
+  im Adapter oder Viewer. Beide Frame-Usecases geben denselben Replay-Vertrag aus.
+- Der bisherige Recorder-`Game/Orchestration/ReplayCoordinator` liegt gemeinsam unter
+  `Recorder/Replay`. Game und Training verwenden dieselbe Ausführung mit eigener
+  Session-Lebensdauer. Der Trainingsanschluss folgt dem Game-Presenter und -Modul;
+  beide Event-Presenter starten/beenden Replay-Arbeit zusammen mit ihrer Session.
+  Session-Ende/Wechsel cancelt wartenden Nachlauf, laufende Übertragung und alte Queue-Einträge.
+- Der vorhandene begrenzte Encoded-Puffer und seine Keyframe-Ausrichtung bleiben erhalten.
+  Ein fehlender/überschriebener Start oder fehlender Keyframe verwirft die Anforderung.
+  Ein noch unvollständiger Nachlauf wird außerhalb der Frame-Verarbeitung höchstens
+  50-mal mit je 20 ms Abstand abgewartet; danach wird kein Teilclip gesendet. Erst ein
+  vollständiges Segment löst ReplayStarted aus. Die bisherige Queue mit einem wartenden
+  Eintrag behält bei Überlappung die neueste Anforderung. Keine größere Pufferhaltung.
+- TrainingSession erkennt während Analyse/Wiedergabe weiterhin jede aktivierte Vorbereitung.
+  Ready fordert über den gemeinsamen Coordinator die Rückkehr auch vor Clip-Eingang an;
+  Ansage und neuer Versuch warten nicht auf den Viewer. Nach einem Pass darf der Ball
+  weiterlaufen. Die vorhandene ReplaySession, Analyse, Decoder und Rückkehr-Usecases
+  bleiben gemeinsam: frühe Rückkehr wird gemerkt, mindestens ein Clipdurchlauf gezeigt,
+  erledigte Duplikate verworfen und Stop/Sessionabbau beendet ohne Mindestdurchlauf.
+  Wiederholung überträgt und analysiert den Clip nicht erneut.
+- Protokolländerung: ReplayStartedMessage und ReplayClipMessage enthalten zusätzlich
+  `Speed` und `RequiredCompletedLoops`. Mapper und StartReplayAnalysis reichen die
+  Vorgaben an vorhandene Wiedergabe/ReplaySession weiter. Session-/Replay-Korrelation,
+  ReplayReturnToLiveMessage, Ports, Kanäle und Handshake bleiben unverändert.
+  Gemäß Prototyp-Entscheidung kein Versionssprung; beide Rollen benötigen denselben Build.
+  Keine neuen Projekte, Projektabhängigkeiten, JSON-Einstellungen oder Audioverträge.
+- README, Configuration.md, Diagnostics.md, Protokoll-Guide und aktuelle Release Notes
+  dokumentieren diesen Schnitt. Die übrigen Arbeitspakete wurden nicht umgesetzt.
+
+Verifikation, sequenziell:
+
+- `dotnet build FoosVision.slnx --no-restore --disable-build-servers -m:1` erfolgreich,
+  0 Warnungen/0 Fehler, einschließlich Android-App, Composition, VideoPlayer und CLIs.
+- Domain 334/334, Usecases 65/65, Recorder-Adapter 88/88, Viewer-Adapter 107/107 und
+  Media.Core 114/114 erfolgreich (708 Tests). Nach dem Build wurden die Testprogramme
+  jeweils direkt mit `dotnet Tests/.../bin/Debug/<Testprojekt>.dll` ausgeführt:
+  `dotnet test --no-build --no-restore` scheiterte beim finalen Start am Named-Pipe-Handshake
+  der Testplattform mit UnauthorizedAccessException. Der direkte Testlauf umgeht nur
+  diesen technischen Handshake und führt dieselben gebauten Tests aus.
+- Neue Prüfungen umfassen alle drei Techniken und beide Ansagemodi, Zeitfenster,
+  ausbleibenden Clip bei Abbruch, neuen Setup-Typ nach Replay, weiterlaufenden Pass,
+  Nachlauf/Frist mit kontrollierter Zeit, fehlende Segmente, Pufferüberschreibung,
+  Mindestdurchläufe, Übertragung einmal pro Clip sowie Stop und Session-Wechsel.
+  Bestehende Tests für Ready vor Clip, Duplikate, Dispose und Game-Rückkehr bestehen weiter.
+- `git diff --check`, LF-/Final-Newline- und Encoding-Prüfung erfolgreich.
+
+Gerätetest vom Nutzer am 2026-11-07 erfolgreich bestätigt. Anschließende Anpassung:
+Vor-/Nachlauf jeweils auf 500 ms erhöht. Der Analyseanker verwendet einen gespeicherten
+Tracking-Frame samt damaliger Position etwa 500 ms vor dem erkannten Bewegungsbeginn
+(statt des letzten Setup-Frames). Bei kürzerer Historie wird der erste Frame der
+bestätigten Vorbereitung verwendet. Der Anker bleibt während der Auswertung fest;
+Schuss-/Passerkennung und Game bleiben unverändert. Der Clip beginnt weitere 500 ms
+vor diesem Analyseanker und endet 500 ms nach der bestätigten Ausführung.
+Verifiziert nach dieser Anpassung: Domain 334/334 und Usecases 65/65, sequenziell
+über die gebauten Testassemblies. Zugehöriger Build erfolgreich mit 0 Warnungen/
+0 Fehlern; Diff- und LF-Prüfung erfolgreich. Die erneute Geräteprüfung dieser
+Anpassung bleibt offen.
+
+Nachtrag zur Replay-Diagnose am 2026-11-07: Geräte-Logs belegen einen ungültigen
+Listenindex beim Kopieren eines Replay-Segments. Der gemeinsame EncodedAccessUnitBuffer
+synchronisiert jetzt Metadatenänderungen und die Auswahl für Replay/Snapshot mit einem
+Lock. Codec, Header und ausgewählte Access-Unit-Metadaten werden unter dem Lock
+übernommen; Byte-Kopie und Streaming-Callback laufen außerhalb. Die Sperre schützt
+keine Byte-Bereiche vor tatsächlichem Überschreiben während der Kopie.
+Media.Core-Build: 0 Warnungen/0 Fehler; 115/115 Tests über die gebaute Testassembly
+bestanden, einschließlich stabiler Header und bereits kopierter Replay-/Snapshot-Daten
+nach Ring-Umlauf und Reset. Erneute Geräteprüfung und Messung der Lock-Dauer stehen aus.
+Der Nutzer bestätigt zuverlässige Zeitlupen auch mit temporär auf 1000 ms erhöhtem
+Vorlauf, Nachlauf und Anker-Rückgriff. Alle drei Werte sind wieder auf 300 ms gesetzt;
+die temporären ReplayTrace-Logs sind entfernt. Der Metadaten-Lock bleibt bestehen.
+Game-Zeitfenster unverändert.
+Verifiziert: Domain 334/334, Usecases 65/65, Recorder 88/88 und Viewer 107/107
+bestanden (594 Tests); vier Builds ohne Warnungen oder Fehler, Diff-Prüfung erfolgreich.
+
 
 ## 10. Dokumentation, Werkzeuge und Abschlussprüfung
 
@@ -864,7 +953,8 @@ Abnahme: Die Umsetzung ist abgeschlossen; der temporäre Plan ist entfernt.
    Lokale Recorder-Sprachausgabe ist implementiert und automatisiert geprüft (8).
    Die Tischprüfung von Snake, Pull und Pass wurde vom Nutzer erfolgreich bestätigt.
 6. Gewichtete Variantenauswahl ist als Zwischenschritt 8a ergänzt.
-   Trainings-Replay als eigenen anschließenden Schnitt umsetzen (9).
+   Gemeinsame Replay-Ausführung und Trainings-Replay sind implementiert und automatisiert
+   geprüft (9); die manuelle Replay-Abnahme auf Geräten bleibt offen.
 7. Dokumentation und Verifikation pro Schnitt nachführen (10).
 
 Erledigte Checkboxen erst nach Implementierung und der jeweiligen Abnahme markieren.

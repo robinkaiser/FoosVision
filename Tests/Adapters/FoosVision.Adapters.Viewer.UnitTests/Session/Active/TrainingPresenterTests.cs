@@ -40,6 +40,29 @@ public class TrainingPresenterTests
     }
 
     [Fact]
+    public async Task Training_repeats_one_transferred_clip_while_ball_moves_and_returns_on_recorder_ready()
+    {
+        SessionContext context = new();
+        using ActiveSession sut = context.CreateSut();
+        sut.OnRecorderRuntimeStateChanged(CreateRuntimeState(RecorderRuntimeMode.TrainingRunning));
+        context.EnableReplayAnalysisPrerequisites();
+        context.PublishReplayClip(CreateReplayClipMessage());
+        await context.PlaybackController.ReplayStarted.WaitAsync(TestContext.Current.CancellationToken);
+        for (int i = 0; i < 3; i++)
+        {
+            context.PublishTrackingFrame(CreateTrackingFrame((ulong)(100 + i), 10_000_000_000 + i * 1_000_000_000, true));
+            await context.PlaybackController.CompleteReplayLoopAsync();
+            Assert.True(context.UiSink.States[^1].IsReplayActive);
+        }
+        Assert.Single(context.PlaybackController.ReplayPlaybacks);
+        Assert.Equal(1, context.ReplayFrameDecoder.DecodeCallCount);
+        context.PublishReplayReturn(new() { SessionId = SessionId, TriggerFrameId = 42, TriggerTimestampNs = 2_000_000_000 });
+        await context.PlaybackController.LiveStarted.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.False(context.UiSink.States[^1].IsReplayActive);
+        Assert.Equal(SessionMode.Training, context.UiSink.States[^1].Mode);
+    }
+
+    [Fact]
     public void Training_pending_replay_preserves_fps_and_stop_rejects_old_replay()
     {
         SessionContext context = new();

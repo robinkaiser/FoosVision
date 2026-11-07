@@ -22,7 +22,7 @@ public class StartReplayAnalysisInteractor : IStartReplayAnalysisInputPort
     {
         BallTracker ballTracker = new(BallTrackerParams.Default, request.TableConfiguration);
         ReplayAnalyzer replayAnalyzer = new(TableImageScale.From(request.TableConfiguration));
-        ReplaySession session = new(ballTracker, replayAnalyzer);
+        ReplaySession session = new(ballTracker, replayAnalyzer, request.RequiredCompletedLoops);
         _SessionStore.SaveActive(session);
 
         session.Start(request.ReplayId, request.TrackAnchor, request.TableConfiguration);

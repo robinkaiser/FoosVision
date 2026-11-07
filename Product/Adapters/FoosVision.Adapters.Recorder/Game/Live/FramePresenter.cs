@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Robin Kaiser
 
 using FoosVision.Adapters.Recorder.Calibration;
-using FoosVision.Adapters.Recorder.Game.Orchestration;
+using FoosVision.Adapters.Recorder.Replay;
 using FoosVision.Adapters.Recorder.Live;
 using FoosVision.Common.Types;
 using FoosVision.Ports.Vision;
@@ -53,16 +53,9 @@ public class FramePresenter : IProcessFrameOutputPort
             await _Calibration.RequestTableSceneUpdate(r.Frame, ballPosition);
         }
 
-        if (r.RequestReplay)
+        if (r.Replay is { } replay)
         {
-            await _Replay.RequestReplay(
-                r.SessionId,
-                r.Frame,
-                r.ReplayAnchorFrame,
-                r.ReplayAnchorPosition,
-                r.ReplayAnchorPossession,
-                r.ReplayAnchorPossessionTimeMs,
-                r.ReplayTriggerKind);
+            await _Replay.RequestReplay(r.SessionId, r.Frame, replay);
         }
 
         if (r.ReturnToLiveReplayFrame is Frame triggerFrame)
