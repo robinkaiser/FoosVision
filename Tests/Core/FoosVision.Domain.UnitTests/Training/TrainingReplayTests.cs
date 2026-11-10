@@ -20,15 +20,15 @@ public class TrainingReplayTests
     [InlineData(TrainingStrategyKind.SnakeShot, TrainingVariantAnnouncement.OnShoot)]
     [InlineData(TrainingStrategyKind.PullShot, TrainingVariantAnnouncement.OnReady)]
     [InlineData(TrainingStrategyKind.PullShot, TrainingVariantAnnouncement.OnShoot)]
-    [InlineData(TrainingStrategyKind.TickTackPass, TrainingVariantAnnouncement.OnReady)]
-    [InlineData(TrainingStrategyKind.TickTackPass, TrainingVariantAnnouncement.OnShoot)]
+    [InlineData(TrainingStrategyKind.Pass, TrainingVariantAnnouncement.OnReady)]
+    [InlineData(TrainingStrategyKind.Pass, TrainingVariantAnnouncement.OnShoot)]
     public void Completed_technique_replays_until_any_enabled_strategy_confirms_new_preparation(
         TrainingStrategyKind kind, TrainingVariantAnnouncement mode)
     {
-        TrainingSession session = Session(new([Option(kind), Option(kind == TrainingStrategyKind.TickTackPass
-            ? TrainingStrategyKind.SnakeShot : TrainingStrategyKind.TickTackPass)], mode));
+        TrainingSession session = Session(new([Option(kind), Option(kind == TrainingStrategyKind.Pass
+            ? TrainingStrategyKind.SnakeShot : TrainingStrategyKind.Pass)], mode));
         TrainingAttemptCompleted completed;
-        if (kind == TrainingStrategyKind.TickTackPass)
+        if (kind == TrainingStrategyKind.Pass)
         {
             PreparePass(session, 0);
             for (long ms = 400; ms <= 1300; ms += 100)
@@ -53,10 +53,10 @@ public class TrainingReplayTests
                 .Events.OfType<TrainingAttemptCompleted>());
         }
 
-        long anchorMs = kind == TrainingStrategyKind.TickTackPass ? 1100 : 1800;
-        Point anchorPosition = kind == TrainingStrategyKind.TickTackPass ? new(700, 201.1)
+        long anchorMs = kind == TrainingStrategyKind.Pass ? 1100 : 1800;
+        Point anchorPosition = kind == TrainingStrategyKind.Pass ? new(700, 201.1)
             : (kind == TrainingStrategyKind.SnakeShot ? SnakePosition(Team.A) : Pull(Team.A));
-        if (kind != TrainingStrategyKind.TickTackPass)
+        if (kind != TrainingStrategyKind.Pass)
         {
             anchorPosition = anchorPosition with { Y = anchorPosition.Y + 1.8 };
         }
@@ -77,7 +77,7 @@ public class TrainingReplayTests
         Assert.Empty(moving.Events);
 
         TrainingFrameResult ready;
-        if (kind == TrainingStrategyKind.TickTackPass)
+        if (kind == TrainingStrategyKind.Pass)
         {
             session.ApplyTracking(Snapshot(10000, SnakePosition(Team.A)));
             ready = session.ApplyTracking(Snapshot(11000, SnakePosition(Team.A)));

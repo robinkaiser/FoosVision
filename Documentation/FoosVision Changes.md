@@ -4,7 +4,7 @@
 - Android 13+
 
 ## New
-- Start and stop Training from the viewer after table setup. Practice Snake, Pull, and Tick-Tack Pass on either side of the table with spoken recorder cues and configurable waits and variant weights.
+- Start and stop Training from the viewer after table setup. Practice Snake, Pull, and Pass on either side of the table with spoken recorder cues and configurable waits and variant weights.
 - Review recognized training shots and passes in quarter-speed replay. The clip repeats until the next preparation is recognized and at least one loop has played.
 
 ## Improved

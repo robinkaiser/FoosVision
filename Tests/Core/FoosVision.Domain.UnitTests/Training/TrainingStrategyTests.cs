@@ -49,11 +49,11 @@ public class TrainingStrategyTests
     [InlineData(1110, 450, true)]
     [InlineData(1160, 450, true)]
     [InlineData(1161, 450, false)]
-    [InlineData(1150, 383, false)]
-    [InlineData(1150, 384, true)]
-    [InlineData(1150, 516, true)]
-    [InlineData(1150, 517, false)]
-    public void Snake_region_uses_rod_centers_and_middle_twenty_percent(double x, double y, bool ready)
+    [InlineData(1150, 350, false)]
+    [InlineData(1150, 351, true)]
+    [InlineData(1150, 549, true)]
+    [InlineData(1150, 550, false)]
+    public void Snake_region_uses_rod_centers_and_middle_thirty_percent(double x, double y, bool ready)
     {
         foreach (Team team in new[] { Team.A, Team.B })
         {
@@ -152,35 +152,40 @@ public class TrainingStrategyTests
     [InlineData(Team.A, true)]
     [InlineData(Team.B, false)]
     [InlineData(Team.B, true)]
-    public void Tick_tack_needs_two_real_reversals_at_either_side_for_each_team(Team team, bool lower)
+    public void Pass_is_ready_after_two_twenty_pixel_reversals_at_either_side_for_each_team(Team team, bool lower)
     {
-        TickTackPassTrainingStrategy strategy = TickTack();
+        PassTrainingStrategy strategy = Pass();
         double startY = lower ? 700 : 200;
         double x = team == Team.A ? 700 : 900;
+        double inward = lower ? -1 : 1;
         Assert.Null(strategy.FindPreparation(Snapshot(0, new(x, startY), Five(team))));
-        Assert.Null(strategy.FindPreparation(Snapshot(100, new(x, startY + 10), Five(team))));
-        Assert.Null(strategy.FindPreparation(Snapshot(200, new(x, startY), Five(team))));
-        Assert.NotNull(strategy.FindPreparation(Snapshot(300, new(x, startY + 10), Five(team))));
+        Assert.Null(strategy.FindPreparation(Snapshot(100, new(x, startY + 19 * inward), Five(team))));
+        Assert.Null(strategy.FindPreparation(Snapshot(200, new(x, startY + 20 * inward), Five(team))));
+        Assert.Null(strategy.FindPreparation(Snapshot(300, new(x, startY + inward), Five(team))));
+        Assert.Null(strategy.FindPreparation(Snapshot(400, new(x, startY), Five(team))));
+        Assert.Null(strategy.FindPreparation(Snapshot(500, new(x, startY + 19 * inward), Five(team))));
+        Assert.NotNull(strategy.FindPreparation(Snapshot(600, new(x, startY + 20 * inward), Five(team))));
     }
 
     [Theory]
-    [InlineData(0.35, true)]
-    [InlineData(0.3501, false)]
-    [InlineData(0.6499, false)]
-    [InlineData(0.65, true)]
-    public void Pass_uses_outer_35_percent_for_preparation_and_holding_for_both_teams(double sideFraction, bool allowed)
+    [InlineData(0.20, true)]
+    [InlineData(0.2001, false)]
+    [InlineData(0.7999, false)]
+    [InlineData(0.80, true)]
+    public void Pass_enters_at_twenty_percent_and_holds_to_the_center_for_both_teams(double sideFraction, bool allowed)
     {
         foreach (Team team in new[] { Team.A, Team.B })
         {
-            TickTackPassTrainingStrategy strategy = TickTack();
+            PassTrainingStrategy strategy = Pass();
             double x = team == Team.A ? 700 : 900;
             double y = 120 + 660 * sideFraction;
-            double otherY = y + (sideFraction < 0.5 ? -10 : 10);
+            double inward = sideFraction < 0.5 ? 1 : -1;
+            double otherY = y + 30 * inward;
             BarType bar = Five(team);
-            strategy.FindPreparation(Snapshot(0, new(x, otherY), bar));
-            strategy.FindPreparation(Snapshot(100, new(x, y), bar));
-            strategy.FindPreparation(Snapshot(200, new(x, otherY), bar));
-            TrainingPreparation? preparation = strategy.FindPreparation(Snapshot(300, new(x, y), bar));
+            strategy.FindPreparation(Snapshot(0, new(x, y), bar));
+            strategy.FindPreparation(Snapshot(100, new(x, otherY), bar));
+            strategy.FindPreparation(Snapshot(200, new(x, y + 10 * inward), bar));
+            TrainingPreparation? preparation = strategy.FindPreparation(Snapshot(300, new(x, otherY), bar));
             Assert.Equal(allowed, preparation is not null);
             if (preparation is null)
             {
@@ -188,14 +193,48 @@ public class TrainingStrategyTests
             }
 
             strategy.Begin(preparation);
-            Assert.Equal(TrainingExecutionState.Holding, strategy.Evaluate(Snapshot(400, new(x, y), bar)).State);
+            Assert.Equal(TrainingExecutionState.Holding, strategy.Evaluate(Snapshot(400, new(x, 450), bar)).State);
+            Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(500, new(x, 450 + inward), bar)).State);
         }
     }
 
     [Fact]
-    public void Tick_tack_does_not_count_jitter_or_combine_different_sides_or_teams()
+    public void Pass_is_ready_after_one_reversal_and_a_full_second_of_rest()
     {
-        TickTackPassTrainingStrategy strategy = TickTack();
+        PassTrainingStrategy strategy = Pass();
+        BarType bar = BarType.A5;
+        Point start = new(700, 250);
+        Point inward = new(700, 290);
+        Point reversed = new(700, 270);
+        Point settled = new(716, 270);
+        Assert.Null(strategy.FindPreparation(Snapshot(0, start, bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(1000, start, bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(1100, inward, bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(2100, inward, bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(2200, reversed, bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(2500, settled, bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(3499, settled, bar)));
+        Assert.NotNull(strategy.FindPreparation(Snapshot(3500, settled, bar)));
+    }
+
+    [Fact]
+    public void Pass_must_enter_the_outer_zone_again_after_crossing_the_center_during_preparation()
+    {
+        PassTrainingStrategy strategy = Pass();
+        BarType bar = BarType.A5;
+        Assert.Null(strategy.FindPreparation(Snapshot(0, new(700, 200), bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(100, new(700, 300), bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(200, new(700, 270), bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(300, new(700, 451), bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(400, new(700, 300), bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(500, new(700, 270), bar)));
+        Assert.Null(strategy.FindPreparation(Snapshot(1500, new(700, 270), bar)));
+    }
+
+    [Fact]
+    public void Pass_does_not_count_jitter_or_combine_different_sides_or_teams()
+    {
+        PassTrainingStrategy strategy = Pass();
         for (int i = 0; i < 20; i++)
         {
             Assert.Null(strategy.FindPreparation(Snapshot(i * 10, new(700, 200 + (i % 2)), BarType.A5)));
@@ -218,7 +257,7 @@ public class TrainingStrategyTests
         SnakeShotTrainingStrategy strategy = Snake();
         BeginShot(strategy, team);
         Vector2 velocity = sideSpeed ? new(0, 2000) : new(2000, 0);
-        Point moving = SnakePosition(team) with { Y = 530 };
+        Point moving = SnakePosition(team) with { Y = 550 };
         Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(1100, moving, Three(team), velocity)).State);
         TrainingExecution confirmed = strategy.Evaluate(Snapshot(1200, new(team == Team.A ? 1300 : 300, 450), Target(team)));
         Assert.Equal(TrainingExecutionState.Pending, confirmed.State);
@@ -366,7 +405,7 @@ public class TrainingStrategyTests
     [InlineData(Team.B, BarType.A2)]
     public void Pass_completes_on_own_three_or_opponent_defense(Team team, BarType target)
     {
-        TickTackPassTrainingStrategy strategy = BeginPass(team);
+        PassTrainingStrategy strategy = BeginPass(team);
         Bar bar = TableConfig.Config.Field.Bars[target];
         Point targetPosition = new((bar.Center.P0.X + bar.Center.P1.X) / 2, 200);
         Assert.Equal(TrainingExecutionState.Completed, strategy.Evaluate(Snapshot(400, targetPosition, target)).State);
@@ -379,9 +418,9 @@ public class TrainingStrategyTests
     [InlineData(Team.B, true)]
     public void Pass_sideways_exit_or_wrong_direction_cannot_become_success(Team team, bool backwards)
     {
-        TickTackPassTrainingStrategy strategy = BeginPass(team);
+        PassTrainingStrategy strategy = BeginPass(team);
         double x = team == Team.A ? 700 : 900;
-        Point exit = backwards ? new(team == Team.A ? 500 : 1100, 200) : new(x, 450);
+        Point exit = backwards ? new(team == Team.A ? 500 : 1100, 200) : new(x, 451);
         BarType exitBar = backwards ? Three(team == Team.A ? Team.B : Team.A) : Five(team);
         Assert.Equal(TrainingExecutionState.Pending, strategy.Evaluate(Snapshot(400, exit, exitBar)).State);
         Point target = new(team == Team.A ? 1100 : 500, 200);
@@ -390,7 +429,7 @@ public class TrainingStrategyTests
 
     private static SnakeShotTrainingStrategy Snake() => new(Option(TrainingStrategyKind.SnakeShot), TableConfig.Config);
     private static PullShotTrainingStrategy PullStrategy() => new(Option(TrainingStrategyKind.PullShot), TableConfig.Config);
-    private static TickTackPassTrainingStrategy TickTack() => new(Option(TrainingStrategyKind.TickTackPass), TableConfig.Config);
+    private static PassTrainingStrategy Pass() => new(Option(TrainingStrategyKind.Pass), TableConfig.Config);
 
     private static void BeginShot(ITrainingStrategy strategy, Team team)
     {
@@ -398,9 +437,9 @@ public class TrainingStrategyTests
         strategy.Begin(strategy.FindPreparation(Snapshot(1000, SnakePosition(team), Three(team)))!);
     }
 
-    private static TickTackPassTrainingStrategy BeginPass(Team team)
+    private static PassTrainingStrategy BeginPass(Team team)
     {
-        TickTackPassTrainingStrategy strategy = TickTack();
+        PassTrainingStrategy strategy = Pass();
         double x = team == Team.A ? 700 : 900;
         strategy.FindPreparation(Snapshot(0, new(x, 200), Five(team)));
         strategy.FindPreparation(Snapshot(100, new(x, 220), Five(team)));

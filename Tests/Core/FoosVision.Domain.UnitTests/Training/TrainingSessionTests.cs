@@ -43,7 +43,7 @@ public class TrainingSessionTests
     {
         TrainingSession session = Session();
         ReadyAndAnnounce(session, team);
-        session.ApplyTracking(Snapshot(2100, SnakePosition(team) with { Y = 530 }, Three(team), new(2000, 0)));
+        session.ApplyTracking(Snapshot(2100, SnakePosition(team) with { Y = 550 }, Three(team), new(2000, 0)));
         session.ApplyTracking(Snapshot(2200, new(team == Team.A ? 1300 : 300, 450), Target(team)));
         TrainingAttemptCompleted completed = Assert.Single(session.ApplyTracking(Snapshot(2450, default, Target(team))).Events.OfType<TrainingAttemptCompleted>());
         Assert.Equal(At(1000), completed.Attempt.Anchor.Frame);
@@ -161,7 +161,7 @@ public class TrainingSessionTests
 
     [Theory]
     [InlineData(TrainingStrategyKind.PullShot)]
-    [InlineData(TrainingStrategyKind.TickTackPass)]
+    [InlineData(TrainingStrategyKind.Pass)]
     public void Multiple_strategies_switch_after_abort_with_their_own_waits_and_fresh_history(TrainingStrategyKind other)
     {
         CountingRandom random = new();
@@ -243,9 +243,9 @@ public class TrainingSessionTests
     [InlineData(TrainingStrategyKind.PullShot, 0.0, "short")]
     [InlineData(TrainingStrategyKind.PullShot, 0.5, "middle")]
     [InlineData(TrainingStrategyKind.PullShot, 0.99, "long")]
-    [InlineData(TrainingStrategyKind.TickTackPass, 0.0, "wall")]
-    [InlineData(TrainingStrategyKind.TickTackPass, 0.5, "lane")]
-    [InlineData(TrainingStrategyKind.TickTackPass, 0.99, "split")]
+    [InlineData(TrainingStrategyKind.Pass, 0.0, "wall")]
+    [InlineData(TrainingStrategyKind.Pass, 0.5, "lane")]
+    [InlineData(TrainingStrategyKind.Pass, 0.99, "split")]
     public void Each_strategy_selects_its_own_variants_uniformly(TrainingStrategyKind kind, double unit, string expected)
     {
         CountingRandom random = new(0, unit);
@@ -253,7 +253,7 @@ public class TrainingSessionTests
         Point setup;
         BarType bar;
         long readyMs;
-        if (kind == TrainingStrategyKind.TickTackPass)
+        if (kind == TrainingStrategyKind.Pass)
         {
             bar = BarType.A5;
             setup = new(700, 220);
@@ -288,9 +288,9 @@ public class TrainingSessionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Tick_tack_setup_loss_aborts_once_and_requires_two_fresh_reversals(bool afterVariant)
+    public void Pass_setup_loss_aborts_once_and_requires_fresh_preparation(bool afterVariant)
     {
-        TrainingSession session = Session(new([Option(TrainingStrategyKind.TickTackPass)], TrainingVariantAnnouncement.OnShoot));
+        TrainingSession session = Session(new([Option(TrainingStrategyKind.Pass)], TrainingVariantAnnouncement.OnShoot));
         session.ApplyTracking(Snapshot(0, new(700, 200), BarType.A5));
         session.ApplyTracking(Snapshot(100, new(700, 220), BarType.A5));
         session.ApplyTracking(Snapshot(200, new(700, 200), BarType.A5));
@@ -301,11 +301,11 @@ public class TrainingSessionTests
         }
 
         long exitMs = afterVariant ? 1400 : 400;
-        session.ApplyTracking(Snapshot(exitMs, new(700, 450), BarType.A5));
-        TrainingFrameResult result = session.ApplyTracking(Snapshot(exitMs + 750, new(700, 450), BarType.A5));
+        session.ApplyTracking(Snapshot(exitMs, new(700, 451), BarType.A5));
+        TrainingFrameResult result = session.ApplyTracking(Snapshot(exitMs + 750, new(700, 451), BarType.A5));
         Assert.Single(result.Events.OfType<TrainingAttemptAborted>());
         Assert.Equal(TrainingAnnouncementKind.Aborted, Assert.Single(result.Events.OfType<TrainingAnnouncementRequested>()).Kind);
-        Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 800, new(700, 450), BarType.A5)).Events);
+        Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 800, new(700, 451), BarType.A5)).Events);
         Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 900, new(700, 200), BarType.A5)).Events);
         Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 1000, new(700, 220), BarType.A5)).Events);
         Assert.Empty(session.ApplyTracking(Snapshot(exitMs + 1100, new(700, 200), BarType.A5)).Events);
@@ -315,7 +315,7 @@ public class TrainingSessionTests
     [Theory]
     [InlineData(TrainingStrategyKind.SnakeShot, "right", "Rechts")]
     [InlineData(TrainingStrategyKind.PullShot, "long", "Lang")]
-    [InlineData(TrainingStrategyKind.TickTackPass, "lane", "Spur")]
+    [InlineData(TrainingStrategyKind.Pass, "lane", "Spur")]
     public void OnReady_announces_selected_text_then_shoot_without_selecting_again(TrainingStrategyKind kind, string id, string text)
     {
         CountingRandom random = new(0, 0);
@@ -324,7 +324,7 @@ public class TrainingSessionTests
         Point setup = kind == TrainingStrategyKind.SnakeShot ? SnakePosition(Team.A) : Pull(Team.A);
         BarType bar = BarType.A3;
         long readyMs = 1000;
-        if (kind == TrainingStrategyKind.TickTackPass)
+        if (kind == TrainingStrategyKind.Pass)
         {
             bar = BarType.A5;
             setup = new(700, 220);

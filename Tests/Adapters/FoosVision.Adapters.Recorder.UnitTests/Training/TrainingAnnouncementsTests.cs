@@ -17,10 +17,10 @@ public class TrainingAnnouncementsTests
     [Theory]
     [InlineData(TrainingStrategyKind.SnakeShot, "Left ready", "Shoot!")]
     [InlineData(TrainingStrategyKind.PullShot, "Short ready", "Shoot!")]
-    [InlineData(TrainingStrategyKind.TickTackPass, "Wall ready", "Shoot!")]
+    [InlineData(TrainingStrategyKind.Pass, "Wall ready", "Shoot!")]
     [InlineData(TrainingStrategyKind.SnakeShot, "Snake ready", "Right")]
     [InlineData(TrainingStrategyKind.PullShot, "Pull ready", "Long")]
-    [InlineData(TrainingStrategyKind.TickTackPass, "Pass ready", "Lane")]
+    [InlineData(TrainingStrategyKind.Pass, "Pass ready", "Lane")]
     public async Task Request_speaks_core_text_for_both_modes_without_waiting_for_speech(
         TrainingStrategyKind strategy, string ready, string execution)
     {

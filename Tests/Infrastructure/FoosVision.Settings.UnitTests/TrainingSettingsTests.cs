@@ -31,7 +31,7 @@ public class TrainingSettingsTests
     [InlineData("snakeShot", "left")]
     [InlineData("snakeShot", "right")]
     [InlineData("pullShot", "long")]
-    [InlineData("tickTackPass", "wall")]
+    [InlineData("pass", "wall")]
     public void Json_and_initializer_load_each_strategy_and_update_example(string id, string variant)
     {
         JsonObject json = DefaultJson();
@@ -63,11 +63,11 @@ public class TrainingSettingsTests
     [Theory]
     [InlineData("snakeShot", "minWaitSeconds", "-1")]
     [InlineData("pullShot", "maxWaitSeconds", "0")]
-    [InlineData("tickTackPass", "maxWaitSeconds", "1e20")]
+    [InlineData("pass", "maxWaitSeconds", "1e20")]
     [InlineData("snakeShot", "waitDistribution", "\"gaussian\"")]
     [InlineData("snakeShot", "variants", "[]")]
     [InlineData("pullShot", "variants", "[{\"id\":\"left\",\"text\":\"Left\",\"weight\":1}]")]
-    [InlineData("tickTackPass", "variants", "[{\"id\":\"wall\",\"text\":\" \",\"weight\":1}]")]
+    [InlineData("pass", "variants", "[{\"id\":\"wall\",\"text\":\" \",\"weight\":1}]")]
     [InlineData("snakeShot", "variants", "[{\"id\":\"left\",\"text\":\"A\",\"weight\":1},{\"id\":\"left\",\"text\":\"B\",\"weight\":1}]")]
     [InlineData("snakeShot", "variants", "[{\"id\":\"short\",\"text\":\"Short\",\"weight\":1}]")]
     [InlineData("snakeShot", "variants", "[{\"id\":\"long\",\"text\":\"Long\",\"weight\":1}]")]
@@ -97,7 +97,7 @@ public class TrainingSettingsTests
     [Theory]
     [InlineData("snakeShot")]
     [InlineData("pullShot")]
-    [InlineData("tickTackPass")]
+    [InlineData("pass")]
     public void Recognition_is_an_implementation_detail_and_is_rejected_in_json(string id)
     {
         JsonObject json = DefaultJson();
@@ -119,8 +119,8 @@ public class TrainingSettingsTests
         JsonObject json = DefaultJson();
         Assert.Equal("training", json.Last().Key);
         JsonObject training = json["training"]!.AsObject();
-        Assert.Equal(["variantAnnouncement", "enabledStrategies", "snakeShot", "pullShot", "tickTackPass"], training.Select(property => property.Key));
-        foreach (string id in new[] { "snakeShot", "pullShot", "tickTackPass" })
+        Assert.Equal(["variantAnnouncement", "enabledStrategies", "snakeShot", "pullShot", "pass"], training.Select(property => property.Key));
+        foreach (string id in new[] { "snakeShot", "pullShot", "pass" })
         {
             Assert.Equal(["minWaitSeconds", "maxWaitSeconds", "waitDistribution", "variants"],
                 training[id]!.AsObject().Select(property => property.Key));
@@ -134,7 +134,7 @@ public class TrainingSettingsTests
     public void Nonfinite_values_are_rejected_for_every_strategy(double value)
     {
         RecorderTrainingSettings settings = new();
-        foreach (TrainingStrategySettings strategy in new TrainingStrategySettings[] { settings.SnakeShot, settings.PullShot, settings.TickTackPass })
+        foreach (TrainingStrategySettings strategy in new TrainingStrategySettings[] { settings.SnakeShot, settings.PullShot, settings.Pass })
         {
             strategy.MinWaitSeconds = value;
             Assert.Throws<InvalidOperationException>(() => settings.Validate());
@@ -237,7 +237,7 @@ public class TrainingSettingsTests
     {
         "snakeShot" => settings.SnakeShot,
         "pullShot" => settings.PullShot,
-        _ => settings.TickTackPass,
+        _ => settings.Pass,
     };
 
     private static void AssertInvalidAndPreserved(string text)

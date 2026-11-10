@@ -10,8 +10,8 @@ namespace FoosVision.Domain.Training.Services;
 
 public class SnakeShotTrainingStrategy : ShotTrainingStrategy
 {
-    private const double _MinSideFraction = 0.40;
-    private const double _MaxSideFraction = 0.60;
+    private const double _MinSideFraction = 0.35;
+    private const double _MaxSideFraction = 0.65;
     private const double _MinAttackFraction = 0.05;
     private const double _MaxAttackFraction = 0.30;
 

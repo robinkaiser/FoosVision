@@ -89,7 +89,7 @@ Alternative PC workflow:
     "enabledStrategies": [
       "snakeShot",
       "pullShot",
-      "tickTackPass"
+      "pass"
     ],
     "snakeShot": {
       "minWaitSeconds": 1,
@@ -135,7 +135,7 @@ Alternative PC workflow:
         }
       ]
     },
-    "tickTackPass": {
+    "pass": {
       "minWaitSeconds": 1,
       "maxWaitSeconds": 10,
       "waitDistribution": "uniform",
@@ -249,7 +249,7 @@ Operational diagnostics workflows are documented in [Diagnostics](Diagnostics.md
 ## Training Settings
 
 - `variantAnnouncement` (required): `onReady` (default) announces “<variant text> ready”, waits, then announces “Shoot!”. `onShoot` keeps the strategy-specific Ready announcement, waits, then announces the variant.
-- `enabledStrategies`: active strategies: `snakeShot` (Snake), `pullShot` (Pull), `tickTackPass` (Pass). An empty list enables all strategies.
+- `enabledStrategies`: active strategies: `snakeShot` (Snake), `pullShot` (Pull), `pass` (Pass). An empty list enables all strategies.
 
 Each strategy has these settings:
 

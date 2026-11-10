@@ -9,13 +9,14 @@ using FoosVision.Domain.Training.ValueObjects;
 
 namespace FoosVision.Domain.Training.Services;
 
-public class TickTackPassTrainingStrategy : ITrainingStrategy
+public class PassTrainingStrategy : ITrainingStrategy
 {
-    private const double _BandSideFraction = 0.35;
+    private const double _EntrySideFraction = 0.20;
+    private const double _HoldingSideFraction = 0.50;
 
-    // A reversal must move this far from the previous extreme; subpixel jitter is not a tick-tack.
-    public const double DirectionChangeMinDistancePx = 5;
+    public const double DirectionChangeMinDistancePx = 20;
 
+    private readonly List<(Frame Frame, Point Position)> _RestHistory = [];
     private TableConfiguration _TableConfig;
     private Team _Team = Team.None;
     private int _Side;
@@ -28,7 +29,7 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
     private Frame? _ConfirmationFrame;
     private bool _InvalidExit;
 
-    public TickTackPassTrainingStrategy(TrainingStrategyOptions options, TableConfiguration tableConfig)
+    public PassTrainingStrategy(TrainingStrategyOptions options, TableConfiguration tableConfig)
     {
         Options = options;
         _TableConfig = tableConfig;
@@ -91,7 +92,7 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
             _Reversals++;
         }
 
-        return _Reversals >= 2
+        return _Reversals >= 2 || (_Reversals == 1 && HasComeToRest(snapshot))
             ? new(team, TrainingGeometry.FiveBar(team), new(snapshot.Frame, snapshot.BallPosition, snapshot.Possession))
             : null;
     }
@@ -159,6 +160,7 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
         _Side = 0;
         _Direction = 0;
         _Reversals = 0;
+        _RestHistory.Clear();
         _Preparation = null;
         _LastSetupAnchor = null;
         _MovementFrame = null;
@@ -168,6 +170,26 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
 
     private TrainingExecution Result(TrainingExecutionState state)
         => new(state, _MovementFrame, _ConfirmationFrame, _LastSetupAnchor);
+
+    private bool HasComeToRest(LiveTrackingSnapshot snapshot)
+    {
+        _RestHistory.Add((snapshot.Frame, snapshot.BallPosition));
+        long cutoff = snapshot.Frame.TimestampNs - ShotTrainingStrategy.PreparationDelayMs * 1_000_000L;
+        while (_RestHistory.Count > 1 && _RestHistory[1].Frame.TimestampNs <= cutoff)
+        {
+            _RestHistory.RemoveAt(0);
+        }
+
+        Point mean = new(_RestHistory.Average(item => item.Position.X), _RestHistory.Average(item => item.Position.Y));
+        if (_RestHistory.Any(item => TrainingGeometry.DistanceSquared(item.Position, mean) > ShotTrainingStrategy.StationaryMaxDistanceSquared))
+        {
+            _RestHistory.Clear();
+            _RestHistory.Add((snapshot.Frame, snapshot.BallPosition));
+            return false;
+        }
+
+        return _RestHistory[0].Frame.TimestampNs <= cutoff;
+    }
 
     private bool HasMovedBackwards(Point position, TrainingPreparation preparation)
         => TrainingGeometry.AttackProgress(_TableConfig, preparation.Team, position, preparation.Bar) <
@@ -181,10 +203,16 @@ public class TickTackPassTrainingStrategy : ITrainingStrategy
         }
 
         double side = TrainingGeometry.SideFraction(_TableConfig, TrainingGeometry.FiveBar(team), snapshot.BallPosition);
+        if (team == _Team &&
+            ((_Side == -1 && side >= 0 && side <= _HoldingSideFraction) ||
+             (_Side == 1 && side >= 1 - _HoldingSideFraction && side <= 1)))
+        {
+            return _Side;
+        }
 
         return
             side >= 0 &&
-            side <= _BandSideFraction ? -1 : side >= 1 - _BandSideFraction &&
+            side <= _EntrySideFraction ? -1 : side >= 1 - _EntrySideFraction &&
             side <= 1 ? 1 : 0;
     }
 }

@@ -15,7 +15,7 @@ public abstract class ShotTrainingStrategy : ITrainingStrategy
     public const int DecisionWindowMs = 750;
     public const int CompletionTailMs = 250;
     public const double HighSpeedKmh = 4;
-    protected const double StationaryMaxDistanceSquared = 50;
+    protected internal const double StationaryMaxDistanceSquared = 50;
 
     private readonly List<(Frame Frame, Point Position)> _PreparationHistory = [];
     private TrainingPreparation? _Preparation;

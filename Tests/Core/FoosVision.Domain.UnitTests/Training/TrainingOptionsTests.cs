@@ -65,7 +65,7 @@ public class TrainingOptionsTests
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
             new(TrainingStrategyKind.PullShot, snake.Wait, [new("short", " ", 1)])]));
         Assert.Throws<ArgumentException>(() => new TrainingOptions([
-            new(TrainingStrategyKind.TickTackPass, snake.Wait, [])]));
+            new(TrainingStrategyKind.Pass, snake.Wait, [])]));
     }
 
     [Theory]

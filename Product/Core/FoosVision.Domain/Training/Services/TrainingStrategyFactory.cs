@@ -16,7 +16,7 @@ public static class TrainingStrategyFactory
         {
             TrainingStrategyKind.SnakeShot => new SnakeShotTrainingStrategy(option, tableConfig),
             TrainingStrategyKind.PullShot => new PullShotTrainingStrategy(option, tableConfig),
-            TrainingStrategyKind.TickTackPass => new TickTackPassTrainingStrategy(option, tableConfig),
+            TrainingStrategyKind.Pass => new PassTrainingStrategy(option, tableConfig),
             _ => throw new ArgumentOutOfRangeException(nameof(option)),
         };
 }

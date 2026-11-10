@@ -7,7 +7,7 @@ public enum TrainingStrategyKind
 {
     SnakeShot,
     PullShot,
-    TickTackPass,
+    Pass,
 }
 
 public enum WaitDistribution
@@ -136,6 +136,6 @@ public class TrainingOptions
     [
         new(TrainingStrategyKind.SnakeShot, new(1, 12, WaitDistribution.Uniform)),
         new(TrainingStrategyKind.PullShot, new(1, 10, WaitDistribution.Uniform)),
-        new(TrainingStrategyKind.TickTackPass, new(1, 10, WaitDistribution.Uniform)),
+        new(TrainingStrategyKind.Pass, new(1, 10, WaitDistribution.Uniform)),
     ]);
 }

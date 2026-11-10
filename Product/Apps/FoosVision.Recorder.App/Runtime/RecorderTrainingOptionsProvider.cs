@@ -40,7 +40,7 @@ public class RecorderTrainingOptionsProvider : ITrainingOptionsProvider
         {
             "snakeShot" => Map(TrainingStrategyKind.SnakeShot, settings.SnakeShot),
             "pullShot" => Map(TrainingStrategyKind.PullShot, settings.PullShot),
-            "tickTackPass" => Map(TrainingStrategyKind.TickTackPass, settings.TickTackPass),
+            "pass" => Map(TrainingStrategyKind.Pass, settings.Pass),
             _ => throw new InvalidOperationException($"Unknown training strategy '{id}'."),
         })];
     }

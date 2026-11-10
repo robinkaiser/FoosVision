@@ -10,10 +10,10 @@ public class RecorderTrainingSettings
     [JsonRequired]
     public string VariantAnnouncement { get; set; } = "onReady";
 
-    public List<string> EnabledStrategies { get; set; } = ["snakeShot", "pullShot", "tickTackPass"];
+    public List<string> EnabledStrategies { get; set; } = ["snakeShot", "pullShot", "pass"];
     public SnakeShotSettings SnakeShot { get; set; } = new();
     public PullShotSettings PullShot { get; set; } = new();
-    public TickTackPassSettings TickTackPass { get; set; } = new();
+    public PassSettings Pass { get; set; } = new();
 
     public static RecorderTrainingSettings CreateDefault()
     {
@@ -27,20 +27,20 @@ public class RecorderTrainingSettings
             throw new InvalidOperationException("training.variantAnnouncement must be onReady or onShoot.");
         }
 
-        if (EnabledStrategies is null || EnabledStrategies.Any(id => id is not ("snakeShot" or "pullShot" or "tickTackPass")) ||
+        if (EnabledStrategies is null || EnabledStrategies.Any(id => id is not ("snakeShot" or "pullShot" or "pass")) ||
             EnabledStrategies.Distinct(StringComparer.Ordinal).Count() != EnabledStrategies.Count)
         {
             throw new InvalidOperationException("training.enabledStrategies must contain known, unique strategy IDs.");
         }
 
-        if (SnakeShot is null || PullShot is null || TickTackPass is null)
+        if (SnakeShot is null || PullShot is null || Pass is null)
         {
             throw new InvalidOperationException("Training strategy sections must not be null.");
         }
 
         SnakeShot.Validate(["left", "right", "middle"]);
         PullShot.Validate(["short", "middle", "long"]);
-        TickTackPass.Validate(["wall", "lane", "split"]);
+        Pass.Validate(["wall", "lane", "split"]);
     }
 }
 
@@ -104,9 +104,9 @@ public class PullShotSettings : TrainingStrategySettings
     }
 }
 
-public class TickTackPassSettings : TrainingStrategySettings
+public class PassSettings : TrainingStrategySettings
 {
-    public TickTackPassSettings()
+    public PassSettings()
     {
         Variants = [new("wall", "Wall", 1), new("lane", "Lane", 1), new("split", "Split", 1)];
     }

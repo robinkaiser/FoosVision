@@ -40,7 +40,6 @@ public class SpeechRecordingCatalogTests
     [InlineData("Left or right")]
     [InlineData("My custom variant")]
     [InlineData("../left")]
-    [InlineData("Tick tack ready")]
     public void Find_leaves_unknown_texts_for_default_text_to_speech(string text)
     {
         Assert.Null(SpeechRecordingCatalog.Find(text));
